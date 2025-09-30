@@ -1,0 +1,41 @@
+<odoo>
+  <data>
+    <!-- Insertar el campo DESPUÉS de 'Términos de pago' (customer) en Sales & Purchases -->
+    <record id="view_partner_form_inherit_delivery_type" model="ir.ui.view">
+      <field name="name">res.partner.form.delivery.type</field>
+      <field name="model">res.partner</field>
+      <field name="inherit_id" ref="base.view_partner_form"/>
+      <field name="arch" type="xml">
+        <xpath expr="//page[@name='sales_purchases']//field[@name='property_payment_term_id']" position="after">
+          <field name="delivery_type_id"
+                 context="{'default_company_id': company_id}"
+                 options="{'no_create_edit': False, 'no_open': False}"/>
+        </xpath>
+      </field>
+    </record>
+
+    <!-- Búsqueda -->
+    <record id="view_partner_search_inherit_delivery_type" model="ir.ui.view">
+      <field name="name">res.partner.search.delivery.type</field>
+      <field name="model">res.partner</field>
+      <field name="inherit_id" ref="base.view_res_partner_filter"/>
+      <field name="arch" type="xml">
+        <xpath expr="//search" position="inside">
+          <field name="delivery_type_id" string="Tipo de entrega"/>
+        </xpath>
+      </field>
+    </record>
+
+    <!-- Lista: añade columna al final -->
+    <record id="view_partner_list_inherit_delivery_type" model="ir.ui.view">
+      <field name="name">res.partner.list.delivery.type</field>
+      <field name="model">res.partner</field>
+      <field name="inherit_id" ref="base.view_partner_tree"/>
+      <field name="arch" type="xml">
+        <xpath expr="//list" position="inside">
+          <field name="delivery_type_id"/>
+        </xpath>
+      </field>
+    </record>
+  </data>
+</odoo>

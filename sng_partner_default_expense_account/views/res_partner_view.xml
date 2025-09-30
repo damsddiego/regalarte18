@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <!-- Vista heredada para agregar el campo "Cuenta de gasto por defecto" en Proveedor -->
+  <record id="view_partner_form_inherit_expense_account" model="ir.ui.view">
+    <field name="name">res.partner.form.expense.account.default</field>
+    <field name="model">res.partner</field>
+    <field name="inherit_id" ref="account.view_partner_property_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//page[@name='accounting']" position="inside">
+        <group string="Cuentas por defecto (Compras)">
+          <field name="property_expense_account_id"
+                 domain="[('account_type','=','expense'), ('deprecated','=',False)]"
+                 
+                 options="{'no_create_edit': True}"/>
+        </group>
+      </xpath>
+    </field>
+  </record>
+</odoo>

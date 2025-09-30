@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <record id="view_partner_form_inherit_client_code_mc" model="ir.ui.view">
+    <field name="name">res.partner.form.inherit.client.code.mc</field>
+    <field name="model">res.partner</field>
+    <field name="inherit_id" ref="base.view_partner_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='name']" position="after">
+        <field name="client_code" readonly="1"/>
+      </xpath>
+    </field>
+  </record>
+
+  <record id="view_res_partner_filter_inherit_client_code_mc" model="ir.ui.view">
+    <field name="name">res.partner.search.inherit.client.code.mc</field>
+    <field name="model">res.partner</field>
+    <field name="inherit_id" ref="base.view_res_partner_filter"/>
+    <field name="arch" type="xml">
+      <xpath expr="//search" position="inside">
+        <field name="client_code" string="Código cliente"/>
+        <filter name="filter_client_code_partial"
+                string="Código contiene…"
+                domain="[('client_code','ilike', self)]"/>
+      </xpath>
+    </field>
+  </record>
+</odoo>

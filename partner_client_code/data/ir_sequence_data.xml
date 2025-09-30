@@ -1,0 +1,10 @@
+<odoo>
+  <record id="seq_client_code_template" model="ir.sequence">
+    <field name="name">Secuencia Código Cliente (Plantilla)</field>
+    <field name="code">res.partner.client.code</field>
+    <field name="prefix"></field>
+    <field name="padding">5</field>
+    <field name="implementation">no_gap</field>
+    <field name="company_id" eval="False"/>
+  </record>
+</odoo>
