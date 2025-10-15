@@ -44,11 +44,15 @@ class ConsignCxcXlsx(models.AbstractModel):
     #       HELPERS (stock)
     # =========================
     def _partner_root_location(self, partner):
+        """Raíz de bodega del cliente.
+        1) partner.sale_location_id si existe
+        2) si no, property_stock_customer
+        (No filtramos por 'usage' para no excluir consignaciones)."""
         loc = getattr(partner, "sale_location_id", False)
-        if loc and getattr(loc, "usage", "") == "internal":
+        if loc:
             return loc
         loc = getattr(partner, "property_stock_customer", False)
-        if loc and getattr(loc, "usage", "") == "internal":
+        if loc:
             return loc
         return None
 
@@ -63,36 +67,68 @@ class ConsignCxcXlsx(models.AbstractModel):
         ]))
 
     def _valued_stock_now(self, partner, restrict_locs=None):
+        """Valor actual de TODO el stock en la bodega del cliente (root child_of).
+        1) Si existe 'quant.value', se usa (valor contable).
+        2) Si no, qty × standard_price (con fallback al template).
+        3) Aplica intersección real con wiz.location_ids (AND)."""
         root = self._partner_root_location(partner)
         if not root:
             return 0.0
-        if restrict_locs and not self._intersects_locations(root, restrict_locs):
-            return 0.0
+
+        domain = [("location_id", "child_of", root.id)]
+        # Intersección con ubicaciones del wizard (si vienen)
+        if restrict_locs and restrict_locs.ids:
+            domain.append(("location_id", "child_of", restrict_locs.ids))
 
         Quant = self.env["stock.quant"].sudo().with_context(active_test=False)
+
+        # 1) Usar 'value' si existe (más fiel al costo contable)
+        if "value" in Quant._fields:
+            groups = Quant.read_group(domain, fields=["value:sum"], groupby=[], lazy=False)
+            if groups:
+                v = groups[0].get("value", 0.0) or 0.0
+                if abs(v) > 1e-6:
+                    return v
+
+        # 2) qty × standard_price por producto (rápido con read_group)
         groups = Quant.read_group(
-            [("location_id", "child_of", root.id)],
+            domain,
             fields=["quantity:sum", "product_id"],
             groupby=["product_id"],
             lazy=False,
         )
-        if not groups:
-            return 0.0
-
-        product_ids = [g["product_id"][0] for g in groups if g.get("product_id")]
-        products = {p.id: p for p in self.env["product.product"].browse(product_ids).exists()}
 
         total = 0.0
-        for g in groups:
-            pid = g["product_id"] and g["product_id"][0]
-            qty = g.get("quantity", 0.0) or 0.0
-            if not pid or not qty:
+        if groups:
+            product_ids = [g["product_id"][0] for g in groups if g.get("product_id")]
+            products = {p.id: p for p in self.env["product.product"].browse(product_ids).exists()}
+            for g in groups:
+                pid = g["product_id"] and g["product_id"][0]
+                qty = g.get("quantity", 0.0) or 0.0
+                if not pid or not qty:
+                    continue
+                prod = products.get(pid)
+                if not prod:
+                    continue
+                cost = (prod.standard_price or prod.product_tmpl_id.standard_price or 0.0)
+                total += qty * cost
+            if abs(total) > 1e-6:
+                return total
+
+        # 3) Fallback final: sumar manual con search() si read_group vino vacío
+        quants = Quant.search(domain, limit=0)
+        if not quants:
+            return 0.0
+        prod_cache = {}
+        total = 0.0
+        for q in quants:
+            qty = q.quantity or 0.0
+            if not qty:
                 continue
-            prod = products.get(pid)
-            if not prod:
-                continue
-            cost = prod.standard_price or 0.0
-            total += qty * cost
+            p = q.product_id
+            if p.id not in prod_cache:
+                prod_cache[p.id] = (p.standard_price or p.product_tmpl_id.standard_price or 0.0)
+            total += qty * prod_cache[p.id]
         return total
 
     # =========================
@@ -151,7 +187,6 @@ class ConsignCxcXlsx(models.AbstractModel):
         return inv.invoice_date
 
     def _last_invoice_in_month(self, partner, m_start: date, m_end: date):
-        """Última factura posteada del mes para el partner. Devuelve record de account.move."""
         return self.env["account.move"].search(
             [
                 ("move_type", "=", "out_invoice"),
@@ -197,7 +232,7 @@ class ConsignCxcXlsx(models.AbstractModel):
             # Vendedor
             ws.write(row, 0, _("Vendedor")); ws.write(row, 1, wiz.user_id.name or _("Todos")); row += 2
 
-            # Encabezados de tabla (ahora incluye ASIENTO)
+            # Encabezados de tabla
             headers = [
                 _("Cod cliente"), _("Descripción"), _("Vendedor"), _("Equipo de ventas"),
                 _("Último traslado Bodega cliente"), _("Última factura realizada"), _("Asiento"),
@@ -230,7 +265,7 @@ class ConsignCxcXlsx(models.AbstractModel):
                 # Subtotales del mes
                 sub_currency = sub_cxc = sub_general = sub_valued = 0.0
 
-                # Título del mes (localizado)
+                # Título del mes
                 ws.write(row, 0, self._month_label(y, m), h2)
                 row += 1
 
@@ -241,12 +276,12 @@ class ConsignCxcXlsx(models.AbstractModel):
                     if not cxc_m and not gen_m:
                         continue
 
-                    # Última factura del mes → team_id (desde la factura) y nombre del asiento
+                    # Última factura del mes → team y asiento
                     inv_last = self._last_invoice_in_month(p, m_start, m_end)
                     team_name = inv_last.team_id.name if inv_last and inv_last.team_id else ""
                     asiento_name = inv_last.name if inv_last else ""
 
-                    # Valorizado actual (ahora) en bodega del cliente
+                    # Valorizado actual en bodega del cliente (respeta wizard.location_ids)
                     valued_now = self._valued_stock_now(p, wiz.location_ids)
 
                     # "Colones [1]"
@@ -254,13 +289,13 @@ class ConsignCxcXlsx(models.AbstractModel):
                     if currency == 0:
                         currency = gen_m
 
-                    # Identificadores/descriptivos
+                    # Datos descriptivos
                     code = getattr(p, "client_code", None) or p.vat or str(p.id)
                     desc = p.name or ""
                     vendedor = p.user_id.name or ""
 
-                    last_pick_dt = self._last_out_picking_date(p, date_to_dt)  # datetime
-                    last_inv_dt = self._last_invoice_date(p, m_end)           # date
+                    last_pick_dt = self._last_out_picking_date(p, date_to_dt)
+                    last_inv_dt = self._last_invoice_date(p, m_end)
 
                     # Fila
                     col = 0
@@ -288,7 +323,7 @@ class ConsignCxcXlsx(models.AbstractModel):
                     ws.write_number(row, col, valued_now or 0.0, money); col += 1
                     row += 1
 
-                    # Subtotales
+                    # Subtotales del mes
                     sub_currency += currency or 0.0
                     sub_cxc += cxc_m or 0.0
                     sub_general += gen_m or 0.0
@@ -304,7 +339,7 @@ class ConsignCxcXlsx(models.AbstractModel):
                 ws.write_number(row, 10, sub_valued, money)
                 row += 2
 
-                # Acumular totales generales
+                # Totales generales
                 grand_currency += sub_currency
                 grand_cxc += sub_cxc
                 grand_general += sub_general
