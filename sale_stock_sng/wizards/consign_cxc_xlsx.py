@@ -75,60 +75,12 @@ class ConsignCxcXlsx(models.AbstractModel):
         if not root:
             return 0.0
 
-        domain = [("location_id", "child_of", root.id)]
-        # Intersección con ubicaciones del wizard (si vienen)
-        if restrict_locs and restrict_locs.ids:
-            domain.append(("location_id", "child_of", restrict_locs.ids))
+        domain = [('location_id', '=', root.id)]
 
-        Quant = self.env["stock.quant"].sudo().with_context(active_test=False)
-
-        # 1) Usar 'value' si existe (más fiel al costo contable)
-        if "value" in Quant._fields:
-            groups = Quant.read_group(domain, fields=["value:sum"], groupby=[], lazy=False)
-            if groups:
-                v = groups[0].get("value", 0.0) or 0.0
-                if abs(v) > 1e-6:
-                    return v
-
-        # 2) qty × standard_price por producto (rápido con read_group)
-        groups = Quant.read_group(
-            domain,
-            fields=["quantity:sum", "product_id"],
-            groupby=["product_id"],
-            lazy=False,
-        )
-
-        total = 0.0
-        if groups:
-            product_ids = [g["product_id"][0] for g in groups if g.get("product_id")]
-            products = {p.id: p for p in self.env["product.product"].browse(product_ids).exists()}
-            for g in groups:
-                pid = g["product_id"] and g["product_id"][0]
-                qty = g.get("quantity", 0.0) or 0.0
-                if not pid or not qty:
-                    continue
-                prod = products.get(pid)
-                if not prod:
-                    continue
-                cost = (prod.standard_price or prod.product_tmpl_id.standard_price or 0.0)
-                total += qty * cost
-            if abs(total) > 1e-6:
-                return total
-
-        # 3) Fallback final: sumar manual con search() si read_group vino vacío
-        quants = Quant.search(domain, limit=0)
-        if not quants:
-            return 0.0
-        prod_cache = {}
-        total = 0.0
-        for q in quants:
-            qty = q.quantity or 0.0
-            if not qty:
-                continue
-            p = q.product_id
-            if p.id not in prod_cache:
-                prod_cache[p.id] = (p.standard_price or p.product_tmpl_id.standard_price or 0.0)
-            total += qty * prod_cache[p.id]
+        Quant = self.env["stock.quant"].sudo().with_context(active_test=False).search(domain)
+        total = 0
+        for a in Quant:
+            total += a.quantity * a.product_id.standard_price
         return total
 
     # =========================
