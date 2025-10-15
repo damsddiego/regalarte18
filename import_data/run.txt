@@ -1,0 +1,11 @@
+python /home/michaels/PycharmProjects/Odoo18/odoo/odoo-bin shell -d regalarte -c "/home/michaels/PycharmProjects/Odoo18/conf/cr.conf"
+
+__file__ = '/home/manex/PycharmProjects/Odoo17/sh/dimaca/import_data/partner/contactos.py'
+
+__file__="/home/michaels/PycharmProjects/Odoo18/other/regalarte18/import_data/product/product.py"
+exec(open(__file__, encoding='utf-8').read())
+
+
+asi descargamos el archivo pesado en el server
+rsync -P -vv --inplace clientes.xlsx 14634298@shoestatiana.odoo.com:/home/odoo/clientes.xlsx
+wget "https://drive.usercontent.google.com/download?id=1DioERCBHTx3R3LarA1RtxMfFDH7bNOcc&export=download&authuser=0" -O nombre_del_archivo.xlsx
