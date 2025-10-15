@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, _
 from odoo.tools import date_utils
-from datetime import datetime, date, time
+from datetime import datetime, date, time as dt_time
 import calendar
 
 class ConsignCxcXlsx(models.AbstractModel):
