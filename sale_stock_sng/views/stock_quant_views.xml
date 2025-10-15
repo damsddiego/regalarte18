@@ -8,7 +8,7 @@
         <xpath expr="//search" position="inside">
           <filter name="my_loc"
                   string="Mi bodega"
-                  domain="[('in_my_location', '=', True)]"/>
+                  domain="[('in_my_location','=',True)]"/>
         </xpath>
       </field>
     </record>
