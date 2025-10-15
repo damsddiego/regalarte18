@@ -10,6 +10,7 @@
     "data": [
         "security/ir.model.access.csv",
         "views/res_partner_views.xml",
+"views/stock_quant_views.xml",
         "wizards/reports.xml",
         "wizards/consign_cxc_wizard_views.xml"
     ],
