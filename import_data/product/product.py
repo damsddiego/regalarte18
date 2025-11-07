@@ -8,6 +8,8 @@ import openpyxl
 PRODUCT = env['product.template']
 CATEGORY = env['product.category']
 CABYS_PRODUCT = env['cabys.producto']  # Modelo CAByS
+PRICELIST = env['product.pricelist']
+PRICELIST_ITEM = env['product.pricelist.item']
 
 # Contexto para evitar tracking / chatter
 CTX_NOTRACK = {
@@ -17,6 +19,8 @@ CTX_NOTRACK = {
 }
 PRODUCT_NOTRACK = PRODUCT.with_context(**CTX_NOTRACK)
 CATEGORY_NOTRACK = CATEGORY.with_context(**CTX_NOTRACK)
+PRICELIST_NOTRACK = PRICELIST.with_context(**CTX_NOTRACK)
+PLI_NOTRACK = PRICELIST_ITEM.with_context(**CTX_NOTRACK)
 
 # ===== Config =====
 NOMBRE_HOJA = 'Productos'           # cambia si tu hoja se llama distinto
@@ -130,6 +134,14 @@ header_map = {
     'precio_3 (precio publico en colon)': 'list_price',
     'precio_3': 'list_price',  # por si cambias el header a algo más corto
 
+    # PRECIO_1 (Mayor) -> lista de precios "Mayor"
+    'precio_1 (mayor)': 'price_mayor',
+    'precio_1': 'price_mayor',
+
+    # PRECIO_9 (mayor en dolares) -> lista de precios "Mayor dólares"
+    'precio_9 (mayor en dolares)': 'price_mayor_usd',
+    'precio_9': 'price_mayor_usd',
+
     # Categorías: DES_FAMI = padre, DES_SUBF = subcategoría
     'des_fami': 'categ_parent',
     'des_subf': 'categ_child',
@@ -140,9 +152,6 @@ header_map = {
     # Flags opcionales (si los tuvieras en el Excel futuro)
     'se puede comprar': 'purchase_ok',
     'se puede vender': 'sale_ok',
-
-    # IMPORTANTE: COD_FAMI, COD_SUBF, CODIGO_IVA, POR_IVA, PRECIO_1, PRECIO_9,
-    # MINIMO, MAXIMO, CIA, NOMBRE_CIA NO se mapean -> se ignoran
 }
 
 rows = list(ws.iter_rows(values_only=True))
@@ -165,6 +174,38 @@ def _getv(row, key):
     return row[col] if (col is not None and col < len(row)) else None
 
 
+# ===== Crear/obtener listas de precios =====
+pl_mayor = PRICELIST.search([('name', '=', 'Mayor')], limit=1)
+if not pl_mayor:
+    pl_mayor = PRICELIST_NOTRACK.create({'name': 'Mayor'})
+    print("🧾 Creada lista de precios 'Mayor'")
+
+pl_mayor_usd = False
+cur_usd = env['res.currency'].search([('name', '=', 'USD')], limit=1)
+if not cur_usd:
+    print("⚠ No se encontró moneda USD; no se creará la lista de precios 'Mayor dólares'")
+else:
+    pl_mayor_usd = PRICELIST.search([('name', '=', 'Mayor dólares')], limit=1)
+    if not pl_mayor_usd:
+        pl_mayor_usd = PRICELIST_NOTRACK.create({
+            'name': 'Mayor dólares',
+            'currency_id': cur_usd.id,
+        })
+        print("🧾 Creada lista de precios 'Mayor dólares' (USD)")
+
+# ===== Limpiar items existentes de esas listas =====
+if pl_mayor:
+    old_items = PLI_NOTRACK.search([('pricelist_id', '=', pl_mayor.id)])
+    if old_items:
+        print(f"🗑 Eliminando {len(old_items)} items de la lista 'Mayor'...")
+        old_items.unlink()
+
+if pl_mayor_usd:
+    old_items2 = PLI_NOTRACK.search([('pricelist_id', '=', pl_mayor_usd.id)])
+    if old_items2:
+        print(f"🗑 Eliminando {len(old_items2)} items de la lista 'Mayor dólares'...")
+        old_items2.unlink()
+
 # ===== Procesamiento =====
 errores = []
 logs = []
@@ -178,7 +219,7 @@ commit_counter = 0
 for r, row in enumerate(rows[1:], start=2):  # desde fila 2 (después de encabezados)
     procesados += 1
     try:
-        # Claves
+        # Claves básicas
         name = _getv(row, 'name')
         name = str(name).strip() if name is not None else ''
         ref = _getv(row, 'default_code')
@@ -189,25 +230,11 @@ for r, row in enumerate(rows[1:], start=2):  # desde fila 2 (después de encabez
             logs.append(f"[{r}] sin 'Nombre' -> saltado")
             continue
 
-        # --- Buscar existente SOLO por nombre ---
-        prod = False
-        found = PRODUCT.search([('name', '=', name)])
-        if len(found) == 1:
-            prod = found[0]
-        elif len(found) > 1:
-            skipped_multi += 1
-            logs.append(f"[{r}] NAME='{name}' múltiples templates {found.ids} -> saltado")
-            continue
+        # Precios para listas de precios
+        price_mayor = _parse_number(_getv(row, 'price_mayor'))
+        price_mayor_usd = _parse_number(_getv(row, 'price_mayor_usd'))
 
-        # --- Valores comunes (create/write) ---
-        vals = {}
-
-        # Nombre y referencia interna
-        vals['name'] = name
-        if ref:
-            vals['default_code'] = ref
-
-        # Categoría: DES_FAMI (padre) + DES_SUBF (hija)
+        # ===== Categoría: DES_FAMI (padre) + DES_SUBF (hija) =====
         categ = None
         parent_name = _getv(row, 'categ_parent')
         child_name = _getv(row, 'categ_child')
@@ -225,10 +252,36 @@ for r, row in enumerate(rows[1:], start=2):  # desde fila 2 (después de encabez
         if path:
             categ = _get_or_create_categ_by_path(path)
 
+        # ===== Buscar existente por (name, categ_id) =====
+        prod = False
+        domain = [('name', '=', name)]
+        if categ:
+            domain.append(('categ_id', '=', categ.id))
+        found = PRODUCT.search(domain)
+
+        if len(found) == 1:
+            prod = found[0]
+        elif len(found) > 1:
+            skipped_multi += 1
+            logs.append(
+                f"[{r}] NAME='{name}', CATEG='{categ.display_name if categ else '-'}' "
+                f"múltiples templates {found.ids} -> saltado"
+            )
+            continue
+
+        # --- Valores comunes (create/write) ---
+        vals = {}
+
+        # Nombre y referencia interna
+        vals['name'] = name
+        if ref:
+            vals['default_code'] = ref
+
+        # Categoría en vals
         if categ:
             vals['categ_id'] = categ.id
 
-        # Precios
+        # Precios base (list_price / standard_price)
         lp = _parse_number(_getv(row, 'list_price'))
         if lp is not None:
             vals['list_price'] = lp
@@ -266,6 +319,46 @@ for r, row in enumerate(rows[1:], start=2):  # desde fila 2 (después de encabez
             created_total += 1
             print(f"[{r}] 🆕 CREADO name='{name}' ref={ref or '-'} -> {vals}")
 
+        # ===== Actualizar / crear items de lista de precios =====
+
+        # Lista "Mayor" (colones) -> solo si price_mayor > 0
+        if pl_mayor and price_mayor is not None and price_mayor > 0:
+            item = PLI_NOTRACK.search([
+                ('pricelist_id', '=', pl_mayor.id),
+                ('product_tmpl_id', '=', prod.id),
+                ('display_applied_on', '=', '1_product'),
+            ], limit=1)
+            vals_item = {
+                'pricelist_id': pl_mayor.id,
+                'product_tmpl_id': prod.id,
+                'display_applied_on': '1_product',
+                'compute_price': 'fixed',
+                'fixed_price': price_mayor,
+            }
+            if item:
+                item.write(vals_item)
+            else:
+                PLI_NOTRACK.create(vals_item)
+
+        # Lista "Mayor dólares" (USD) -> solo si price_mayor_usd > 0
+        if pl_mayor_usd and price_mayor_usd is not None and price_mayor_usd > 0:
+            item2 = PLI_NOTRACK.search([
+                ('pricelist_id', '=', pl_mayor_usd.id),
+                ('product_tmpl_id', '=', prod.id),
+                ('display_applied_on', '=', '1_product'),
+            ], limit=1)
+            vals_item2 = {
+                'pricelist_id': pl_mayor_usd.id,
+                'product_tmpl_id': prod.id,
+                'display_applied_on': '1_product',
+                'compute_price': 'fixed',
+                'fixed_price': price_mayor_usd,
+            }
+            if item2:
+                item2.write(vals_item2)
+            else:
+                PLI_NOTRACK.create(vals_item2)
+
     except Exception as e:
         env.cr.rollback()
         errores.append(f"[{r}] ❌ Error name='{name}' ref={ref or '-'} -> {e}")
@@ -301,5 +394,5 @@ print(f"Procesados: {procesados}")
 print(f"Creados: {created_total}")
 print(f"Actualizados: {updated_total}")
 print(f"Saltados sin claves (nombre): {skipped_no_keys}")
-print(f"Saltados por múltiples coincidencias (nombre): {skipped_multi}")
+print(f"Saltados por múltiples coincidencias (nombre+categ): {skipped_multi}")
 print(f"Errores: {len(errores)}")
