@@ -19,6 +19,14 @@ def _normalize_header(s):
     return re.sub(r'\s+', ' ', str(s or '').strip().lower())
 
 
+def _split_emails(raw):
+    """Recibe un string con correos separados por ; o , y devuelve lista limpia."""
+    if not raw:
+        return []
+    parts = re.split(r'[;,]', str(raw))
+    return [p.strip() for p in parts if p and p.strip()]
+
+
 def _resolve_path(filename):
     """Devuelve ruta existente. Prioriza carpeta del script (__file__), luego CWD, luego carpeta padre."""
     if os.path.isabs(filename):
@@ -27,11 +35,11 @@ def _resolve_path(filename):
         return filename
     tried = []
     base_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
-    p1 = os.path.join(base_dir, filename);
+    p1 = os.path.join(base_dir, filename)
     tried.append(p1)
-    p2 = os.path.join(os.getcwd(), filename);
+    p2 = os.path.join(os.getcwd(), filename)
     tried.append(p2)
-    p3 = os.path.join(os.path.dirname(base_dir), filename);
+    p3 = os.path.join(os.path.dirname(base_dir), filename)
     tried.append(p3)
     for p in tried:
         if os.path.exists(p):
@@ -94,45 +102,38 @@ if sheet is None:
 headers = [sheet.cell_value(0, c) for c in range(sheet.ncols)]
 norm_headers = [_normalize_header(h) for h in headers]
 
-# Mapeo de columnas: COD_CLIE, NOMBRE, CEDULA, TIPO_CEDULA, PAIS
+# Mapeo de columnas: COD_CLIE, NOMBRE, CEDULA, TIPO_CEDULA, PAIS, correos y notas
 header_map = {
     'cod_clie': 'client_code',
     'nombre': 'name',
     'cedula': 'vat',
     'tipo_cedula': 'id_type',
     'pais': 'country_code',
-    'nombre_facturar_edi': '',
-    'cod_clase': '',
-    'plazo': '',
-    'nivel_precio': '',
-    'cod_ruta': '',
-    'cod_vend': '',
-    'bodega_consignacion': '',
-    'telefono': '',
-    'telefono_2': '',
-    'cod_prov': '',
-    'cod_cant': '',
-    'cod_dist': '',
-    'direccion': '',
-    'excento': '',
-    'desc_fijo': '',
-    'porc_exento': '',
-    'limite_credito': '',
-    'saldo': '',
-    'fecha_ult_comp': '',
-    'fecha_ultima_fact': '',
-    'e_mail': 'email',
-    'e_mail_cortesia': '',
-    'correo2': 'email',
-    'correo3': 'email',
-    'notas1': 'comment',
-    'notas2': 'comment',
-    'notas3': 'comment',
-    'notas5': 'comment',
+
+    'telefono': 'phone',
+    'telefono_2': 'mobile',
+    'direccion': 'street',
+
+    # Correos
+    'e_mail': 'email_1',
+    'e_mail_cortesia': 'email_courtesy',
+    'correo2': 'email_2',
+    'correo3': 'email_3',
+
+    # Notas
+    'notas1': 'note_1',
+    'notas2': 'note_2',
+    'notas3': 'note_3',
+    'notas5': 'note_5',
+
+    'cod_prov': 'prov',
+    'cod_cant': 'cant',
+    'cod_dist': 'dist',
 }
 
 idx = {}
 for i, h in enumerate(norm_headers):
+    print('>>', i, h)
     if h in header_map:
         idx[header_map[h]] = i
 
@@ -145,6 +146,21 @@ def _getv(row_index, key):
         return sheet.cell_value(row_index, col)
     except IndexError:
         return None
+
+def _normalize_code(val):
+    """Normaliza códigos que pueden venir como 1, '01', 1.0, '1.0', '01.0', etc."""
+    if val is None:
+        return ''
+    s = str(val).strip()
+    if not s:
+        return ''
+    # Si es puramente numérico (con posible .0)
+    if re.match(r'^\d+(\.0+)?$', s):
+        # parseamos a int para quitar ceros a la izquierda y decimales .0
+        n = int(float(s))
+        return str(n)  # '01' -> '1', '1.0' -> '1'
+    return s
+
 
 
 # ===== Procesamiento =====
@@ -168,6 +184,21 @@ for r in range(1, sheet.nrows):  # desde fila 2 (índice 1)
         vat = str(vat).strip() if vat is not None else ''
         id_type_code = str(_getv(r, 'id_type') or '').strip()
 
+        phone = _getv(r, 'phone')
+        phone = str(phone).strip() if phone is not None else ''
+
+        mobile = _getv(r, 'mobile')
+        mobile = str(mobile).strip() if mobile is not None else ''
+
+        street = _getv(r, 'street')
+        street = str(street).strip() if street is not None else ''
+
+        prov_code = _normalize_code(_getv(r, 'prov'))
+        cant_code = _normalize_code(_getv(r, 'cant'))
+        dist_code = _normalize_code(_getv(r, 'dist'))
+
+
+        # Si no hay claves mínimas, saltar
         if not client_code and not name and not vat:
             skipped_no_keys += 1
             logs.append(f"[{r + 1}] sin COD_CLIE, NOMBRE ni CEDULA -> saltado")
@@ -192,6 +223,54 @@ for r in range(1, sheet.nrows):  # desde fila 2 (índice 1)
             vals['client_code'] = client_code
         if vat:
             vals['vat'] = vat
+        if phone:
+            vals['phone'] = phone
+        if mobile:
+            vals['mobile'] = mobile
+        if street:
+            vals['street'] = street
+
+        # ===== Correos: e_mail, e_mail_cortesia, correo2, correo3 =====
+        email_1 = _getv(r, 'email_1')
+        email_courtesy = _getv(r, 'email_courtesy')
+        email_2 = _getv(r, 'email_2')
+        email_3 = _getv(r, 'email_3')
+
+        all_email_raw = [email_1, email_courtesy, email_2, email_3]
+
+        unique_emails = []
+        seen = set()
+
+        for raw in all_email_raw:
+            for e in _split_emails(raw):
+                key = e.strip()
+                if key and key not in seen:
+                    seen.add(key)
+                    unique_emails.append(e)
+
+        if unique_emails:
+            # ejemplo final: "prueba@gmail.com;gerardo@gmail.com"
+            vals['email'] = ';'.join(unique_emails)
+
+        # ===== Notas: notas1, notas2, notas3, notas5 -> comment (sobrescribe) =====
+        note_1 = _getv(r, 'note_1')
+        note_2 = _getv(r, 'note_2')
+        note_3 = _getv(r, 'note_3')
+        note_5 = _getv(r, 'note_5')
+
+        notes_parts = []
+        for n in (note_1, note_2, note_3, note_5):
+            if n:
+                txt = str(n).strip()
+                if txt:
+                    notes_parts.append(txt)
+
+        if notes_parts:
+            # Siempre sobre-escribimos el comment con las notas del Excel
+            vals['comment'] = '\n'.join(notes_parts)
+        # Si quisieras limpiar comment cuando NO hay notas, descomenta:
+        # else:
+        #     vals['comment'] = False
 
         # Cliente / proveedor
         current_customer_rank = partner.customer_rank if partner else 0
