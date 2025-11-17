@@ -483,7 +483,7 @@ import time
 PARTNER = env['res.partner']
 
 # Busca todos los contactos (ajusta el dominio si quieres filtrar)
-partners = PARTNER.search([])
+partners = PARTNER.search([('id', '>', 765)])
 total = len(partners)
 print(f"Se encontraron {total} contactos.")
 
