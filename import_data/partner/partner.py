@@ -165,6 +165,7 @@ header_map = {
     'notas5': 'note_5',
 
     'cod_vend': 'salesperson_code',
+    'cod_ruta': 'route_code',
 }
 
 idx = {}
@@ -266,6 +267,35 @@ for r in range(1, sheet.nrows):  # desde fila 2 (índice 1)
             vals['user_id'] = 26
         if cod_venta == '0022':
             vals['user_id'] = 27
+
+        # cod_ruta = _get_str(r, 'route_code')
+        #
+        # if cod_ruta == '0000':
+        #     vals['user_id'] = vat
+        # if cod_ruta == '0010':
+        #     vals['user_id'] = 25
+        # if cod_ruta == '0030':
+        #     vals['user_id'] = 23
+        # if cod_ruta == '0040':
+        #     vals['user_id'] = 19
+        # if cod_ruta == '0050':
+        #     vals['user_id'] = 24
+        # if cod_ruta == '0060':
+        #     vals['user_id'] = 19
+        # if cod_ruta == '0070':
+        #     vals['user_id'] = vat
+        # if cod_ruta == '0080':
+        #     vals['user_id'] = 26
+        # if cod_ruta == '0090':
+        #     vals['user_id'] = 27
+        # if cod_ruta == '0100':
+        #     vals['user_id'] = vat
+        # if cod_ruta == '0120':
+        #     vals['user_id'] = 26
+        # if cod_ruta == '0130':
+        #     vals['user_id'] = 27
+
+
 
         # Términos de pago (plazo -> account.payment.term)
         if plazo:
