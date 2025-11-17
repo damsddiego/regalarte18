@@ -3,6 +3,7 @@
 
 import os
 import re
+
 import openpyxl
 
 PRODUCT = env['product.template']
@@ -10,6 +11,9 @@ CATEGORY = env['product.category']
 CABYS_PRODUCT = env['cabys.producto']  # Modelo CAByS
 PRICELIST = env['product.pricelist']
 PRICELIST_ITEM = env['product.pricelist.item']
+LOCATION = env['stock.location']
+QUANT = env['stock.quant']
+PARTNER = env['res.partner']
 
 # Contexto para evitar tracking / chatter
 CTX_NOTRACK = {
@@ -23,9 +27,22 @@ PRICELIST_NOTRACK = PRICELIST.with_context(**CTX_NOTRACK)
 PLI_NOTRACK = PRICELIST_ITEM.with_context(**CTX_NOTRACK)
 
 # ===== Config =====
-NOMBRE_HOJA = 'Productos'           # cambia si tu hoja se llama distinto
-COMMIT_INTERVAL = 50                # commit cada N filas
-DEFAULT_XLSX = 'inventario.xlsx'    # nombre por defecto
+NOMBRE_HOJA = 'Productos'  # cambia si tu hoja se llama distinto
+COMMIT_INTERVAL = 50  # commit cada N filas
+DEFAULT_XLSX = 'inventario.xlsx'  # nombre por defecto
+
+# Nombre del almacén principal (ubicación) que quieres usar como padre
+MAIN_LOCATION_NAME = 'Existencias'
+
+# Buscar la ubicación principal una sola vez
+MAIN_LOCATION = LOCATION.search([
+    ('name', '=', MAIN_LOCATION_NAME),
+    ('usage', '=', 'internal'),
+], limit=1)
+if not MAIN_LOCATION:
+    print(f"⚠ No se encontró ubicación principal '{MAIN_LOCATION_NAME}'. "
+          f"Se crearán ubicaciones sin padre.")
+
 
 # ===== Utils =====
 def _parse_number(val):
@@ -97,9 +114,12 @@ def _resolve_path(filename):
         return filename
     tried = []
     base_dir = os.path.dirname(os.path.abspath(__file__)) if '__file__' in globals() else os.getcwd()
-    p1 = os.path.join(base_dir, filename); tried.append(p1)
-    p2 = os.path.join(os.getcwd(), filename); tried.append(p2)
-    p3 = os.path.join(os.path.dirname(base_dir), filename); tried.append(p3)
+    p1 = os.path.join(base_dir, filename)
+    tried.append(p1)
+    p2 = os.path.join(os.getcwd(), filename)
+    tried.append(p2)
+    p3 = os.path.join(os.path.dirname(base_dir), filename)
+    tried.append(p3)
     for p in tried:
         if os.path.exists(p):
             return p
@@ -152,6 +172,9 @@ header_map = {
     # Flags opcionales (si los tuvieras en el Excel futuro)
     'se puede comprar': 'purchase_ok',
     'se puede vender': 'sale_ok',
+
+    'mano': 'quant',
+    'bodega': 'location_id',
 }
 
 rows = list(ws.iter_rows(values_only=True))
@@ -307,6 +330,7 @@ for r, row in enumerate(rows[1:], start=2):  # desde fila 2 (después de encabez
             vals['sale_ok'] = _parse_bool(_getv(row, 'sale_ok'))
 
         # --- Crear o actualizar SIN tracking ---
+        vals['is_storable'] = True
         if prod:
             PRODUCT_NOTRACK.browse(prod.id).write(vals)
             updated_total += 1
@@ -318,6 +342,90 @@ for r, row in enumerate(rows[1:], start=2):  # desde fila 2 (después de encabez
             prod = PRODUCT_NOTRACK.create(vals)
             created_total += 1
             print(f"[{r}] 🆕 CREADO name='{name}' ref={ref or '-'} -> {vals}")
+
+        # ===== Cantidad y ubicación (stock.location + stock.quant) =====
+        quant_val = _parse_number(_getv(row, 'quant'))
+        location_raw = _getv(row, 'location_id')
+        location_name = str(location_raw or '').strip()
+        location_number = ''.join(ch for ch in location_name if ch.isdigit()) if location_name else ''
+
+        location_rec = False
+        if location_name:
+            loc_norm = location_name.strip()
+            loc_upper = loc_norm.upper()
+
+            # Caso especial: REGALARTE DE LAS AMERICAS S.A. -> usar almacén principal EXISTENCIAS
+            if loc_upper == 'REGALARTE DE LAS AMERICAS S.A.':
+                if MAIN_LOCATION:
+                    location_rec = MAIN_LOCATION
+                    print(f"[{r}] 📌 Ubicación '{loc_norm}' mapeada a almacén principal '{MAIN_LOCATION.display_name}'")
+                else:
+                    # Fallback: buscar por nombre tal cual
+                    location_rec = LOCATION.search([('name', '=', loc_norm)], limit=1)
+            else:
+                # Para las demás ubicaciones:
+                # 1) Si ya existe una ubicación con ese nombre, usarla (no duplicar).
+                location_rec = LOCATION.search([('name', '=', loc_norm)], limit=1)
+                # 2) Si no existe, crearla como hija del almacén principal (si existe).
+                if not location_rec:
+                    parent_id = MAIN_LOCATION.id if MAIN_LOCATION else False
+                    location_vals = {
+                        'name': loc_norm,
+                        'usage': 'internal',
+                        'location_id': parent_id,
+                    }
+                    location_rec = LOCATION.create(location_vals)
+                    if parent_id:
+                        print(
+                            f"[{r}] 📦 Creada ubicación '{loc_norm}' hija de "
+                            f"'{MAIN_LOCATION.display_name}' -> {location_rec.id}"
+                        )
+                    else:
+                        print(f"[{r}] 📦 Creada ubicación '{loc_norm}' sin padre -> {location_rec.id}")
+
+        # Crear / actualizar QUANT por producto + ubicación
+        if location_rec and quant_val is not None:
+            product_variant = prod.product_variant_id
+            if product_variant:
+                quant = QUANT.search([
+                    ('product_id', '=', product_variant.id),
+                    ('location_id', '=', location_rec.id),
+                ], limit=1)
+
+                if not quant:
+                    QUANT.create({
+                        'product_id': product_variant.id,
+                        'location_id': location_rec.id,
+                        'quantity': quant_val,  # cantidad del Excel
+                        'company_id': env.user.company_id.id,
+                    })
+                    print(
+                        f"[{r}] 🏷️ Stock CREADO: {quant_val} unidades en la ubicación "
+                        f"{location_rec.display_name} para el producto {product_variant.display_name}"
+                    )
+                else:
+                    nueva_cantidad = (quant.quantity or 0.0) + quant_val
+                    quant.write({'quantity': nueva_cantidad})
+                    print(
+                        f"[{r}] ✅ Stock ACTUALIZADO: +{quant_val} unidades en la ubicación "
+                        f"{location_rec.display_name} para el producto {product_variant.display_name} "
+                        f"(total={nueva_cantidad})"
+                    )
+
+        # ===== Enlazar ubicación con contacto (client_code -> sale_location_id) =====
+        if location_number and location_rec:
+            partner = PARTNER.search([('client_code', '=', location_number)], limit=1)
+            if partner:
+                partner.write({'sale_location_id': location_rec.id})
+                print(
+                    f"[{r}] 🤝 Partner '{partner.display_name}' enlazado con "
+                    f"ubicación '{location_rec.display_name}' (client_code={location_number})"
+                )
+            else:
+                logs.append(
+                    f"[{r}] Sin partner con client_code='{location_number}' "
+                    f"para ubicación '{location_name}'"
+                )
 
         # ===== Actualizar / crear items de lista de precios =====
 

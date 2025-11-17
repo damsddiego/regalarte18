@@ -18,9 +18,9 @@
     <field name="arch" type="xml">
       <xpath expr="//search" position="inside">
         <field name="client_code" string="Código cliente"/>
-        <filter name="filter_client_code_partial"
-                string="Código contiene…"
-                domain="[('client_code','ilike', self)]"/>
+<!--        <filter name="filter_client_code_partial"-->
+<!--                string="Código contiene…"-->
+<!--                domain="[('client_code','ilike', self)]"/>-->
       </xpath>
     </field>
   </record>
