@@ -478,26 +478,26 @@ print(f"Saltados por múltiples coincidencias: {skipped_multi}")
 print(f"Errores: {len(errores)}")
 
 
-# import time
-#
-# PARTNER = env['res.partner']
+import time
+
+PARTNER = env['res.partner']
 
 # Busca todos los contactos (ajusta el dominio si quieres filtrar)
-# partners = PARTNER.search([])
-# total = len(partners)
-# print(f"Se encontraron {total} contactos.")
-#
-# for idx, partner in enumerate(partners, start=1):
-#     try:
-#         print(f"[{idx}/{total}] Ejecutando action_get_economic_activities en partner ID {partner.id} - {partner.display_name}")
-#         partner.action_get_economic_activities()
-#         env.cr.commit()  # Guarda cambios por cada contacto
-#         print(f"[{idx}/{total}] ✅ OK")
-#     except Exception as e:
-#         env.cr.rollback()
-#         print(f"[{idx}/{total}] ❌ Error en partner ID {partner.id}: {e}")
-#
-#     # Esperar al menos 5 segundos antes del siguiente
-#     time.sleep(2)
-#
-# print("Proceso terminado.")
+partners = PARTNER.search([])
+total = len(partners)
+print(f"Se encontraron {total} contactos.")
+
+for idx, partner in enumerate(partners, start=1):
+    try:
+        print(f"[{idx}/{total}] Ejecutando action_get_economic_activities en partner ID {partner.id} - {partner.display_name}")
+        partner.action_get_economic_activities()
+        env.cr.commit()  # Guarda cambios por cada contacto
+        print(f"[{idx}/{total}] ✅ OK")
+    except Exception as e:
+        env.cr.rollback()
+        print(f"[{idx}/{total}] ❌ Error en partner ID {partner.id}: {e}")
+
+    # Esperar al menos 5 segundos antes del siguiente
+    time.sleep(2)
+
+print("Proceso terminado.")
