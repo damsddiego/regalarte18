@@ -163,6 +163,8 @@ header_map = {
     'notas2': 'note_2',
     'notas3': 'note_3',
     'notas5': 'note_5',
+
+    'cod_vend': 'salesperson_code',
 }
 
 idx = {}
@@ -242,6 +244,28 @@ for r in range(1, sheet.nrows):  # desde fila 2 (índice 1)
             vals['mobile'] = mobile
         if street:
             vals['street'] = street
+
+
+        cod_venta = _get_str(r, 'salesperson_code')
+
+        # if cod_venta == '0010':
+        #     vals['user_id'] = vat
+        if cod_venta == '0012':
+            vals['user_id'] = 25
+        if cod_venta == '0013':
+            vals['user_id'] = 23
+        if cod_venta == '0014':
+            vals['user_id'] = 19
+        if cod_venta == '0015':
+            vals['user_id'] = 24
+        # if cod_venta == '0016':
+        #     vals['user_id'] = 19
+        # if cod_venta == '0019':
+        #     vals['user_id'] = vat
+        if cod_venta == '0020':
+            vals['user_id'] = 26
+        if cod_venta == '0022':
+            vals['user_id'] = 27
 
         # Términos de pago (plazo -> account.payment.term)
         if plazo:
