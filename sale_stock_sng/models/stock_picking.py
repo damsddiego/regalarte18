@@ -33,27 +33,3 @@ class StockPicking(models.Model):
 
             if partner_sale_location:
                 picking.location_dest_id = partner_sale_location
-
-    # @api.model
-    # def create(self, vals):
-    #     picking = super().create(vals)
-    #     if picking.picking_type_id.code == 'internal':
-    #         picking._set_default_sale_locations()
-    #     return picking
-    #
-    # def _set_default_sale_locations(self):
-    #     for picking in self:
-    #         if picking.picking_type_id.code != 'internal':
-    #             continue
-    #
-    #         user_sale_location = None
-    #         if picking.partner_id.user_id:
-    #             user_sale_location = picking.partner_id.user_id.partner_id.sale_location_id
-    #
-    #         partner_sale_location = picking.partner_id.sale_location_id
-    #
-    #         if user_sale_location and not picking.location_id:
-    #             picking.location_id = user_sale_location
-    #
-    #         if partner_sale_location and not picking.location_dest_id:
-    #             picking.location_dest_id = partner_sale_location
