@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="model_sales_commission_day_range" model="ir.model">
+            <field name="name">Sales Commission Day Range</field>
+            <field name="model">sales.commission.day.range</field>
+            <field name="state">manual</field>
+        </record>
+    </data>
+</odoo>

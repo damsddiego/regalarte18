@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sales_commission_day_range_tree" model="ir.ui.view">
+        <field name="name">sales.commission.day.range.tree</field>
+        <field name="model">sales.commission.day.range</field>
+        <field name="arch" type="xml">
+            <list string="Commission Day Ranges">
+                <field name="commission_id"/>
+                <field name="min_days"/>
+                <field name="max_days"/>
+                <field name="commission_percentage"/>
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sales_commission_day_range_form" model="ir.ui.view">
+        <field name="name">sales.commission.day.range.form</field>
+        <field name="model">sales.commission.day.range</field>
+        <field name="arch" type="xml">
+            <form string="Commission Day Range">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="commission_id"/>
+                            <field name="min_days"/>
+                            <field name="max_days"/>
+                        </group>
+                        <group>
+                            <field name="commission_percentage"/>
+                            <field name="name" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>
