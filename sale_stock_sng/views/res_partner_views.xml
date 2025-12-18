@@ -29,6 +29,10 @@
           <field name="sale_location_id"/>
         </xpath>
 
+        <field name="user_id" position="after">
+          <field name="team_id"/>
+        </field>
+
       </field>
     </record>
 

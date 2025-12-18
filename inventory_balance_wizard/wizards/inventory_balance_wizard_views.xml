@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Wizard form -->
+    <record id="view_inventory_balance_wizard_form" model="ir.ui.view">
+        <field name="name">inventory.balance.wizard.form</field>
+        <field name="model">inventory.balance.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Saldo de Inventario (Paso 1)">
+                <group>
+                    <group string="Ubicaciones">
+                        <field name="warehouse_id"/>
+                        <field name="location_ids" widget="many2many_tags"/>
+                        <field name="include_child_locations"/>
+                    </group>
+
+                    <group string="Filtros de producto">
+                        <field name="product_ids" widget="many2many_tags"/>
+                        <field name="categ_ids" widget="many2many_tags"/>
+                        <field name="only_positive_qty"/>
+                    </group>
+                </group>
+
+                <group string="Vista">
+                    <field name="group_by_product"/>
+                    <field name="group_by_location"/>
+                </group>
+
+                <footer>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                    <button string="Generar" type="object" name="action_open_quants" class="btn-primary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_inventory_balance_wizard" model="ir.actions.act_window">
+        <field name="name">Saldo de Inventario</field>
+        <field name="res_model">inventory.balance.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_inventory_balance_wizard"
+              name="Saldo de Inventario"
+              parent="stock.menu_warehouse_report"
+              action="action_inventory_balance_wizard"
+              sequence="10"/>
+
+</odoo>

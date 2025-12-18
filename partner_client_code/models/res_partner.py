@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
+from odoo.osv import expression
 
 class ResPartner(models.Model):
     _inherit = "res.partner"
@@ -48,3 +49,23 @@ class ResPartner(models.Model):
             partners = self.search(domain + args, limit=limit)
             return partners.name_get()
         return super().name_search(name=name, args=args, operator=operator, limit=limit)
+
+
+    @api.model
+    def _name_search(self, name='', args=None, operator='ilike', limit=100, name_get_uid=None):
+        args = args or []
+
+        if not name:
+            return super()._name_search(
+                name=name, args=args, operator=operator, limit=limit, name_get_uid=name_get_uid
+            )
+
+        domain = ['|',
+                  ('client_code', operator, name),
+                  ('name', operator, name)]
+
+        domain = expression.AND([domain, args])
+
+        return super()._name_search(
+            name='', args=domain, operator=operator, limit=limit, name_get_uid=name_get_uid
+        )

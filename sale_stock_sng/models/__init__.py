@@ -4,3 +4,4 @@ from . import stock_rule
 from . import stock_quant
 from . import stock_picking
 from . import account_move
+from . import product
