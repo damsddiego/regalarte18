@@ -148,6 +148,7 @@ actualizados = 0
 errores = []
 skips = 0
 commit_counter = 0
+partner_list = []
 
 print(f"🚀 Iniciando importación desde fila {header_row + 1}...")
 
@@ -219,9 +220,13 @@ for r in range(header_row + 1, ws.max_row + 1):
         # ======================
         if partner:
             partner.with_context(**CTX).write(vals)
+            if country_code == 'CR':
+                partner_list.append(partner.id)
             actualizados += 1
         else:
             PARTNER.with_context(**CTX).create(vals)
+            if country_code == 'CR':
+                partner_list.append(PARTNER.id)
             creados += 1
 
     except Exception as e:
@@ -268,3 +273,28 @@ if errores:
         print("⚠️ No pude guardar archivo de errores. Aquí van los primeros 30:")
         for line in errores[:30]:
             print(" -", line)
+
+
+import time
+
+PARTNER = env['res.partner']
+
+# Busca todos los contactos (ajusta el dominio si quieres filtrar)
+partners = PARTNER.search([('id', 'in', partner_list)])
+total = len(partners)
+print(f"Se encontraron {total} contactos.")
+
+for idx, partner in enumerate(partners, start=1):
+    try:
+        print(f"[{idx}/{total}] Ejecutando action_get_economic_activities en partner ID {partner.id} - {partner.display_name}")
+        partner.action_get_economic_activities()
+        env.cr.commit()  # Guarda cambios por cada contacto
+        print(f"[{idx}/{total}] ✅ OK")
+    except Exception as e:
+        env.cr.rollback()
+        print(f"[{idx}/{total}] ❌ Error en partner ID {partner.id}: {e}")
+
+    # Esperar al menos 5 segundos antes del siguiente
+    time.sleep(2)
+
+print("Proceso terminado.")
