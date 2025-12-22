@@ -1,0 +1,258 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+
+    <record id="report_import_manex" model="ir.actions.report">
+        <field name="name">Importaciones Ecuador</field>
+        <field name="model">stock.landed.cost</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">import_manex.template_import_manex</field>
+        <field name="report_file">import_manex.template_import_manex</field>
+        <field name="print_report_name">"Importación - " + (object.name)</field>
+        <field name="binding_model_id" ref="import_manex.model_stock_landed_cost"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="template_import_manex">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page" style="font-size: 12px;">
+                        <table class="table table-sm table-borderless" style="width: 100%; margin-bottom: 10px;">
+                            <thead>
+                                <tr>
+                                    <th colspan="6" class="text-center">
+                                        <h2 style="margin: 5px 0;">Importación -
+                                            <t t-esc="doc.name"/>
+                                        </h2>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <strong>Proveedor:</strong>
+                                    </td>
+                                    <td colspan="2">
+                                        <t t-if="doc.picking_ids">
+                                            <t t-esc="doc.picking_ids[0].partner_id.name"/>
+                                        </t>
+                                        <t t-if="not doc.picking_ids">N/A</t>
+                                    </td>
+                                    <td>
+                                        <strong>Fecha:</strong>
+                                    </td>
+                                    <td colspan="2">
+                                        <t t-esc="doc.date"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>Traslados:</strong>
+                                    </td>
+                                    <td colspan="2">
+                                        <t t-if="doc.picking_ids">
+                                            <t t-set="names" t-value="', '.join([p.name for p in doc.picking_ids])"/>
+                                            <t t-esc="names"/>
+                                        </t>
+                                        <t t-if="not doc.picking_ids">N/A</t>
+                                    </td>
+                                    <td>
+                                        <strong>Estado:</strong>
+                                    </td>
+                                    <td colspan="2">
+                                        <t t-esc="dict(doc.fields_get(allfields=['state'])['state']['selection'])[doc.state]"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>Responsable:</strong>
+                                    </td>
+                                    <td colspan="2">
+                                        <t t-esc="doc.create_uid.name"/>
+                                    </td>
+                                    <td>
+                                        <strong>F. de reporte:</strong>
+                                    </td>
+                                    <td colspan="2">
+                                        <t t-set="date_report"
+                                           t-value="datetime.datetime.today().strftime('%d/%m/%Y %H:%M')"/>
+                                        <t t-esc="date_report"/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <strong>Referencia:</strong>
+                                    </td>
+                                    <td colspan="4">
+                                        <t t-esc="doc.ref"/>
+
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <table class="table table-sm table-bordered" style="margin-bottom: 10px;">
+                            <thead style="background-color: #f0f0f0;">
+                                <tr>
+                                    <th class="text-center">Fecha</th>
+                                    <th class="text-center">Empresa</th>
+                                    <th class="text-center">Asiento contable</th>
+                                    <th class="text-center">Referencia</th>
+                                    <th class="text-center">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="total_import" t-value="0"/>
+                                <t t-set="total_move" t-value="0"/>
+
+                                <t t-if="doc.picking_ids">
+                                    <t t-set="compras"
+                                       t-value="[p.purchase_id for p in doc.picking_ids if p.purchase_id]"/>
+                                    <t t-set="total" t-value="sum([c.amount_untaxed for c in compras])"/>
+
+                                    <t t-foreach="compras" t-as="compra">
+                                        <tr style="color: #6c757d;">
+                                            <td>
+                                                <t t-esc="compra.date_order.strftime('%d/%m/%Y') if compra.date_order else ''"/>
+                                            </td>
+                                            <td>
+                                                <t t-esc="compra.partner_id.name"/>
+                                            </td>
+                                            <td>-</td>
+                                            <td>
+                                                <t t-esc="compra.name"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <t t-esc="'{:,.2f}'.format(compra.amount_untaxed)"/>
+                                            </td>
+                                        </tr>
+                                    </t>
+
+                                    <tr style="font-weight: bold; border-top: 2px solid #000;">
+                                        <td colspan="4" class="text-end">FOB:</td>
+                                        <td class="text-end">
+                                            <t t-esc="'{:,.2f}'.format(total)"/>
+                                            <t t-set="total_import" t-value="total_import + total"/>
+                                        </td>
+                                    </tr>
+                                </t>
+                                <t t-if="not doc.picking_ids">
+                                    <tr>
+                                        <td colspan="5" class="text-center">No existen traslados relacionados.</td>
+                                    </tr>
+                                </t>
+
+                                <t t-if="doc.move_line_ids">
+                                    <t t-foreach="doc.move_line_ids" t-as="move">
+                                        <tr>
+                                            <td>
+                                                <t t-esc="move.date"/>
+                                            </td>
+                                            <td>
+                                                <t t-esc="move.partner_id.name" t-if="move.partner_id"/>
+                                            </td>
+                                            <td>
+                                                <t t-esc="move.move_id.name" t-if="move.move_id"/>
+                                            </td>
+                                            <td>
+                                                <t t-esc="move.name"/>
+                                            </td>
+                                            <td class="text-end">
+                                                <t t-esc="'{:,.2f}'.format(move.balance)"/>
+                                            </td>
+                                        </tr>
+                                        <t t-set="total_move" t-value="total_move + move.balance"/>
+                                        <t t-set="total_import" t-value="total_import + move.balance"/>
+                                    </t>
+                                </t>
+
+                                <tr style="font-weight: bold; border-top: 2px solid #000;">
+                                    <td colspan="4" class="text-end">Total:</td>
+                                    <td class="text-end">
+                                        <t t-esc="'{:,.2f}'.format(total_move)"/>
+                                    </td>
+                                </tr>
+
+                                <tr style="font-weight: bold; border-top: 2px solid #000;">
+                                    <td colspan="4" class="text-end">Total General:</td>
+                                    <td class="text-end">
+                                        <t t-esc="'{:,.2f}'.format(total_import)"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <!-- AJUSTES DE VALORACIÓN -->
+                        <br/>
+                        <h4 style="margin-top: 20px;">Ajustes de Valoración</h4>
+                        <table class="table table-sm table-hover" style="font-size: 10px;">
+                            <thead style="background-color: #f8f9fa;">
+                                <tr>
+                                    <th class="text-center">Producto</th>
+                                    <th class="text-center">Cantidad</th>
+                                    <th class="text-center">Precio</th>
+                                    <th class="text-center">Valor original</th>
+                                    <th class="text-center">Costo</th>
+                                    <th class="text-center">Costo actual</th>
+                                    <th class="text-center">Nuevo valor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="productos" t-value="doc.get_valuation_summary_by_product()"/>
+                                <t t-set="total_quantity" t-value="sum([p['quantity'] for p in productos])"/>
+                                <t t-set="total_former_cost" t-value="sum([p['former_cost'] for p in productos])"/>
+                                <t t-set="total_new_cost" t-value="sum([p['new_cost'] for p in productos])"/>
+
+                                <t t-foreach="productos" t-as="item">
+                                    <tr>
+                                        <td>
+                                            <t t-esc="item['template'].name"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <t t-esc="'{:,.2f}'.format(item['quantity'])"/>
+                                        </td>
+                                        <td class="text-end" style="color:#007bff; font-weight:bold">
+                                            <t t-if="item['quantity'] > 0"
+                                               t-esc="'{:,.2f}'.format(item['former_cost'] / item['quantity'])"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <t t-esc="'{:,.2f}'.format(item['former_cost'])"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <t t-esc="'{:,.2f}'.format(item['additional_cost'])"/>
+                                        </td>
+                                        <td class="text-end" style="color:#ff2700; font-weight:bold">
+                                            <t t-if="item['quantity'] > 0"
+                                               t-esc="'{:,.2f}'.format(item['new_cost'] / item['quantity'])"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <t t-esc="'{:,.2f}'.format(item['new_cost'])"/>
+                                        </td>
+                                    </tr>
+                                </t>
+
+                                <!-- Fila de totales -->
+                                <tr style="font-weight: bold; background-color: #f1f1f1;">
+                                    <td class="text-end">Totales:</td>
+                                    <td class="text-end">
+                                        <t t-esc="'{:,.2f}'.format(total_quantity)"/>
+                                    </td>
+                                    <td class="text-center">–</td>
+                                    <td class="text-end">
+                                        <t t-esc="'{:,.2f}'.format(total_former_cost)"/>
+                                    </td>
+                                    <td class="text-center">–</td>
+                                    <td class="text-center">–</td>
+                                    <td class="text-end">
+                                        <t t-esc="'{:,.2f}'.format(total_new_cost)"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>
