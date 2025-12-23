@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <record id="action_inventory_balance_xlsx" model="ir.actions.report">
+        <field name="name">Inventario en Excel</field>
+        <field name="model">inventory.balance.wizard</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">inventory_balance_wizard.inventory_balance_xlsx</field>
+        <field name="report_file">inventory_balance_wizard.inventory_balance_xlsx</field>
+        <field name="print_report_name">'Inventario_%s' % (object.id)</field>
+    </record>
+</odoo>

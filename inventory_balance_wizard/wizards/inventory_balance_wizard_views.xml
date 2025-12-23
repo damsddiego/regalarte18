@@ -20,15 +20,20 @@
                         <field name="only_positive_qty"/>
                     </group>
                 </group>
-
+                <group>
                 <group string="Vista">
                     <field name="group_by_product"/>
                     <field name="group_by_location"/>
                 </group>
-
+                    <group string="Excel">
+                        <field name="show_first_in"/>
+                        <field name="show_last_in"/>
+                    </group>
+                </group>
                 <footer>
                     <button string="Cancelar" class="btn-secondary" special="cancel"/>
                     <button string="Generar" type="object" name="action_open_quants" class="btn-primary"/>
+                    <button string="Exportar Excel" type="object" name="action_export_xlsx" class="btn-success"/>
                 </footer>
             </form>
         </field>
