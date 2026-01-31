@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Wizard Form view for product to add stock locations in the view-->
+    <record id="product_stock_locations_wizard_form_view" model="ir.ui.view">
+        <field name="name">product.product.view.form.stock.locations.wizard</field>
+        <field name="model">stock.locations.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Stock By Locations">
+                <field name="def_warehouse" invisible="1"></field>
+                <div style="width: 100% !important;" class="text-center" invisible="not def_warehouse">
+                    <span class="fw-bold">On hand in default warehouse
+                        (<field name="def_warehouse" nolabel="1" class="oe_inline" 
+                        options="{&quot;no_quick_create&quot;: True, 'no_open': True, 'no_create': True}"/>): 
+                        <field name="qty_def_warehouse" nolabel="1" class="oe_inline" />/ 
+                        <field name="total_qty_on_hand" nolabel="1" class="oe_inline" />
+                    </span>
+                </div>
+                <div style="width: 100% !important; margin-top:20px;">
+                    <field name="product_location_ids" widget="one2many" nolabel="1">
+                        <list decoration-danger="forecast_qty &lt;= 0" decoration-warning="qty_free &lt;= 0">
+                            <field name="location_id"/>
+                            <field name="on_hand_qty" sum="Total On Hand"/>
+                            <field name="qty_free" sum="Total Free"/>
+                            <field name="qty_reserved" sum="Total Reserved" />
+                            <field name="forecast_qty" sum="Total Forecast" />
+                            <field name="qty_incoming" sum="Total Incoming" />
+                            <field name="qty_outgoing" sum="Total Outgoing" />
+                        </list>
+                    </field>
+                </div>
+                <footer>
+                    <button string="Cancel" class="btn-secondary" special="cancel" />
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

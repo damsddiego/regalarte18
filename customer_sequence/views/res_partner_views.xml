@@ -28,4 +28,22 @@
             </field>
         </field>
     </record>
+
+    <!-- Add search view with filter for unique_id -->
+    <record id="view_partner_filter" model="ir.ui.view">
+        <field name="name">res.partner.view.search.inherit.customer.sequence</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_res_partner_filter"/>
+        <field name="arch" type="xml">
+            <field name="name" position="after">
+                <field name="unique_id" string="Código cliente"
+                       filter_domain="[('unique_id', 'ilike', self)]"/>
+            </field>
+            <filter name="customer" position="after">
+                <separator/>
+                <filter name="filter_by_unique_id" string="Buscar por Código"
+                        domain="[('unique_id', '!=', '/')]"/>
+            </filter>
+        </field>
+    </record>
 </odoo>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Inherited Form view for product to add stock locations in the view-->
+    <record id="product_stock_locations_form_view" model="ir.ui.view">
+        <field name="name">product.product.view.form.inherit.stock.locations</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="product.product_normal_form_view" />
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='general_information']" position="after">
+                <page string="Stock By Locations" name="stock_locations"
+                    invisible="type != 'consu' or is_storable == False">
+                    <group colspan="2">
+                        <field colspan="2" name="stock_by_locations"
+                            mode="list" widget="one2many" nolabel="1">
+                            <list decoration-danger="forecast_qty &lt;= 0">
+                                <field name="location_id" />
+                                <field name="on_hand_qty" sum="Total On Hand" />
+                                <field name="qty_free" sum="Total Free" />
+                                <field name="qty_reserved" sum="Total Reserved" />
+                                <field name="forecast_qty" sum="Total Forecast" />
+                                <field name="qty_incoming" sum="Total Incoming" />
+                                <field name="qty_outgoing" sum="Total Outgoing" />
+                            </list>
+                        </field>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

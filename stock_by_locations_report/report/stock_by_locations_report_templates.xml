@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!--Templates for the stock location
+    report-->
+    <template id="report_stock_locations">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <div class="page" style="font-family:sans-serif">
+                    <div class="oe_structure">
+                        <h2
+                            style="text-align: center; background-color: #08619b; color: white;padding: 8px;">
+                            Stock By Locations Report
+                        </h2>
+                        <div style="margin-bottom: 20px;">
+                            <strong>Report Date:</strong>
+                            <span t-esc="datetime.datetime.now().strftime('%Y-%m-%d')" />
+                        </div>
+                        <table class="table table-bordered"
+                            style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background-color: #99b0e7; vertical-align: middle; text-align: left;">
+                                    <th>
+                                        <strong>Product Name</strong>
+                                    </th>
+                                    <th>
+                                        <strong>Location</strong>
+                                    </th>
+                                    <t t-if="1 in measures">
+                                        <th>
+                                            <strong>On Hand Qty</strong>
+                                        </th>
+                                    </t>
+                                    <t t-if="2 in measures">
+                                        <th>
+                                            <strong>Free To Use Qty</strong>
+                                        </th>
+                                    </t>
+                                    <t t-if="3 in measures">
+                                        <th>
+                                            <strong>Reserved Qty</strong>
+                                        </th>
+                                    </t>
+                                    <t t-if="4 in measures">
+                                        <th>
+                                            <strong>Forecast Qty</strong>
+                                        </th>
+                                    </t>
+                                    <t t-if="5 in measures">
+                                        <th>
+                                            <strong>Incoming Qty</strong>
+                                        </th>
+                                    </t>
+                                    <t t-if="6 in measures">
+                                        <th>
+                                            <strong>Outgoing Qty</strong>
+                                        </th>
+                                    </t>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Loop through grouped_data -->
+                                <t t-foreach="grouped_data.items()" t-as="group">
+                                    <t t-set="product_id" t-value="group[0]" />
+                                    <t t-set="product_data" t-value="group[1]" />
+
+                                    <!-- Loop through each product's data -->
+                                    <t t-foreach="product_data" t-as="data">
+                                        <tr>
+                                            <td t-esc="product_id" />
+                                            <td t-esc="data['location']" />
+
+                                            <t t-if="1 in measures">
+                                                <td t-esc="data['on_hand_qty']"
+                                                    style="text-align: right;" />
+                                            </t>
+                                            <t t-if="2 in measures">
+                                                <td t-esc="data['qty_free']"
+                                                    style="text-align: right;" />
+                                            </t>
+                                            <t t-if="3 in measures">
+                                                <td t-esc="data['qty_reserved']"
+                                                    style="text-align: right;" />
+                                            </t>
+                                            <t t-if="4 in measures">
+                                                <td t-esc="data['forecast_qty']"
+                                                    style="text-align: right;" />
+                                            </t>
+                                            <t t-if="5 in measures">
+                                                <td t-esc="data['qty_incoming']"
+                                                    style="text-align: right;" />
+                                            </t>
+                                            <t t-if="6 in measures">
+                                                <td t-esc="data['qty_outgoing']"
+                                                    style="text-align: right;" />
+                                            </t>
+                                        </tr>
+                                    </t>
+
+                                    <!-- Total row for the product -->
+                                    <tr style="background-color: #99dfe7;">
+                                        <td colspan="2" style="text-align: right;">
+                                            <strong>Total: </strong>
+                                        </td>
+
+                                        <t t-if="1 in measures">
+                                            <td style="text-align: right;">
+                                                <strong>
+                                                    <t
+                                                        t-esc="sum([x['on_hand_qty'] or 0 for x in product_data])" />
+                                                </strong>
+                                            </td>
+                                        </t>
+                                        <t t-if="2 in measures">
+                                            <td style="text-align: right;">
+                                                <strong>
+                                                    <t
+                                                        t-esc="sum([x['qty_free'] or 0 for x in product_data])" />
+                                                </strong>
+                                            </td>
+                                        </t>
+                                        <t t-if="3 in measures">
+                                            <td style="text-align: right;">
+                                                <strong>
+                                                    <t
+                                                        t-esc="sum([x['qty_reserved'] or 0 for x in product_data])" />
+                                                </strong>
+                                            </td>
+                                        </t>
+                                        <t t-if="4 in measures">
+                                            <td style="text-align: right;">
+                                                <strong>
+                                                    <t
+                                                        t-esc="sum([x['forecast_qty'] or 0 for x in product_data])" />
+                                                </strong>
+                                            </td>
+                                        </t>
+                                        <t t-if="5 in measures">
+                                            <td style="text-align: right;">
+                                                <strong>
+                                                    <t
+                                                        t-esc="sum([x['qty_incoming'] or 0 for x in product_data])" />
+                                                </strong>
+                                            </td>
+                                        </t>
+                                        <t t-if="6 in measures">
+                                            <td style="text-align: right;">
+                                                <strong>
+                                                    <t
+                                                        t-esc="sum([x['qty_outgoing'] or 0 for x in product_data])" />
+                                                </strong>
+                                            </td>
+                                        </t>
+                                    </tr>
+                                </t>
+                            </tbody>
+
+                        </table>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

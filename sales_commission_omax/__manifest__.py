@@ -14,15 +14,13 @@
     'depends': ['sale', 'account', 'product', 'uom'],#uom bcz data file
 	'data': [
 	    'security/group_security.xml',
-        'security/sales_commission_day_range_security.xml',
-        'security/ir.model.access.csv',
+	    'security/ir.model.access.csv',
 	    'data/product_data.xml',
 	    'data/commission_days_data.xml',
 	    'wizard/create_commission_bill_wiz.xml',
 	    'wizard/sales_commission_report_wiz.xml',
-        'views/sales_commission_day_range_views.xml',
 	    'views/sales_commission.xml',
-        'views/sales_commission_analysis.xml',
+	    'views/sales_commission_analysis.xml',
 	    'views/res_partner_view.xml',
 	    'views/sale_order.xml',
 	    'views/account_move.xml',

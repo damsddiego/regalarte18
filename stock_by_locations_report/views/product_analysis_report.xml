@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="quant_search_view" model="ir.ui.view">
+        <field name="name">product.analysis.report.search</field>
+        <field name="model">product.analysis.report</field>
+        <field name="arch" type="xml">
+            <search string="Quants">
+                <field name="product_tmpl_id" />
+                <field name="product_id" />
+                <field name="categ_id" />
+                <field name="location_id" />
+                <field name="company_id" groups="base.group_multi_company" />
+                <group expand='0' string='Filters'>
+                    <filter name="favorite_products" string="Favorite"
+                        domain="[('product_tmpl_id.is_favorite', '=', True)]" />
+                    <separator />
+                    <filter name="negative" string="Negative Stock"
+                        domain="[('on_hand_qty', '&lt;', 0.0)]" />
+                    <filter name="on_hand_qty" string="On Hand Qty"
+                        domain="[('on_hand_qty', '&gt;', 0.0)]" />
+                    <filter name="qty_free" string="Free Qty"
+                        domain="[('qty_free', '!=', 0.0)]" />
+                    <filter name="qty_reserved" string="Reserved"
+                        domain="[('qty_reserved', '&gt;', 0.0)]" />
+                    <filter name="forecast_qty" string="Forecast Qty"
+                        domain="[('forecast_qty', '!=', 0.0)]" />
+                    <filter name="incoming_qty" string="Incoming Qty"
+                        domain="[('qty_incoming', '&gt;', 0.0)]" />
+                    <filter name="qty_outgoing" string="Outgoing Qty"
+                        domain="[('qty_outgoing', '&gt;', 0.0)]" />
+
+                </group>
+                <group expand='0' string='Group by...'>
+                    <filter string='Location' name="locationgroup" domain="[]"
+                        context="{'group_by': 'location_id'}" />
+                    <filter string='Product' name="productgroup"
+                        context="{'group_by': 'product_tmpl_id'}" />
+                    <filter string='Product Variant' name="productvariantgroup"
+                        context="{'group_by': 'product_id'}" />
+                    <filter string='Product Category' name="productcategorygroup"
+                        context="{'group_by': 'categ_id'}" />
+                    <filter string='Company' name="company" domain="[]"
+                        context="{'group_by': 'company_id'}"
+                        groups="base.group_multi_company" />
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Pivot view for product variants-->
+    <record id="product_analysis_report_view_pivot" model="ir.ui.view">
+        <field name="name">product.analysis.report.view.pivot</field>
+        <field name="model">product.analysis.report</field>
+        <field name="arch" type="xml">
+            <pivot string="Stock Analysis Report">
+                <field name="location_id" type="col" />
+                <field name="product_id" type="row" />
+                <field name="on_hand_qty" type="measure" />
+                <field name="qty_free" type="measure" />
+                <field name="qty_reserved" type="measure" />
+                <field name="forecast_qty" type="measure" />
+                <!-- 
+                <field name="qty_incoming" type="measure"/>
+                <field name="qty_outgoing" type="measure"/>
+                -->
+            </pivot>
+        </field>
+    </record>
+
+    <!-- list view for product variants-->
+    <record id="product_analysis_report_view_list" model="ir.ui.view">
+        <field name="name">product_analysis_report_view_list</field>
+        <field name="model">product.analysis.report</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="product_id" />
+                <field name="location_id" />
+                <field name="on_hand_qty" />
+                <field name="qty_free" />
+                <field name="qty_reserved" />
+                <field name="forecast_qty" />
+                <field name="qty_incoming" />
+                <field name="qty_outgoing" />
+            </list>
+        </field>
+    </record>
+
+    <!-- Graph view for product variants-->
+    <record id="product_analysis_report_view_graph" model="ir.ui.view">
+        <field name="name">product.analysis.report.graph</field>
+        <field name="model">product.analysis.report</field>
+        <field name="arch" type="xml">
+            <graph string="Stock Analysis Report">
+                <field name="location_id" />
+                <field name="product_id" />
+                <field name="on_hand_qty" type="measure" />
+            </graph>
+        </field>
+    </record>
+
+    <!-- Action for the for Products -->
+    <record model="ir.actions.act_window" id="product_pivot_view_action">
+        <field name="context">{}</field>
+        <field name="name">Stock Analysis Report</field>
+        <field name="res_model">product.analysis.report</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="view_id" ref="product_analysis_report_view_pivot" />
+        <field name="domain">['|', ('company_id', '=', False), ('company_id', 'in', allowed_company_ids)]</field>
+    </record>
+
+
+</odoo>

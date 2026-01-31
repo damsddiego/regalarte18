@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!--Report action for stock analysis by location-->
+     <record id="stock_by_locations_report" model="ir.actions.report">
+         <field name="name">Stock Locations Report</field>
+         <field name="model">stock.move</field>
+         <field name="report_type">qweb-pdf</field>
+         <field name="report_name">stock_by_locations_report.report_stock_locations</field>
+         <field name="report_file">stock_by_locations_report.report_stock_locations</field>
+         <field name="print_report_name">'Stock Location Report - %s'</field>
+         <field name="binding_type">report</field>
+     </record>
+</odoo>

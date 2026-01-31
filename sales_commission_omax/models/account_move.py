@@ -199,11 +199,14 @@ class AccountMove(models.Model):
 
     def get_commission_percentage_by_days(self, commission, days):
         """Get commission percentage based on days difference"""
-        ranges = commission.day_range_ids.sorted(lambda r: (r.min_days, r.max_days if (r.max_days or r.max_days == 0) else float('inf')))
-        for day_range in ranges:
-            if day_range.matches(days):
-                return day_range.commission_percentage
-        return 0.0
+        if days <= 30:
+            return commission.days_0_30_commission
+        elif days <= 60:
+            return commission.days_31_60_commission
+        elif days <= 90:
+            return commission.days_61_90_commission
+        else:
+            return commission.days_90_plus_commission
 
     def create_standard_commission(self, commission):
         for line in self.invoice_line_ids.filtered(lambda l: l.display_type == 'product'):

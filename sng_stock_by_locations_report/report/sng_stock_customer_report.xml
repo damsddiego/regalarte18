@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Report Action -->
+    <record id="action_report_stock_customer" model="ir.actions.report">
+        <field name="name">Stock By Customer Location</field>
+        <field name="model">sng.stock.customer.report</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sng_stock_by_locations_report.report_stock_customer_template</field>
+        <field name="report_file">sng_stock_by_locations_report.report_stock_customer_template</field>
+        <field name="binding_model_id" ref="model_sng_stock_customer_report"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="base.paperformat_euro"/>
+    </record>
+</odoo>

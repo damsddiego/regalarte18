@@ -9,6 +9,7 @@
                 <group name="sale" position="inside">
                     <field name="affiliated" />
                     <field name="is_salesperson" />
+                    <field name="assigned_salesperson_id" invisible="is_salesperson" />
                 </group>
             </field>
         </record>

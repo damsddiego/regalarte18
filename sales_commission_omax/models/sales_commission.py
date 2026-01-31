@@ -27,14 +27,13 @@ class SalesCommission(models.Model):
     salesperson_ids = fields.Many2many('res.partner', 'partner_commission_rel', 'commission_id', 'partner_id', string='Sales Person', copy=False, domain="[('is_salesperson', '=', True)]", required=True)
     #standard
     standard_commission = fields.Float(string='Standard Commission %', copy=False)
-
+    
+    # Campos para comisiones por días de vencimiento
     commission_by_days = fields.Boolean(string='Commission by Days', default=False)
-    day_range_ids = fields.One2many(
-        'sales.commission.day.range',
-        'commission_id',
-        string='Day Ranges',
-        copy=True
-    )
+    days_0_30_commission = fields.Float(string='0-30 Days Commission %', copy=False)
+    days_31_60_commission = fields.Float(string='31-60 Days Commission %', copy=False)
+    days_61_90_commission = fields.Float(string='61-90 Days Commission %', copy=False)
+    days_90_plus_commission = fields.Float(string='90+ Days Commission %', copy=False)
     
     #partner_based
     affiliated_partner_commission = fields.Float(string='Affiliated Partner Commission %', copy=False)
@@ -70,8 +69,10 @@ class SalesCommission(models.Model):
             ####        
             if r.commission_type == 'standard' and not r.standard_commission and not r.commission_by_days:
                 raise ValidationError(_("'Standard Commission %' must be bigger than 0."))
-            if r.commission_by_days and not r.day_range_ids:
-                raise ValidationError(_("At least one day range must be configured when 'Commission by Days' is enabled."))
+            # Validar comisiones por días si están activas
+            if r.commission_by_days:
+                if not r.days_0_30_commission and not r.days_31_60_commission and not r.days_61_90_commission and not r.days_90_plus_commission:
+                    raise ValidationError(_("At least one commission percentage by days must be set when 'Commission by Days' is enabled."))
             if r.commission_type == 'partner_based': 
                 if not r.affiliated_partner_commission:
                     raise ValidationError(_("'Affiliated Partner Commission %' must be bigger than 0."))
@@ -94,9 +95,11 @@ class SalesCommission(models.Model):
             if rec.start_date >= self.start_date and rec.end_date <= self.end_date:
                 raise ValidationError(_("Can not create record for same user."))
         if self.commission_type == 'standard' and not self.standard_commission and not self.commission_by_days:
-            raise ValidationError(_("'Standard Commission %' must be bigger than 0."))
-        if self.commission_by_days and not self.day_range_ids:
-            raise ValidationError(_("At least one day range must be configured when 'Commission by Days' is enabled."))
+                raise ValidationError(_("'Standard Commission %' must be bigger than 0."))
+        # Validar comisiones por días si están activas
+        if self.commission_by_days:
+            if not self.days_0_30_commission and not self.days_31_60_commission and not self.days_61_90_commission and not self.days_90_plus_commission:
+                raise ValidationError(_("At least one commission percentage by days must be set when 'Commission by Days' is enabled."))
         if self.commission_type == 'partner_based': 
             if not self.affiliated_partner_commission:
                 raise ValidationError(_("'Affiliated Partner Commission %' must be bigger than 0."))

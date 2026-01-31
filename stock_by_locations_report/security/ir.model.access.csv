@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_stock_location_product,access.product.analysis.report,model_product_analysis_report,base.group_user,1,1,1,1
+access_stock_locations_wizard,access.stock.locations.wizard,model_stock_locations_wizard,base.group_user,1,1,1,1
+access_stock_by_locations_report,access.stock.by.locations.report,model_stock_by_locations_report,base.group_user,1,1,1,1
+access_report_stock_by_locations,access.report.stock_by_locations,model_report_stock_by_locations_report_report_stock_locations,base.group_user,1,1,1,1
+access_measure_option,access.measure.option,model_measure_option,base.group_user,1,1,1,1

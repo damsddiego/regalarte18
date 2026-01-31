@@ -1,0 +1,27 @@
+<odoo>
+    <data>
+        <!-- Define a new xpath targeting the order_line list view -->
+        <record id="purchase_order_line_stock_locations" model="ir.ui.view">
+            <field name="name">purchase.order.line.stock.locations</field>
+            <field name="model">purchase.order</field>
+            <field name="inherit_id" ref="purchase.purchase_order_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//page/field[@name='order_line']/form/group/group/div[hasclass('o_row')]/field[@name='product_uom']"
+                       position="after">
+                    <button name="open_stock_locations"
+                            title="Stock locations"
+                            type="object"
+                            icon="fa-cubes"/>
+                </xpath>
+                <xpath expr="//page/field[@name='order_line']/list/field[@name='qty_invoiced']" position="before">
+                    <button name="open_stock_locations"
+                            title="Stock by locations report"
+                            type="object"
+                            icon="fa-cubes"
+                            width="20px"
+                            invisible="product_type != 'consu'"/>
+                </xpath>
+            </field>
+        </record>
+    </data>
+</odoo>

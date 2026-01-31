@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Wizard Form View -->
+    <record id="view_stock_by_customer_wizard_form" model="ir.ui.view">
+        <field name="name">stock.by.customer.wizard.form</field>
+        <field name="model">stock.by.customer.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Stock by Customer Report">
+                <group>
+                    <group name="filters" invisible="state == 'done'">
+                        <field name="state" invisible="1"/>
+                        <field name="company_id" groups="base.group_multi_company" options="{'no_create': True}"/>
+                        <field name="date_report"/>
+                        <field name="include_zero_stock"/>
+                    </group>
+                    <group name="download" invisible="state != 'done'">
+                        <field name="report_filename" invisible="1"/>
+                        <field name="report_file" filename="report_filename" invisible="1"/>
+                        <div class="alert alert-success" role="alert">
+                            <p><strong>Reporte generado exitosamente!</strong></p>
+                            <p>Click en el botón "Descargar" para obtener el archivo Excel.</p>
+                        </div>
+                    </group>
+                </group>
+
+                <footer>
+                    <button name="action_generate_report"
+                            string="Generar Reporte"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state == 'done'"/>
+
+                    <button name="action_download"
+                            string="Descargar"
+                            type="object"
+                            class="btn-primary"
+                            invisible="state != 'done'"/>
+
+                    <button string="Cerrar"
+                            class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Wizard Action -->
+    <record id="action_stock_by_customer_wizard" model="ir.actions.act_window">
+        <field name="name">Stock by Customer Report</field>
+        <field name="res_model">stock.by.customer.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="base.model_res_partner"/>
+    </record>
+
+    <!-- Menu Items -->
+    <menuitem id="menu_stock_by_customer_root"
+              name="Stock by Customer"
+              parent="stock.menu_stock_warehouse_mgmt"
+              sequence="100"/>
+
+    <menuitem id="menu_stock_by_customer_report"
+              name="Stock by Customer Report"
+              parent="menu_stock_by_customer_root"
+              action="action_stock_by_customer_wizard"
+              sequence="10"/>
+
+</odoo>

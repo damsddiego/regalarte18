@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        
+        <!-- Sale Order Form View - Add Location Field -->
+        <record id="view_order_form_location" model="ir.ui.view">
+            <field name="name">sale.order.form.location</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_form"/>
+            <field name="arch" type="xml">
+                
+                <!-- Add location field after customer -->
+                <xpath expr="//field[@name='partner_id']" position="after">
+                    <field name="location_id" 
+                           options="{'no_create': True, 'no_create_edit': True}"
+                           readonly="state not in ('draft', 'sent')"
+                           required="order_line"/>
+                </xpath>
+                
+            </field>
+        </record>
+
+        <!-- Sale Order Tree View - Add Location Column -->
+        <record id="view_order_tree_location" model="ir.ui.view">
+            <field name="name">sale.order.tree.location</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_quotation_tree"/>
+            <field name="arch" type="xml">
+                
+                <xpath expr="//field[@name='warehouse_id']" position="after">
+                    <field name="location_id" optional="show"/>
+                </xpath>
+                
+            </field>
+        </record>
+
+        <!-- Stock Picking Form View - Show Sale Location (readonly) -->
+        <record id="view_picking_form_sale_location" model="ir.ui.view">
+            <field name="name">stock.picking.form.sale.location</field>
+            <field name="model">stock.picking</field>
+            <field name="inherit_id" ref="stock.view_picking_form"/>
+            <field name="arch" type="xml">
+                
+                <xpath expr="//field[@name='location_id']" position="after">
+                    <field name="sale_location_id" 
+                           invisible="not sale_location_id"
+                           readonly="1"/>
+                </xpath>
+                
+            </field>
+        </record>
+
+    </data>
+</odoo>

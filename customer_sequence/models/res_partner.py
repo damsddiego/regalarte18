@@ -31,19 +31,21 @@ class ResPartner(models.Model):
         help="The Unique Sequence no",
         default='/',
         copy=False,
+        index=True,  # Index for better search performance
     )
 
-    @api.model
-    def create(self, values):
+    @api.model_create_multi
+    def create(self, vals_list):
         """Super create function for generating sequence.
 
         Only sets the ``unique_id`` field; no longer modifica el nombre del
         partner para evitar que el código aparezca varias veces en pantalla.
         """
-        res = super(ResPartner, self).create(values)
+        records = super(ResPartner, self).create(vals_list)
         company = self.env.company.sudo()
-        if res.unique_id == '/':
-            code = company.next_code or company.customer_code
-            res.unique_id = code
-            company.write({'next_code': code + 1})
-        return res
+        for rec in records:
+            if rec.unique_id == '/':
+                code = company.next_code or company.customer_code
+                rec.unique_id = code
+                company.write({'next_code': code + 1})
+        return records

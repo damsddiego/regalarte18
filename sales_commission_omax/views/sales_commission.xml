@@ -26,28 +26,10 @@
                             <field name="commission_apply_on"/>
                             <field name="end_date"/>
                             <field name="standard_commission" required="commission_type == 'standard' and not commission_by_days" invisible="commission_type != 'standard' or commission_by_days"/>
-                            <field name="day_range_ids" invisible="commission_type != 'standard' or not commission_by_days">
-                                <list editable="bottom">
-                                    <field name="min_days"/>
-                                    <field name="max_days"/>
-                                    <field name="commission_percentage"/>
-                                    <field name="name" readonly="1"/>
-                                </list>
-                                <form string="Day Range">
-                                    <sheet>
-                                        <group>
-                                            <group>
-                                                <field name="min_days"/>
-                                                <field name="max_days"/>
-                                            </group>
-                                            <group>
-                                                <field name="commission_percentage"/>
-                                                <field name="name" readonly="1"/>
-                                            </group>
-                                        </group>
-                                    </sheet>
-                                </form>
-                            </field>
+                            <field name="days_0_30_commission" invisible="commission_type != 'standard' or not commission_by_days"/>
+                            <field name="days_31_60_commission" invisible="commission_type != 'standard' or not commission_by_days"/>
+                            <field name="days_61_90_commission" invisible="commission_type != 'standard' or not commission_by_days"/>
+                            <field name="days_90_plus_commission" invisible="commission_type != 'standard' or not commission_by_days"/>
                             <field name="non_affiliated_partner_commission" required="commission_type == 'partner_based'" invisible="commission_type != 'partner_based'"/>
                             <!-- widget="monetary" options="{'currency_field': 'currency_id'}"-->
                         </group>

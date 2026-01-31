@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="measure_on_hand" model="measure.option">
+            <field name="name">On Hand</field>
+        </record>
+        <record id="measure_free_to_use" model="measure.option">
+            <field name="name">Free To Use</field>
+        </record>
+        <record id="measure_reserved" model="measure.option">
+            <field name="name">Reserved</field>
+        </record>
+        <record id="measure_forecast" model="measure.option">
+            <field name="name">Forecast</field>
+        </record>
+        <record id="measure_incoming" model="measure.option">
+            <field name="name">Incoming</field>
+        </record>
+        <record id="measure_outgoing" model="measure.option">
+            <field name="name">Outgoing</field>
+        </record>
+    </data>
+</odoo>

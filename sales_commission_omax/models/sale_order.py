@@ -10,6 +10,11 @@ class SaleOrder(models.Model):
     commission_analysis_line = fields.One2many('sales.commission.analysis','sale_order_id','Sales Commission')
     salesperson_id = fields.Many2one('res.partner', 'Salesperson', domain="[('is_salesperson', '=', True)]", help="Salesperson assigned to this order for commission purposes.")
 
+    @api.onchange('partner_id')
+    def _onchange_partner_id_salesperson(self):
+        if self.partner_id and self.partner_id.assigned_salesperson_id:
+            self.salesperson_id = self.partner_id.assigned_salesperson_id
+
     def create_product_commission_analysis_line(self, commission, commission_line, order_lines):
         for line in order_lines:
             order_id = line.order_id

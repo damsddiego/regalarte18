@@ -5,7 +5,12 @@ This module extends the functionality of the Sales Commission OMAX module to all
 ## New Features
 
 ### Commission by Days
-The module now allows you to configure different commission percentages based on the number of days between the invoice date and due date. The ranges are fully configurable per commission using the "Day Ranges" table, so you can define custom boundaries (e.g., 0-15, 16-45, 46-120, 121+) and the commission percentage for each range.
+The module now allows you to configure different commission percentages based on the number of days between the invoice date and due date:
+
+- 0-30 days
+- 31-60 days
+- 61-90 days
+- 90+ days
 
 ## Configuration
 
@@ -13,7 +18,11 @@ The module now allows you to configure different commission percentages based on
 2. Create a new commission or edit an existing one
 3. Select "Standard" as the Commission Type
 4. Check the "Commission by Days" box
-5. Add one or more entries in the "Day Ranges" table, specifying the minimum and maximum number of days (leave max empty for an open-ended range) and the commission percentage to apply when the invoice falls into that range.
+5. Fill in the commission percentages for each day range:
+   - 0-30 Days Commission %
+   - 31-60 Days Commission %
+   - 61-90 Days Commission %
+   - 90+ Days Commission %
 
 ## How It Works
 
@@ -24,16 +33,16 @@ When an invoice is validated or paid (depending on your commission configuration
 
 ## Example
 
-If you configure ranges like:
+If you configure:
 - 0-30 days: 5%
 - 31-60 days: 3%
 - 61-90 days: 2%
 - 90+ days: 1%
 
-And an invoice has a due date 45 days after the invoice date, the system will apply a 3% commission. You can change the ranges and percentages to match your business rules.
+And an invoice has a due date 45 days after the invoice date, the system will apply a 3% commission.
 
 ## Notes
 
 - The "Commission by Days" feature only works with "Standard" commission type
 - If "Commission by Days" is enabled, the standard commission percentage field is hidden
-- At least one day range must be configured when "Commission by Days" is enabled
+- At least one commission percentage must be set when "Commission by Days" is enabled

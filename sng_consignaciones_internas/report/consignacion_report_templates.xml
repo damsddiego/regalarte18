@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="report_consignacion_delivery">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Entrega de consignación</h2>
+                        <div class="row mt-2">
+                            <div class="col-6">
+                                <strong>Documento:</strong>
+                                <span t-esc="o.name"/>
+                            </div>
+                            <div class="col-6">
+                                <strong>Fecha:</strong>
+                                <span t-if="o.scheduled_date" t-field="o.scheduled_date" t-options="{'widget': 'date'}"/>
+                                <span t-elif="o.date_done" t-field="o.date_done" t-options="{'widget': 'date'}"/>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-6">
+                                <strong>Cliente consignatario:</strong>
+                                <span t-esc="o.partner_id.display_name or ''"/>
+                            </div>
+                            <div class="col-6">
+                                <strong>Origen / Destino:</strong>
+                                <span t-esc="o.location_id.display_name"/> → <span t-esc="o.location_dest_id.display_name"/>
+                            </div>
+                        </div>
+                        <table class="table table-sm mt-3">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-end">Cantidad</th>
+                                    <th class="text-end">Precio unitario</th>
+                                    <th class="text-end">Subtotal</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="o.move_ids_without_package" t-as="m">
+                                    <tr>
+                                        <td>
+                                            <span t-esc="m.product_id.display_name"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <span t-esc="m.product_uom_qty"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <span t-field="m.price_unit" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <span t-field="m.subtotal" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                        <div class="row mt-2">
+                            <div class="col-6"></div>
+                            <div class="col-6 text-end">
+                                <strong>Total:</strong>
+                                <span t-field="o.amount_total" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
+                            </div>
+                        </div>
+                        <div class="row mt-5">
+                            <div class="col-6">
+                                <div>______________________________</div>
+                                <div>Entregado por</div>
+                            </div>
+                            <div class="col-6">
+                                <div>______________________________</div>
+                                <div>Recibido por</div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

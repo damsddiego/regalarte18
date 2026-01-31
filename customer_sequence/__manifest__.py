@@ -31,10 +31,12 @@
     'maintainer': 'Cybrosys Techno Solutions',
     'modificador': 'SNG CLOUD SRL',
     'website': 'https://www.cybrosys.com',
-    'depends': ['sale_management'],
+    'depends': ['sale_management', 'account'],
     'data': [
         'views/res_company_views.xml',
         'views/res_partner_views.xml',
+        'views/sale_order_views.xml',
+        'views/account_move_views.xml',
     ],
     'images': ['static/description/banner.png'],
     'license': 'AGPL-3',

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_picking_form_consignation" model="ir.ui.view">
+        <field name="name">stock.picking.form.consignation</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <field name="is_consignation_delivery" invisible="1"/>
+            </xpath>
+            <xpath expr="//field[@name='picking_type_id']" position="after">
+                <field name="partner_id" string="Cliente consignatario"
+                       invisible="not is_consignation_delivery"
+                       required="is_consignation_delivery"/>
+            </xpath>
+            <xpath expr="//sheet" position="inside">
+                <group invisible="not is_consignation_delivery">
+                    <field name="currency_id" invisible="1"/>
+                    <field name="amount_total" readonly="1"/>
+                </group>
+            </xpath>
+            <xpath expr="//field[@name='move_ids_without_package']/list" position="inside">
+                <field name="currency_id" invisible="1"/>
+                <field name="price_unit" readonly="1"
+                       invisible="not picking_id.is_consignation_delivery"/>
+                <field name="subtotal" readonly="1"
+                       invisible="not picking_id.is_consignation_delivery"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_picking_form_consignation_price" model="ir.ui.view">
+        <field name="name">stock.picking.form.consignation.price</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="sng_consignaciones_internas.view_picking_form_consignation"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='move_ids_without_package']/list/field[@name='price_unit']" position="attributes">
+                <attribute name="readonly">0</attribute>
+                <attribute name="groups">sng_consignaciones_internas.group_consignation_delivery_price</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <menuitem id="menu_stock_by_locations_report"
+        name="Stock By Locations"
+        sequence="5"
+        parent="stock.menu_stock_root"
+        groups="stock_by_locations_report.group_stock_by_locations_report"
+    />
+    <menuitem id="menu_product_pivot_report"
+        name="Stock By Locations"
+        sequence="0"
+        action="product_pivot_view_action"
+        parent="menu_stock_by_locations_report"
+    />
+    <menuitem id="menu_product_print_report"
+        name="Print Report"
+        sequence="1"
+        action="stock_by_locations_report_menu_action"
+        parent="menu_stock_by_locations_report"
+    />
+</odoo>

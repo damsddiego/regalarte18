@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.5.0/css/font-awesome.min.css">
+
+    <style>
+        .nav-tabs li .active {
+            background-color: #bb89aa;
+            color: #fff !important;
+        }
+
+        .accordion .card-body {
+            background-color: #f0f4f7;
+        }
+
+        .accordion .fa {
+            margin-right: 0.5rem;
+        }
+
+        .accordion button,
+        .accordion button:hover,
+        .accordion button:focus {
+            text-decoration: none;
+        }
+
+        .card-header:after {
+            content: "\2212";
+            color: #000;
+            font-weight: bold;
+            float: left;
+            margin-right: 13px;
+            margin-left: 0px;
+            font-size: 18px;
+        }
+
+        .collapsed:after {
+            content: '\002B';
+        }
+    </style>
+
+    <title>Stock By Location</title>
+
+    <script>
+        // JavaScript to handle zoom on click for both the image and the zoom icon
+        document.querySelectorAll('.screenshot img, .screenshot .zoom-icon').forEach(function (element) {
+            element.addEventListener('click', function () {
+                const img = this.closest('.screenshot').querySelector('img');
+                img.classList.toggle('zoomed'); // Toggle the 'zoomed' class on click
+            });
+        });
+    </script>
+</head>
+
+<body>
+    <div class="container" style="width:80vw">
+        <div class="row mb-5" style="padding: 3rem 2.5rem !important; background-color: #007BFF !important;">
+            <div class="col-lg-12 d-flex flex-column align-items-center;">
+                <h1 class="text-center text-uppercase"
+                    style="font-size: 34px !important; color: #007BFF; font-weight: bold !important;">
+                    <span style="color:#fff;">Stock By Location</span>
+                </h1>
+                <p class="my-1 text-center" style=" color: #fff !important;font-size: 18px;">
+                    Optimize your inventory control with powerful multi-view reporting and export capabilities</p>
+            </div>
+        </div>
+
+        <div class="col-lg-12 d-flex justify-content-center align-items-center mt-3" style="margin:2rem 0;">
+            <!-- Screen Wrapper with Custom Reduced Border Radius -->
+            <div class="screen-frame shadow-lg p-3 mb-5 bg-white" style="width: 100%; max-width: 1000px; border-radius: 15px;">
+                <img src="assets/screenshots/overview.gif" width="100%" height="auto" class="img-responsive" style="border-radius: 5px;">
+            </div>
+        </div>
+        
+        <!--Overview-->
+        <section class="oe_container pb-0">
+            <div class="mt64 mb0">
+
+                <div class="col-lg-12 d-flex flex-column align-items-center">
+                    <h1 class="text-center text-uppercase"
+                        style="font-size:30px !important; color:#791d97; font-weight:bold !important">
+                        <span style="color:#007BFF">Overview</span>
+                        <sup>
+                        </sup>
+                    </h1>
+                    <p class="my-1 text-center text-uppercase"
+                        style="letter-spacing:2px !important; color:#74788D !important">
+                        Stock By Locations Balance | Multi-company Stocks Balance</p>
+                </div>
+
+                <div class="col-sm-12 py-4">
+                    <h4 style="text-indent: 2em; text-align: justify;">
+                        This module enhances stock management by offering real-time inventory tracking and detailed
+                        insights across multiple locations,
+                        ensuring streamlined and accurate inventory control.
+                        With interactive pivot, tree, and graph views, it's easy to analyze inventory for multiple
+                        companies.
+                        Integrated with purchase and sales orders, and enhanced visibility in product variant
+                        management.
+                    </h4>
+                </div>
+
+            </div>
+        </section>
+        <!--End of Overview-->
+
+        <section class="oe_container">
+            <div class="mt32">
+                <h1 class="text-center text-uppercase"
+                    style="font-size:30px !important; color:#791d97; font-weight:bold !important">
+                    <span style="color:#007BFF">Key Features</span>
+                    <sup>
+                    </sup>
+                </h1>
+                <div class="row">
+                    <div class="col-md-6 col-sm-12 mt32">
+                        <div class="container shadow d-flex align-items-center justify-content-center"
+                            style="border-radius: 15px;padding: 25px 0px;min-height: 100px; margin: 15px auto;">
+                            <div class="col-md-3 d-flex align-items-center justify-content-center" style="float:left">
+                                <img class="img img-responsive" src="assets/icons/1.png"
+                                    style="max-width: 55px; max-height: 55px;">
+
+                            </div>
+                            <div class="col-md-9" style="padding-left:0; float:left; width:70%">
+                                <h3 class="mt16 mb2" style=" font-size:22px; color: #781d96;">
+                                    Multi-View Reporting</h3>
+                                <p class=" mt8 mb-0" style="color: #280135; margin-bottom: 0px;">
+                                    Analyze inventory with pivot, tree, and graph views for in-depth stock insights.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-sm-12 mt32">
+                        <div class="container shadow d-flex align-items-center justify-content-center"
+                            style="border-radius: 15px;padding: 25px 0px;min-height: 100px; margin: 15px auto;">
+                            <div class="col-md-3 d-flex align-items-center justify-content-center" style="float:left">
+                                <img class="img img-responsive" src="assets/icons/2.png"
+                                    style="max-width: 55px; max-height: 55px;">
+                            </div>
+                            <div class="col-md-9" style="padding-left:0; float:left; width:70%">
+                                <h3 class="mt16 mb2" style=" font-size:22px; color: #781d96;">
+                                    Customizable Reports</h3>
+                                <p class=" mt8 mb-0" style="color: #280135; margin-bottom: 0px;">
+                                    Generate detailed PDF and XLSX reports tailored to your business needs. </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-sm-12">
+                        <div class="container shadow d-flex align-items-center justify-content-center"
+                            style="border-radius: 15px;padding: 25px 0px;min-height: 100px; margin: 15px auto;">
+                            <div class="col-md-3 d-flex align-items-center justify-content-center" style="float:left">
+                                <img class="img img-responsive" src="assets/icons/3.png"
+                                    style="max-width: 55px; max-height: 55px;">
+                            </div>
+                            <div class="col-md-9" style="padding-left:0; float:left; width:70%">
+                                <h3 class="mt16 mb2" style=" font-size:22px; color: #781d96;">
+                                    Purchase/Sales Stock By Location</h3>
+                                <p class=" mt8 mb-0" style="color: #280135; margin-bottom: 0px;">
+                                    Track and manage purchase and sales stock levels by location.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-sm-12">
+                        <div class="container shadow d-flex align-items-center justify-content-center"
+                            style="border-radius: 15px;padding: 25px 0px;min-height: 100px; margin: 15px auto;">
+                            <div class="col-md-3 d-flex align-items-center justify-content-center" style="float:left">
+                                <img class="img img-responsive" src="assets/icons/4.png"
+                                    style="max-width: 55px; max-height: 55px;">
+                            </div>
+                            <div class="col-md-9" style="padding-left:0; float:left; width:70%;">
+                                <h3 class="mt16 mb2" style=" font-size:22px; color: #781d96;">
+                                    Multi-Company Support</h3>
+                                <p class=" mt8 mb-0" style="color: #280135; margin-bottom: 0px;">
+                                    Manage inventory across multiple companies with ease and efficiency.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="oe_container pt16 mt0 pb-5">
+            <div class="row ">
+                <h3 style="color:#091E42; opacity:1; font-family:&quot;Montserrat&quot;; text-align:center; margin:auto; padding:25px; font-weight:600"
+                    class="oe_slogan">
+                </h3>
+                <div class="col-lg-12 d-flex flex-column align-items-center">
+                    <h1 class="text-center text-uppercase"
+                        style="font-size:30px !important; color:#791d97; font-weight:bold !important">
+                        <span style="color:#007BFF">Benefits</span>
+                        <sup>
+                        </sup>
+                    </h1>
+                </div>
+                <div class="row">
+                    <div class="col-md-12 col-sm-12 mt48" style="padding-bottom: 10px">
+                        <div class="bg-white shadow card" style="border-radius:10px; padding:5px; height: 100%">
+                            <div class="d-flex align-items-center card-body"
+                                style="display: flex; padding: 0px!important; min-height:110px">
+                                <div style="flex-shrink: 0; margin-right: 15px; margin-left: 15px;">
+                                    <img src="assets/icons/5.png" style="height: 50px; width: 50px;">
+                                </div>
+                                <!-- Text Section -->
+                                <div>
+                                    <h5
+                                        style="margin-bottom: 5px; color:#0e1e40; font-size: 18px; text-transform: capitalize;">
+                                        Streamlined Multi-Company Management
+                                    </h5>
+                                    <p>
+                                        Easily manage and oversee stock across multiple companies, enhancing
+                                        collaboration and efficiency.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12 col-sm-12 mt0" style="padding-bottom: 10px">
+                        <div class="bg-white shadow card" style="border-radius:10px; padding:5px; height: 100%">
+                            <div class="d-flex align-items-center card-body"
+                                style="display: flex; padding: 0px!important; min-height:110px">
+                                <div class="d-flex align-items-center justify-content-center"
+                                    style="display: flex; align-items: center; justify-content: flex-start;">
+                                    <div style="flex-shrink: 0; margin-right: 15px; margin-left: 15px;">
+                                        <img src="assets/icons/6.png" style="height: 50px; width: 50px;">
+                                    </div>
+                                    <div>
+                                        <h5 style="margin-bottom: 0px !important; color:#0e1e40; font-size: 18px; text-transform:capitalize"
+                                            class="mb2 text-left mb-0">
+                                            Detailed Inventory Insights
+                                        </h5>
+                                        <p>Gain access to comprehensive insights into stock distribution,
+                                            empowering better inventory management strategies.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12 col-sm-12 mt0" style="padding-bottom: 10px">
+                        <div class="bg-white shadow card" style="border-radius:10px; padding:5px; height: 100%">
+                            <div class="d-flex align-items-center card-body"
+                                style="display: flex; padding: 0px!important; min-height:110px">
+                                <div class="d-flex align-items-center justify-content-center"
+                                    style="display: flex; align-items: center; justify-content: flex-start;">
+                                    <div style="flex-shrink: 0; margin-right: 15px; margin-left: 15px;">
+                                        <img src="assets/icons/2.png" style="height: 50px; width: 50px;">
+                                    </div>
+                                    <div>
+                                        <h5 style="margin-bottom: 0px !important; color:#0e1e40; font-size: 18px; text-transform:capitalize"
+                                            class="mb2 text-left mb-0">
+                                            Customizable Reports</h5>
+                                        <p>Generate tailored PDF and XLSX reports based on selected products,
+                                            companies, and locations for improved usability and decision-making.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-12 col-sm-12 mt0" style="padding-bottom: 10px">
+                        <div class="bg-white shadow card" style="border-radius:10px; padding:5px; height: 100%">
+                            <div class="d-flex align-items-center card-body"
+                                style="display: flex; padding: 0px!important; min-height:110px">
+                                <div class="d-flex align-items-center justify-content-center"
+                                    style="display: flex; align-items: center; justify-content: flex-start;">
+                                    <div style="flex-shrink: 0; margin-right: 15px; margin-left: 15px;">
+                                        <img src="assets/icons/7.png" style="height: 50px; width: 50px;">
+                                    </div>
+                                    <div>
+                                        <h5 style="margin-bottom: 0px !important; color:#0e1e40; font-size: 18px; text-transform:capitalize"
+                                            class="mb2 text-left mb-0">
+                                            Seamless Integration
+                                        </h5>
+                                        <p>Easily integrate the stock management system with your existing
+                                            purchase and sales workflows for smooth operations.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 col-sm-12 mt0" style="padding-bottom: 10px">
+                        <div class="bg-white shadow card" style="border-radius:10px; padding:5px; height: 100%">
+                            <div class="d-flex align-items-center card-body"
+                                style="display: flex; padding: 0px!important; min-height:110px">
+                                <div class="d-flex align-items-center justify-content-center"
+                                    style="display: flex; align-items: center; justify-content: flex-start;">
+                                    <div style="flex-shrink: 0; margin-right: 15px; margin-left: 15px;">
+                                        <img src="assets/icons/8.png" style="height: 50px; width: 50px;">
+                                    </div>
+                                    <div>
+                                        <h5 style="margin-bottom: 0px !important; color:#0e1e40; font-size: 18px; text-transform:capitalize"
+                                            class="mb2 text-left mb-0">
+                                            Enhanced User Control
+                                        </h5>
+                                        <p>Give users the flexibility to customize their inventory management
+                                            interface, offering a personalized user experience.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+
+            </div>
+        </section>
+
+        <div class="col-md-12 tab-content ui-front"
+            style="height:auto;">
+            <div class="tab-pane fade active show" id="Screenshot" role="tabpanel" aria-labelledby="screenshot-1">
+                <div class="row" style="background-color:#fff !important">
+                    <div class="col-lg-12 d-flex flex-column align-items-center">
+                        <h1 class="text-center text-uppercase"
+                            style="font-size:30px !important; color:#791d97; font-weight:bold !important">
+                            <span style="color:#007BFF">Screenshots</span>
+                            <sup>
+                            </sup>
+                        </h1>
+                    </div>
+
+                    <div class="mt-5 col-lg-12 d-flex flex-column align-items-center">
+                        <h3 class="mt16 mb2" style="font-size:22px; color:#781d96">
+                            Configuration
+                        </h3>
+                        <p style="color:#280135">
+                            After installing the module, the users that they have access to the group
+                            <b>Inventory / Stock By Locations Report</b>
+                            can access to the report,<br /> and that group inherited by
+                            <b>Inventory / Administrator</b>
+                            which mean all the users in it have access to the report.
+                        </p>
+                        <div style="margin:2rem;">
+                            <img src="assets/screenshots/1.png" class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+                    </div>
+
+                    <div class="mt-5 col-lg-12 d-flex flex-column align-items-center">
+                        <h3 class="mt16 mb2" style="font-size:22px; color:#781d96">
+                            Pivot View
+                        </h3>
+                        <p style="color:#280135">
+                            Interactive pivot view for inventory analysis, you can analyze with it the:
+                            <b>Qty on hand, Free, Reserved, Forecast, Incoming, Outgoing.</b><br />
+                            by
+                            <b>
+                                Companies, locations, categories, products, Product variants.</b>
+                        </p>
+                        <div style="margin:2rem">
+                            <img src="assets/screenshots/2.png" class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+                    </div>
+
+                    <div class="mt-5 col-lg-12 d-flex flex-column align-items-center">
+                        <h3 class="mt16 mb2" style="font-size:22px; color:#781d96">
+                            Analysis Multi Company
+                        </h3>
+                        <p style="color:#280135">
+                            You can analyze stocks of <b>multiple companies</b> by selecting them,
+                            which means that the user can analyze stocks based on the companies he has <b>access to.</b>
+                        </p>
+                        <div style="margin:2rem">
+                            <img src="assets/screenshots/3.png" class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+                    </div>
+
+                    <div class="mt-5 col-lg-12 d-flex flex-column align-items-center">
+                        <h3 class="mt16 mb2" style="font-size:22px; color:#781d96">
+                            Graph View
+                        </h3>
+                        <p style="color:#280135">
+                            Graph view for visual representation of inventory.
+                        </p>
+                        <div style="margin:2rem">
+                            <img src="assets/screenshots/4.png" class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+                    </div>
+                    <div class="mt-5 col-lg-12 d-flex flex-column align-items-center">
+                        <h3 class="mt16 mb2" style="font-size:22px; color:#781d96">
+                            PDF/XLSX Report
+                        </h3>
+                        <p style="color:#280135">
+                            You can Print Custom PDF/XLSX report.
+                        </p>
+                        <div style="margin:2rem">
+                            <img src="assets/screenshots/5.png" class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+                        <p style="color:#280135">
+                            You can print customized report as you wish by choosing:
+                        </p>
+                        
+                            <li>
+                                Report Format
+                            </li>
+                            <li>
+                                Companies (as per selected companies)
+                            </li>
+                            <li>
+                                Locations
+                            </li>
+                            <li>
+                                Measures
+                            </li>
+                            <li>
+                                By choosing the product or all products
+                            </li>
+                        </ul>
+                        <div style="margin:2rem">
+                            <img src="assets/screenshots/6.png" class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+                    </div>
+<ul>
+
+                    <div class="mt-5 col-lg-12 d-flex flex-column align-items-center">
+                        <h3 class="mt16 mb2" style="font-size:22px; color:#781d96">
+                            Example Of Reports
+                        </h3>
+                        <p style="color:#280135">
+                            PDF Report
+                        </p>
+                        <div style="margin:2rem">
+                            <img src="assets/screenshots/7.png" class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+
+                        <p style="color:#280135">
+                            XLSX Report
+                        </p>
+                        <div style="margin:2rem">
+                            <img src="assets/screenshots/8.png" class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+                    </div>
+
+                    <div class="mt-5 col-lg-12 d-flex flex-column align-items-center">
+                        <h3 class="mt16 mb2" style="font-size:22px; color:#781d96">
+                            Product variants by locations
+                        </h3>
+                        <p style="color:#280135">
+                            Stock by locations in product variants (as per selected companies).<br />
+                            "This page is allowed for all users that have access to products variants"
+                        </p>
+                        <div style="margin:2rem">
+                            <img src="assets/screenshots/9.png" class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+                    </div>
+
+                    <div class="mt-5 col-lg-12 d-flex flex-column align-items-center">
+                        <h3 class="mt16 mb2" style="font-size:22px; color:#781d96">
+                            Inventory Overview In Purchase Order
+                        </h3>
+                        <p style="color:#280135">
+                            Like always, the stock by locations calculated based on selected companies.
+                        </p>
+                        <div style="margin:2rem">
+                            <img src="assets/screenshots/10.png"
+                                class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+                        <p style="color:#280135">
+                            Inventory overview in purchase order allows you to facilitate the supply process.
+                        </p>
+                        <div style="margin:2rem">
+                            <img src="assets/screenshots/11.png"
+                                class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+
+                    </div>
+
+                    <div class="mt-5 col-lg-12 d-flex flex-column align-items-center">
+                        <h3 class="mt16 mb2" style="font-size:22px; color:#781d96">
+                            Inventory Overview In Purchase Order (San Francisco Only)
+                        </h3>
+                        <div style="margin:2rem">
+                            <img src="assets/screenshots/12.png"
+                                class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+                        <p style="color:#280135">
+                            Stock by locations of "San Francisco" locations.
+                        </p>
+                        <div style="margin:2rem">
+                            <img src="assets/screenshots/13.png"
+                                class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+                    </div>
+
+                    <div class="mt-5 col-lg-12 d-flex flex-column align-items-center">
+                        <h3 class="mt16 mb2" style="font-size:22px; color:#781d96">
+                            Inventory Overview In <b>Sale Order</b> (San Francisco Only)
+                        </h3>
+                        <p style="color:#280135">
+                            As you can see, like purchase order, an overview of stock by locations in Sale Order of "San
+                            Francisco" company.<br />
+                            It also indicates the Qty on hand of the default warehouse.
+                        </p>
+                        <div style="margin:2rem">
+                            <img src="assets/screenshots/14.png"
+                                class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+                    </div>
+
+                    <div class="mt-5 col-lg-12 d-flex flex-column align-items-center">
+                        <h3 class="mt16 mb2" style="font-size:22px; color:#781d96">
+                            Out of stock alerts
+                        </h3>
+                        <p style="color:#280135">
+                            If the Free Qty of product in a location &lt;= 0: <b>The line appears in Orange color as a
+                                warning.</b><br />
+                            If the Forecast Qty of product in a location &lt;= 0: <b>The line appears in Red color as a
+                                danger.</b><br />
+                            This colors also appears in the <b>purchase order</b> view and <b>product variants</b>.
+                        </p>
+                        <div style="margin:2rem">
+                            <img src="assets/screenshots/15.png"
+                                class="col-lg-12 d-flex flex-column align-items-center shadow card" style="border-radius: 15px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+</body>
+
+</html>

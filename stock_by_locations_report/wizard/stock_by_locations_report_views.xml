@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="stock_by_locations_report_view_form" model="ir.ui.view">
+        <field name="name">stock.by.locations.report.view</field>
+        <field name="model">stock.by.locations.report</field>
+        <field name="arch" type="xml">
+            <form string="Stock By Locations Report">
+                <group class="oe_title">
+                    <group>
+                        <field name="companies" widget="many2many_tags"
+                            groups="base.group_multi_company"
+                            options="{'no_create': True}" />
+                        <field name="locations" widget="many2many_tags"
+                            domain="[('usage', '=', 'internal')]"
+                            options="{'no_create': True}" />
+                        <field name="measures" widget="many2many_tags" options="{'no_create': True}" />
+                    </group>
+                    <group>
+                        <field name="report_format" widget="radio" />
+                        <field name="report_on" widget="radio" />
+                        <field name="product_ids" invisible="report_on == 'all_products'"
+                            widget="many2many_tags"
+                            options="{'no_create': True}"
+                            domain="[('type', '=', 'consu'), ('is_storable', '=', True)]" />
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_print_report" string="Print" default_focus="1"
+                        type="object" class="btn-primary" />
+                    <button string="Cancel" class="btn-secondary"
+                        special="cancel" />
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!--Window
+    action of stock by locations report-->
+    <record id="stock_by_locations_report_menu_action" model="ir.actions.act_window">
+        <field name="name">Stock By Locations Report</field>
+        <field name="res_model">stock.by.locations.report</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="stock_by_locations_report_view_form" />
+        <field name="target">new</field>
+    </record>
+</odoo>
