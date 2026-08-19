@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_account_payment_tree_inherit_commercial_name" model="ir.ui.view">
+        <field name="name">account.payment.list.inherit.commercial.name</field>
+        <field name="model">account.payment</field>
+        <field name="inherit_id" ref="account.view_account_payment_tree"/>
+        <field name="arch" type="xml">
+            <field name="partner_id" position="before">
+                <field name="partner_commercial_name" optional="show"/>
+                <field name="partner_unique_id" optional="show"/>
+            </field>
+        </field>
+    </record>
+
+    <record id="view_account_payment_search_inherit_commercial_name" model="ir.ui.view">
+        <field name="name">account.payment.search.inherit.commercial.name</field>
+        <field name="model">account.payment</field>
+        <field name="inherit_id" ref="account.view_account_payment_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="attributes">
+                <attribute name="filter_domain">['|', '|', '|', '|', '|', '|', ('partner_commercial_name', 'ilike', self), ('partner_unique_id', 'ilike', self), ('name', 'ilike', self), ('partner_id', 'ilike', self), ('memo', 'ilike', self), ('amount_company_currency_signed', 'ilike', self), ('amount', 'ilike', self)]</attribute>
+            </xpath>
+            <field name="partner_id" position="before">
+                <field name="partner_commercial_name" string="Nombre Comercial" filter_domain="[('partner_commercial_name', 'ilike', self)]"/>
+                <field name="partner_unique_id" string="Código cliente" filter_domain="[('partner_unique_id', 'ilike', self)]"/>
+            </field>
+            <filter name="partner" position="before">
+                <filter string="Nombre Comercial" name="partner_commercial_name" domain="[]" context="{'group_by': 'partner_commercial_name'}"/>
+                <filter string="Código cliente" name="partner_unique_id" domain="[]" context="{'group_by': 'partner_unique_id'}"/>
+            </filter>
+        </field>
+    </record>
+</odoo>

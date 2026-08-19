@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- PDF Report -->
+    <record id="action_report_cycle_count_discrepancy" model="ir.actions.report">
+        <field name="name">Discrepancias de Conteo (PDF)</field>
+        <field name="model">sng.cycle.count</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sng_cycle_count.report_cycle_count_discrepancy</field>
+        <field name="report_file">sng_cycle_count.report_cycle_count_discrepancy</field>
+        <field name="print_report_name">'Discrepancias_%s' % (object.name)</field>
+        <field name="binding_model_id" ref="model_sng_cycle_count"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <!-- Excel Report -->
+    <record id="action_report_cycle_count_discrepancy_xlsx" model="ir.actions.report">
+        <field name="name">Discrepancias de Conteo (Excel)</field>
+        <field name="model">sng.cycle.count</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">sng_cycle_count.cycle_count_discrepancy_xlsx</field>
+        <field name="report_file">sng_cycle_count.cycle_count_discrepancy_xlsx</field>
+        <field name="print_report_name">'Discrepancias_%s' % (object.name)</field>
+        <field name="binding_model_id" ref="model_sng_cycle_count"/>
+        <field name="binding_type">report</field>
+    </record>
+</odoo>

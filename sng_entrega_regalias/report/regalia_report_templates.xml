@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="report_regalia">
+        <t t-call="web.basic_layout">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="company_display_name"
+                   t-value="o.company_id.commercial_name if 'commercial_name' in o.company_id._fields and o.company_id.commercial_name else o.company_id.name"/>
+                <t t-set="customer_display_name"
+                   t-value="o.partner_id.commercial_name if 'commercial_name' in o.partner_id._fields and o.partner_id.commercial_name else o.partner_id.name or o.partner_id.display_name"/>
+                <div class="page">
+                    <div class="row mb-4 align-items-center">
+                        <div class="col-4">
+                            <img t-if="o.company_id.logo"
+                                 t-att-src="image_data_uri(o.company_id.logo)"
+                                 alt="Logo"
+                                 style="max-height:75px; max-width:220px;"/>
+                        </div>
+                        <div class="col-8 text-end">
+                            <div style="font-size:20px; font-weight:700;">
+                                <span t-esc="company_display_name"/>
+                            </div>
+                            <t t-if="company_display_name != o.company_id.name">
+                                <div>
+                                    <span t-esc="o.company_id.name"/>
+                                </div>
+                            </t>
+                            <t t-if="o.company_id.street">
+                                <div>
+                                    <span t-esc="o.company_id.street"/>
+                                </div>
+                            </t>
+                            <t t-if="o.company_id.phone">
+                                <div>
+                                    <span t-esc="o.company_id.phone"/>
+                                </div>
+                            </t>
+                            <t t-if="o.company_id.email">
+                                <div>
+                                    <span t-esc="o.company_id.email"/>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                    <h2>Comprobante de Entrega de Regalía</h2>
+                    <div class="row mt-2">
+                        <div class="col-6">
+                            <strong>Documento:</strong>
+                            <span t-esc="o.name"/>
+                        </div>
+                        <div class="col-6">
+                            <strong>Fecha:</strong>
+                            <span t-field="o.date" t-options="{'widget': 'date'}"/>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-6">
+                            <strong>Cliente:</strong>
+                            <span t-esc="customer_display_name"/>
+                            <t t-if="customer_display_name != (o.partner_id.name or o.partner_id.display_name)">
+                                <br/>
+                                <span t-esc="o.partner_id.name or o.partner_id.display_name"/>
+                            </t>
+                            <t t-if="o.partner_id.vat">
+                                <br/>
+                                <span>Identificación: </span>
+                                <span t-esc="o.partner_id.vat"/>
+                            </t>
+                            <t t-if="o.partner_id.contact_address and o.partner_id.contact_address.strip()">
+                                <br/>
+                                <span t-esc="o.partner_id.contact_address"/>
+                            </t>
+                        </div>
+                        <div class="col-6">
+                            <strong>Almacén:</strong>
+                            <span t-esc="o.warehouse_id.display_name"/>
+                        </div>
+                    </div>
+                    <t t-set="report_values" t-value="o._get_regalia_report_values()"/>
+                    <t t-set="report_lines" t-value="report_values['lines']"/>
+                    <t t-set="report_totals" t-value="report_values['totals']"/>
+                    <table class="table table-sm mt-3">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th class="text-end">Cantidad</th>
+                                <th>Unidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="report_lines" t-as="line">
+                                <tr>
+                                    <td>
+                                        <span t-esc="line['code']"/>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['product']"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="line['quantity']"/>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['uom']"/>
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2" class="text-end">
+                                    <strong>Total</strong>
+                                </td>
+                                <td class="text-end">
+                                    <strong>
+                                        <span t-esc="report_totals['quantity']"/>
+                                    </strong>
+                                </td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    <div t-if="o.notes" class="mt-3">
+                        <strong>Notas:</strong>
+                        <div>
+                            <span t-esc="o.notes"/>
+                        </div>
+                    </div>
+                    <div class="row mt-5">
+                        <div class="col-6">
+                            <div>______________________________</div>
+                            <div>Entregado por</div>
+                        </div>
+                        <div class="col-6">
+                            <div>______________________________</div>
+                            <div>Recibido por</div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </t>
+    </template>
+</odoo>

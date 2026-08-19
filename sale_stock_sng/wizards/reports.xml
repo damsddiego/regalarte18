@@ -10,4 +10,14 @@
         </field>
     </record>
 
+    <record id="current_stock_location_report_xlsx_action" model="ir.actions.report">
+        <field name="name">Existencias Actuales por Ubicación</field>
+        <field name="model">current.stock.location.wizard</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">sale_stock_sng.current_stock_location_xlsx</field>
+        <field name="print_report_name">
+            'Existencias_Actuales_por_Ubicacion'
+        </field>
+    </record>
+
 </odoo>

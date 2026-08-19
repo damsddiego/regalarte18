@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_purchase_supplier_report_line_list" model="ir.ui.view">
+        <field name="name">sng.purchase.supplier.report.line.list</field>
+        <field name="model">sng.purchase.supplier.report.line</field>
+        <field name="arch" type="xml">
+            <list string="Órdenes de compra por proveedor"
+                  create="0"
+                  edit="0"
+                  delete="0"
+                  decoration-warning="reception_state == 'transit'"
+                  decoration-success="reception_state == 'received'">
+                <header>
+                    <button name="action_export_xlsx"
+                            string="Descargar Excel"
+                            type="object"
+                            class="btn-primary"
+                            display="always"/>
+                    <button name="action_print_pdf"
+                            string="Imprimir PDF"
+                            type="object"
+                            class="btn-secondary"
+                            display="always"/>
+                    <button name="action_open_filters"
+                            string="Cambiar filtros"
+                            type="object"
+                            class="btn-secondary"
+                            display="always"/>
+                </header>
+                <field name="wizard_id" column_invisible="1"/>
+                <field name="company_currency_id" column_invisible="1"/>
+                <field name="user_id" column_invisible="1"/>
+                <field name="supplier_id"/>
+                <field name="confirmation_date"/>
+                <field name="planned_date" optional="show"/>
+                <field name="order_id"/>
+                <field name="vendor_reference" optional="show"/>
+                <field name="product_code" optional="show"/>
+                <field name="product_id"/>
+                <field name="qty_ordered" sum="Cantidad ordenada"/>
+                <field name="qty_received" sum="Cantidad recibida"/>
+                <field name="qty_pending" sum="Cantidad pendiente"/>
+                <field name="uom_id"/>
+                <field name="price_unit" optional="show"/>
+                <field name="discount" optional="show"/>
+                <field name="subtotal" sum="Subtotal OC" optional="hide"/>
+                <field name="tax_amount" sum="Impuestos OC" optional="hide"/>
+                <field name="total" sum="Total OC"/>
+                <field name="pending_total" sum="Total pendiente"/>
+                <field name="currency_id"/>
+                <field name="base_qty_ordered"
+                       sum="Ordenada base"
+                       optional="hide"/>
+                <field name="base_qty_received"
+                       sum="Recibida base"
+                       optional="hide"/>
+                <field name="base_qty_pending"
+                       sum="Pendiente base"
+                       optional="hide"/>
+                <field name="base_uom_id" optional="hide"/>
+                <field name="subtotal_company"
+                       sum="Subtotal compañía"
+                       optional="hide"/>
+                <field name="tax_company"
+                       sum="Impuestos compañía"
+                       optional="hide"/>
+                <field name="total_company" sum="Total compañía"/>
+                <field name="pending_subtotal_company"
+                       sum="Subtotal pendiente compañía"
+                       optional="hide"/>
+                <field name="pending_tax_company"
+                       sum="Impuestos pendientes compañía"
+                       optional="hide"/>
+                <field name="pending_total_company"
+                       sum="Total pendiente compañía"/>
+                <field name="reception_state" widget="badge"
+                       decoration-warning="reception_state == 'transit'"
+                       decoration-success="reception_state == 'received'"/>
+                <field name="company_id"
+                       optional="hide"
+                       groups="base.group_multi_company"/>
+                <button name="action_open_order"
+                        string="Abrir"
+                        type="object"
+                        icon="fa-external-link"
+                        class="btn-link"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_purchase_supplier_report_line_search" model="ir.ui.view">
+        <field name="name">sng.purchase.supplier.report.line.search</field>
+        <field name="model">sng.purchase.supplier.report.line</field>
+        <field name="arch" type="xml">
+            <search string="Órdenes de compra por proveedor">
+                <field name="supplier_id"/>
+                <field name="product_id"/>
+                <field name="product_code"/>
+                <field name="order_id"/>
+                <field name="confirmation_date"/>
+                <field name="planned_date"/>
+                <filter name="filter_transit"
+                        string="En tránsito"
+                        domain="[('reception_state', '=', 'transit')]"/>
+                <filter name="filter_received"
+                        string="Recibidas"
+                        domain="[('reception_state', '=', 'received')]"/>
+                <separator/>
+                <group expand="1" string="Agrupar por">
+                    <filter name="group_supplier"
+                            string="Proveedor"
+                            context="{'group_by': 'supplier_id'}"/>
+                    <filter name="group_product"
+                            string="Producto"
+                            context="{'group_by': 'product_id'}"/>
+                    <filter name="group_order"
+                            string="Orden de compra"
+                            context="{'group_by': 'order_id'}"/>
+                    <filter name="group_reception_state"
+                            string="Estado de recepción"
+                            context="{'group_by': 'reception_state'}"/>
+                    <filter name="group_confirmation_month"
+                            string="Mes de confirmación"
+                            context="{'group_by': 'confirmation_date:month'}"/>
+                    <filter name="group_planned_month"
+                            string="Mes de llegada"
+                            context="{'group_by': 'planned_date:month'}"/>
+                    <filter name="group_company"
+                            string="Compañía"
+                            context="{'group_by': 'company_id'}"
+                            groups="base.group_multi_company"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_purchase_supplier_report_line_pivot" model="ir.ui.view">
+        <field name="name">sng.purchase.supplier.report.line.pivot</field>
+        <field name="model">sng.purchase.supplier.report.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Resumen de compras por proveedor" disable_linking="True">
+                <field name="supplier_id" type="row"/>
+                <field name="product_id" type="row"/>
+                <field name="base_uom_id" type="row"/>
+                <field name="base_qty_ordered" type="measure"/>
+                <field name="base_qty_received" type="measure"/>
+                <field name="base_qty_pending" type="measure"/>
+                <field name="subtotal_company" type="measure"/>
+                <field name="tax_company" type="measure"/>
+                <field name="total_company" type="measure"/>
+                <field name="pending_total_company" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+</odoo>
+

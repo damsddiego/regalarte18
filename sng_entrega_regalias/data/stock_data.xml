@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="seq_picking_regalia" model="ir.sequence">
+            <field name="name">Transferencia de regalías</field>
+            <field name="code">stock.picking.regalia</field>
+            <field name="prefix">REG-OUT/%(year)s/</field>
+            <field name="padding">5</field>
+            <field name="company_id" eval="False"/>
+        </record>
+
+        <record id="picking_type_regalia" model="stock.picking.type">
+            <field name="name">Entrega de Regalías</field>
+            <field name="code">outgoing</field>
+            <field name="sequence_code">REGOUT</field>
+            <field name="sequence_id" ref="sng_entrega_regalias.seq_picking_regalia"/>
+            <field name="default_location_src_id" ref="stock.stock_location_stock"/>
+            <field name="default_location_dest_id" ref="stock.stock_location_customers"/>
+            <field name="use_existing_lots">True</field>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_customer_product_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="company" t-value="o.company_id"/>
+                <t t-call="web.external_layout">
+                    <div class="page" style="font-size: 8px;">
+                        <div class="text-center">
+                            <h2 style="margin-bottom: 4px;">
+                                Productos facturados por cliente
+                            </h2>
+                            <div>
+                                <strong>Cliente:</strong>
+                                <span
+                                    t-esc="o._get_commercial_partner().display_name"
+                                />
+                                <span> | </span>
+                                <strong>Período:</strong>
+                                <span t-field="o.date_from"/>
+                                <span> al </span>
+                                <span t-field="o.date_to"/>
+                                <span> | </span>
+                                <strong>Compañía:</strong>
+                                <span t-field="o.company_id"/>
+                            </div>
+                        </div>
+
+                        <h4 style="margin-top: 12px;">Resumen neto por producto (CRC)</h4>
+                        <table class="table table-sm table-bordered"
+                               style="font-size: 8px;">
+                            <thead>
+                                <tr style="background-color: #1F4E78; color: white;">
+                                    <th>Código</th>
+                                    <th>Producto</th>
+                                    <th>UdM base</th>
+                                    <th class="text-end">Cantidad neta</th>
+                                    <th class="text-end">Subtotal CRC</th>
+                                    <th class="text-end">IVA CRC</th>
+                                    <th class="text-end">Total CRC</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="o._get_summary_rows()" t-as="summary">
+                                    <td><t t-esc="summary['product_code']"/></td>
+                                    <td><t t-esc="summary['product_name']"/></td>
+                                    <td><t t-esc="summary['uom'].display_name"/></td>
+                                    <td class="text-end">
+                                        <t t-esc="'{:,.2f}'.format(summary['quantity'])"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <t t-esc="'{:,.2f}'.format(summary['subtotal'])"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <t t-esc="'{:,.2f}'.format(summary['tax'])"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <t t-esc="'{:,.2f}'.format(summary['total'])"/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <t t-set="grand_totals" t-value="o._get_grand_totals()"/>
+                                <tr style="background-color: #D9EAD3; font-weight: bold;">
+                                    <td colspan="4" class="text-end">TOTAL GENERAL</td>
+                                    <td class="text-end">
+                                        <t t-esc="'{:,.2f}'.format(grand_totals['subtotal'])"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <t t-esc="'{:,.2f}'.format(grand_totals['tax'])"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <t t-esc="'{:,.2f}'.format(grand_totals['total'])"/>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <div style="page-break-before: always;">
+                            <h3>Detalle de facturas y notas de crédito</h3>
+                            <p>
+                                Los importes del detalle se muestran en la moneda
+                                original del documento. Los subtotales por producto
+                                se expresan en CRC.
+                            </p>
+                        </div>
+
+                        <t t-foreach="o._get_detail_groups()" t-as="group">
+                            <div style="background-color: #D9E2F3; padding: 4px; margin-top: 8px; font-weight: bold;">
+                                <t t-esc="group['product_code']"/>
+                                <span> - </span>
+                                <t t-esc="group['product_name']"/>
+                            </div>
+                            <table class="table table-sm table-bordered"
+                                   style="font-size: 6.5px; margin-bottom: 4px;">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>Tipo</th>
+                                        <th>Documento</th>
+                                        <th>Contacto facturado</th>
+                                        <th class="text-end">Cantidad</th>
+                                        <th>UdM</th>
+                                        <th class="text-end">Precio</th>
+                                        <th class="text-end">Desc. %</th>
+                                        <th class="text-end">Subtotal</th>
+                                        <th class="text-end">IVA</th>
+                                        <th class="text-end">Total</th>
+                                        <th>Moneda</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="group['lines']"
+                                        t-as="line"
+                                        t-att-style="'color: #C00000;' if line.is_credit_note else ''">
+                                        <td><span t-field="line.invoice_date"/></td>
+                                        <td>
+                                            <t t-if="line.is_credit_note">Nota de crédito</t>
+                                            <t t-else="">Factura</t>
+                                        </td>
+                                        <td><t t-esc="line.document_number"/></td>
+                                        <td><span t-field="line.invoice_partner_id"/></td>
+                                        <td class="text-end"><span t-field="line.quantity"/></td>
+                                        <td><span t-field="line.uom_id"/></td>
+                                        <td class="text-end"><span t-field="line.price_unit"/></td>
+                                        <td class="text-end"><span t-field="line.discount"/></td>
+                                        <td class="text-end"><span t-field="line.subtotal"/></td>
+                                        <td class="text-end"><span t-field="line.tax_amount"/></td>
+                                        <td class="text-end"><span t-field="line.total"/></td>
+                                        <td><span t-field="line.currency_id"/></td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr style="font-weight: bold; background-color: #F2F2F2;">
+                                        <td colspan="4" class="text-end">
+                                            Neto del producto en CRC
+                                        </td>
+                                        <td class="text-end">
+                                            <t t-esc="'{:,.2f}'.format(group['quantity'])"/>
+                                        </td>
+                                        <td><t t-esc="group['uom'].display_name"/></td>
+                                        <td colspan="2"/>
+                                        <td class="text-end">
+                                            <t t-esc="'{:,.2f}'.format(group['subtotal'])"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <t t-esc="'{:,.2f}'.format(group['tax'])"/>
+                                        </td>
+                                        <td class="text-end">
+                                            <t t-esc="'{:,.2f}'.format(group['total'])"/>
+                                        </td>
+                                        <td>CRC</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </t>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

@@ -3,6 +3,7 @@ from odoo import api, fields, models
 from odoo.exceptions import UserError
 from datetime import date
 
+
 class ConsignCxcWizard(models.TransientModel):
     _name = "consign.cxc.wizard"
     _description = "Wizard Reporte Consignaciones y CxC"
@@ -51,5 +52,7 @@ class ConsignCxcWizard(models.TransientModel):
     def action_print(self):
         if not self.date_to:
             raise UserError("Debes indicar la fecha hasta.")
+        if self.date_from and self.date_from > self.date_to:
+            raise UserError("La fecha desde no puede ser mayor que la fecha hasta.")
         # OJO: usa el external id REAL que pusiste en el XML
         return self.env.ref("sale_stock_sng.consign_cxc_report_xlsx_action").report_action(self)

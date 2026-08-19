@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sng_regalia_user,sng.regalia.user,model_sng_regalia,sng_entrega_regalias.group_regalia_user,1,1,1,0
+access_sng_regalia_manager,sng.regalia.manager,model_sng_regalia,sng_entrega_regalias.group_regalia_manager,1,1,1,1
+access_sng_regalia_line_user,sng.regalia.line.user,model_sng_regalia_line,sng_entrega_regalias.group_regalia_user,1,1,1,1
+access_sng_regalia_line_manager,sng.regalia.line.manager,model_sng_regalia_line,sng_entrega_regalias.group_regalia_manager,1,1,1,1

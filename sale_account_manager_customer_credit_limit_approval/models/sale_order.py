@@ -134,10 +134,18 @@ class SaleOrder(models.Model):
     #     return self.state == 'approved' and self.state in {'draft', 'sent', 'approved'} or res
 
     def _confirmation_error_message(self):
-        """ Return whether order can be confirmed or not if not then returm error message. """
+        """ Return whether order can be confirmed or not if not then return error message.
+
+        Extended to allow 'approved' state from credit limit approval workflow.
+        Properly chains to super() for 'draft' and 'sent' states to allow other
+        modules (like stock validation) to run their checks.
+        """
         self.ensure_one()
+        # Check if state is valid for confirmation (including 'approved' from this module)
         if self.state not in {'draft', 'sent', 'approved'}:
             return _("Some orders are not in a state requiring confirmation.")
+
+        # Check for missing products on lines
         if any(
             not line.display_type
             and not line.is_downpayment
@@ -146,9 +154,15 @@ class SaleOrder(models.Model):
         ):
             return _("A line on these orders missing a product, you cannot confirm it.")
 
-        return False
+        # For 'draft' and 'sent' states, call super() to chain other validations
+        # For 'approved' state, skip Odoo base validation (which only accepts draft/sent)
+        # but this allows the MRO to continue to other modules like sng_control_sale
+        if self.state in {'draft', 'sent'}:
+            return super()._confirmation_error_message()
 
-    SaleOrderBase._confirmation_error_message = _confirmation_error_message
+        # For 'approved' state, return False (no error) - other validations in the chain
+        # (like stock validation from sng_control_sale) will still run via the MRO
+        return False
 
     def send_credit_limit_approval(self):
         template_id = self.env.ref('sale_account_manager_customer_credit_limit_approval.sale_order_credit_limit_approval_sales_manager')
@@ -187,8 +201,8 @@ class SaleOrder(models.Model):
                 'email_to': self.user_id.email or self.user_id.partner_id.email,
                 'record_name': self.name,
             }
-            template_id = self.env['mail.mail'].create(template_data)
-            template_id.sudo().send()
+            template_id = self.env['mail.mail'].sudo().create(template_data)
+            template_id.send()
             self.state = 'reject'
             msg = "Rejected By Sales Manager: %s" % self.env.user.name
             self.message_post(body=msg)
@@ -199,17 +213,35 @@ class SaleOrder(models.Model):
                 Hello %s, <br/><br/>
                 </p>
                 <p>
-                This email is to notify that Quotation number %s which belongs to %s 
+                This email is to notify that Quotation number %s which belongs to %s
                 has been rejected by Finance team, <br/>
 
-                please reach him for further clarifications</p> 
+                please reach him for further clarifications</p>
                 """ % (self.user_id.name, self.name, self.partner_id.name),
                 'email_from': self.env.user.partner_id.email or self.env.user.email,
                 'email_to': self.user_id.email or self.user_id.partner_id.email,
                 'record_name': self.name,
             }
-            template_id = self.env['mail.mail'].create(template_data)
-            template_id.sudo().send()
+            template_id = self.env['mail.mail'].sudo().create(template_data)
+            template_id.send()
             self.state = 'reject'
             msg = "Rejected By Finance Team: %s" % self.env.user.name
             self.message_post(body=msg)
+
+    def action_draft(self):
+        """Extend action_draft to allow resetting from credit approval states."""
+        # Include credit limit approval states in addition to Odoo's default states
+        approval_states = {'sales_approval', 'finance_approval', 'approved', 'reject'}
+        orders_from_approval = self.filtered(lambda s: s.state in approval_states)
+        if orders_from_approval:
+            orders_from_approval.write({
+                'state': 'draft',
+                'is_credit_limit_final_approved': False,
+            })
+            for order in orders_from_approval:
+                order.message_post(body=_("Order reset to draft."))
+        # Call super for standard states (cancel, sent)
+        remaining_orders = self - orders_from_approval
+        if remaining_orders:
+            return super(SaleOrder, remaining_orders).action_draft()
+        return True

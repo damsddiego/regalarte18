@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_card_settlement" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.card.settlement</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="account.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='account']" position="inside">
+                <block title="Liquidación de tarjetas" name="card_settlement_settings">
+                    <setting id="card_settlement_source_journals"
+                             string="Diarios fuente"
+                             company_dependent="1"
+                             help="Diarios donde se registran los cobros con tarjeta pendientes de liquidación.">
+                        <field name="card_settlement_source_journal_ids"
+                               widget="many2many_tags"
+                               domain="[('company_id', '=', company_id)]"/>
+                    </setting>
+                    <setting id="card_settlement_bank_journals"
+                             string="Bancos destino"
+                             company_dependent="1"
+                             help="Bancos permitidos para registrar el depósito neto de la liquidación.">
+                        <field name="card_settlement_bank_journal_ids"
+                               widget="many2many_tags"
+                               domain="[('type', '=', 'bank'), ('company_id', '=', company_id)]"/>
+                    </setting>
+                    <setting id="card_settlement_bridge_accounts"
+                             string="Cuentas puente"
+                             company_dependent="1"
+                             help="Cuentas transitorias que se acreditan al liquidar pagos de tarjeta.">
+                        <field name="card_settlement_bridge_account_ids"
+                               widget="many2many_tags"
+                               domain="[('deprecated', '=', False)]"/>
+                    </setting>
+                    <setting id="card_settlement_deduction_accounts"
+                             string="Cuentas de deducción"
+                             company_dependent="1"
+                             help="Cuentas permitidas para comisiones, retenciones e impuestos de liquidación TC.">
+                        <field name="card_settlement_deduction_account_ids"
+                               widget="many2many_tags"
+                               domain="[('deprecated', '=', False)]"/>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

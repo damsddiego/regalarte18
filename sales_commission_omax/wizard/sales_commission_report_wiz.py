@@ -32,6 +32,20 @@ class SalesCommissionReportWiz(models.TransientModel):
     commission_type_3 = fields.Boolean('Product/ Product Category/ Margin Based',default=True)
     partner_ids = fields.Many2many('res.partner', 'partner_customer_sales_commission_wiz_rel', 'partner_id', 'commission_report_wiz_id', string='Partners for Partner Based commission')
 
+    def _get_report_salespersons(self):
+        self.ensure_one()
+        if self.salesperson_ids:
+            return self.salesperson_ids
+        analysis_domain = [
+            ('sales_person_id', '!=', False),
+            ('date', '>=', self.start_date),
+            ('date', '<=', self.end_date),
+        ]
+        sales_persons = self.env['sales.commission.analysis'].search(analysis_domain).mapped('sales_person_id')
+        if sales_persons:
+            return sales_persons
+        return self.env['res.partner'].sudo().search([('is_salesperson', '=', True)])
+
     def _build_contexts(self, data):
         result = {}
         result['start_date'] = data['form']['start_date'] or False
@@ -60,6 +74,9 @@ class SalesCommissionReportWiz(models.TransientModel):
         style_commission_report_title = xlwt.easyxf('font:height 250, bold on; align:horizontal center, vertical center; pattern: pattern solid, fore_color white; border: top thin, bottom thin, right thin, left thin; ')
         style_sub_title = xlwt.easyxf('font:height 220, bold on; align:horizontal center, vertical center; pattern: pattern solid, fore_color white; border: top thin, bottom thin, right thin, left thin; ')
         style_total = xlwt.easyxf('align: horiz right; font:bold on; pattern: pattern solid, fore_colour gray25; border: top thin, bottom thin, right thin, left thin;')
+        style_total_label = xlwt.easyxf('font: bold on; align:horiz right; border: top thin, bottom thin, right thin, left thin;')
+        style_amount_right = xlwt.easyxf('align:horiz right;')
+        style_date_range = xlwt.easyxf('font: bold on; align:vertical center, horizontal center;')
         style_border = xlwt.easyxf('border: top thin, bottom thin, right thin, left thin; align:vertical center, horizontal center;')
         font = xlwt.Font()
         font.name = 'Times New Roman'
@@ -67,16 +84,13 @@ class SalesCommissionReportWiz(models.TransientModel):
         font.height = 250
         style.font = font
         worksheet = workbook.add_sheet('Sheet 1')
-        worksheet.write_merge(0,1,0,7,self.env.user.self.env.user.company_id.name,style_company_title)
+        worksheet.write_merge(0,1,0,7,self.env.user.company_id.name,style_company_title)
         worksheet.write_merge(2,3,0,7,'Sales Commission Report',style_commission_report_title)
         start_date = self.start_date.strftime("%d/%m/%Y")
         end_date = self.end_date.strftime("%d/%m/%Y")
-        worksheet.write_merge(4,4,1,6,start_date + ' to ' + end_date,xlwt.easyxf('font: bold on; align:vertical center, horizontal center;'))
+        worksheet.write_merge(4,4,1,6,start_date + ' to ' + end_date,style_date_range)
         ####
-        if self.salesperson_ids:
-            sales_persons = self.salesperson_ids
-        else:
-            sales_persons = self.env['res.partner'].sudo().search([('is_salesperson', '=', True)])
+        sales_persons = self._get_report_salespersons()
         row = 5
         for sales_person in sales_persons:
             worksheet.write_merge(row,row+1, 0,7,'Salesperson : '+ str(sales_person.name),style_sub_title)
@@ -136,23 +150,23 @@ class SalesCommissionReportWiz(models.TransientModel):
                 col += 1
                 currency_symbol = rec.currency_id.symbol
                 if rec.currency_id.position == 'before':
-                    worksheet.write(row, col, currency_symbol + "{:,.2f}".format(rec.commission_amount, 0.00), xlwt.easyxf('align:horiz right;'))
+                    worksheet.write(row, col, currency_symbol + "{:,.2f}".format(rec.commission_amount), style_amount_right)
                 else:
-                    worksheet.write(row, col, "{:,.2f}".format(rec.commission_amount, 0.00) + currency_symbol, xlwt.easyxf('align:horiz right;'))
+                    worksheet.write(row, col, "{:,.2f}".format(rec.commission_amount) + currency_symbol, style_amount_right)
                 total_commission += rec.commission_amount
                 row += 1
                 col = 0
                 #
             
-            worksheet.write_merge(row,row,0,6,'Total Commission',xlwt.easyxf('font: bold on; align:horiz right; border: top thin, bottom thin, right thin, left thin;'))
+            worksheet.write_merge(row,row,0,6,'Total Commission',style_total_label)
             col = 7
             if total_commission:
                 if rec.currency_id.position == 'before':
-                    worksheet.write(row, col, currency_symbol + "{:,.2f}".format(total_commission, 0.00),style_total)
+                    worksheet.write(row, col, currency_symbol + "{:,.2f}".format(total_commission),style_total)
                 else:
-                    worksheet.write(row, col, "{:,.2f}".format(total_commission, 0.00) + currency_symbol,style_total)
+                    worksheet.write(row, col, "{:,.2f}".format(total_commission) + currency_symbol,style_total)
             else:
-                worksheet.write(row, col, "{:,.2f}".format(total_commission, 0.00),style_total)
+                worksheet.write(row, col, "{:,.2f}".format(total_commission),style_total)
             row += 2
             col = 0
             

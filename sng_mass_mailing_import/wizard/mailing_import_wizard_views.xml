@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_mailing_import_wizard_form" model="ir.ui.view">
+        <field name="name">sng.mailing.import.wizard.form</field>
+        <field name="model">sng.mailing.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Importar clientes a listas de correo">
+                <div class="alert alert-info" role="alert">
+                    Si no selecciona ningún filtro se importan <b>todos los clientes</b> con correo,
+                    aplicando únicamente las exclusiones.
+                </div>
+                <group string="Filtros de clientes">
+                    <field name="filter_category_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+                    <field name="filter_route_ids" widget="many2many_tags"/>
+                    <field name="filter_state_ids" widget="many2many_tags"/>
+                    <field name="filter_activity_ids" widget="many2many_tags"/>
+                    <field name="only_consignment"/>
+                </group>
+                <group string="Exclusiones">
+                    <field name="exclude_category_ids" widget="many2many_tags" options="{'color_field': 'color'}"/>
+                    <field name="exclude_credit_blocked"/>
+                </group>
+                <group string="Destino">
+                    <field name="dest_mode" widget="radio"/>
+                    <field name="mailing_list_id" invisible="dest_mode != 'existing'" required="dest_mode == 'existing'"/>
+                    <field name="new_list_name" invisible="dest_mode != 'new'" required="dest_mode == 'new'"/>
+                </group>
+                <group>
+                    <field name="partner_count" readonly="1"/>
+                </group>
+                <footer>
+                    <button name="action_import" string="Importar" type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sng_mailing_import_wizard" model="ir.actions.act_window">
+        <field name="name">Importar clientes</field>
+        <field name="res_model">sng.mailing.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_sng_mailing_import"
+              name="Importar clientes"
+              parent="mass_mailing.mass_mailing_mailing_list_menu"
+              action="action_sng_mailing_import_wizard"
+              sequence="5"
+              groups="mass_mailing.group_mass_mailing_user"/>
+</odoo>

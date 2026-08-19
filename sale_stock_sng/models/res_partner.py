@@ -8,3 +8,21 @@ class ResPartner(models.Model):
                                        domain=lambda x: [('usage', '=', 'internal')],)
 
     team_id = fields.Many2one('crm.team', string="Equipo de ventas")
+
+    def action_open_current_stock_location_report(self):
+        self.ensure_one()
+        location = self.sale_location_id
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Existencias Actuales por Ubicación",
+            "res_model": "current.stock.location.wizard",
+            "view_mode": "form",
+            "target": "new",
+            "context": {
+                "active_model": self._name,
+                "active_id": self.id,
+                "active_ids": [self.id],
+                "default_partner_ids": [(6, 0, [self.id])],
+                "default_location_ids": [(6, 0, location.ids)],
+            },
+        }

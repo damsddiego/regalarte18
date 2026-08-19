@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_sales_route_sales_report_list" model="ir.ui.view">
+        <field name="name">sng.sales.route.sales.report.list</field>
+        <field name="model">sng.sales.route.sales.report</field>
+        <field name="arch" type="xml">
+            <list string="Ventas por Ruta y Vendedor" create="false" edit="false" delete="false" default_order="line_type,sequence,name">
+                <field name="code"/>
+                <field name="name"/>
+                <field name="amount_untaxed" sum="Total" widget="monetary"/>
+                <field name="weight" widget="percentage" digits="[16,2]" sum="Total"/>
+                <field name="route_salesperson_name"/>
+                <field name="invoice_count" optional="hide" sum="Documentos"/>
+                <field name="date_from" optional="hide"/>
+                <field name="date_to" optional="hide"/>
+                <field name="line_type" column_invisible="1"/>
+                <field name="sequence" column_invisible="1"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_sales_route_sales_report_search" model="ir.ui.view">
+        <field name="name">sng.sales.route.sales.report.search</field>
+        <field name="model">sng.sales.route.sales.report</field>
+        <field name="arch" type="xml">
+            <search string="Ventas por Ruta y Vendedor">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="sales_route_id"/>
+                <field name="salesperson_id"/>
+                <filter string="Pesos por ruta" name="type_route" domain="[('line_type', '=', 'route')]"/>
+                <filter string="Pesos por vendedor" name="type_salesperson" domain="[('line_type', '=', 'salesperson')]"/>
+                <separator/>
+                <filter string="Con ventas" name="with_sales" domain="[('amount_untaxed', '!=', 0)]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Sección" name="group_line_type" context="{'group_by': 'line_type'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_sng_sales_route_sales_report_graph" model="ir.ui.view">
+        <field name="name">sng.sales.route.sales.report.graph</field>
+        <field name="model">sng.sales.route.sales.report</field>
+        <field name="arch" type="xml">
+            <graph string="Ventas por Ruta y Vendedor" type="bar" sample="1">
+                <field name="name"/>
+                <field name="amount_untaxed" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_sng_sales_route_sales_report" model="ir.actions.act_window">
+        <field name="name">Ventas por Ruta y Vendedor</field>
+        <field name="res_model">sng.sales.route.sales.report</field>
+        <field name="view_mode">list,graph</field>
+        <field name="search_view_id" ref="view_sng_sales_route_sales_report_search"/>
+        <field name="context">{'search_default_group_line_type': 1}</field>
+    </record>
+</odoo>

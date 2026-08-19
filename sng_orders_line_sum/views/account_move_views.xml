@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_move_form_inherit_sng_orders_line_sum" model="ir.ui.view">
+        <field name="name">account.move.form.inherit.sng.orders.line.sum</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='invoice_line_ids']//field[@name='quantity']" position="attributes">
+                <attribute name="sum">Cantidad total</attribute>
+            </xpath>
+
+            <xpath expr="//field[@name='tax_totals']" position="after">
+                <field name="invoice_product_line_count"
+                       invisible="move_type == 'entry'"
+                       readonly="1"/>
+                <field name="invoice_product_qty_total"
+                       invisible="move_type == 'entry'"
+                       readonly="1"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

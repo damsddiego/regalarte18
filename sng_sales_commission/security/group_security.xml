@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="0">
+        <record id="module_sng_sales_commission_category" model="ir.module.category">
+            <field name="name">SNG Sales Commission</field>
+        </record>
+
+        <record id="group_sng_sales_commission_user" model="res.groups">
+            <field name="name">User</field>
+            <field name="category_id" ref="sng_sales_commission.module_sng_sales_commission_category"/>
+        </record>
+
+        <record id="group_sng_sales_commission_manager" model="res.groups">
+            <field name="name">Manager</field>
+            <field name="category_id" ref="sng_sales_commission.module_sng_sales_commission_category"/>
+            <field name="implied_ids" eval="[(4, ref('sng_sales_commission.group_sng_sales_commission_user'))]"/>
+        </record>
+    </data>
+</odoo>

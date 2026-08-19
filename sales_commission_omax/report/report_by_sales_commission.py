@@ -14,6 +14,22 @@ class Report_sales_commission_wiz_report(models.AbstractModel):
     _name = 'report.sales_commission_omax.sales_commission_report_tmpl_id'
     _description = 'report.sales_commission_omax.sales_commission_report_tmpl_id'
 
+    def _get_report_salespersons(self, docs, data):
+        if docs.salesperson_ids:
+            return docs.salesperson_ids
+        form_data = data.get('form') or {}
+        start_date = form_data.get('start_date') or docs.start_date
+        end_date = form_data.get('end_date') or docs.end_date
+        analysis_domain = [
+            ('sales_person_id', '!=', False),
+            ('date', '>=', start_date),
+            ('date', '<=', end_date),
+        ]
+        salespersons = self.env['sales.commission.analysis'].search(analysis_domain).mapped('sales_person_id')
+        if salespersons:
+            return salespersons
+        return self.env['res.partner'].sudo().search([('is_salesperson', '=', True)])
+
     def _get_sales_commission_data(self, start_date, end_date, sales_person, rec):
         records = self.env["sales.commission.analysis"]
         domain = [('date','>=',start_date), ('date','<=',end_date), ('sales_person_id','=',sales_person.id)]
@@ -38,10 +54,7 @@ class Report_sales_commission_wiz_report(models.AbstractModel):
         model = self.env.context.get('active_model')
         data = data if data is not None else {}
         docs = self.env[model].browse(self.env.context.get('active_id'))
-        if docs.salesperson_ids:
-            salesperson_ids = docs.salesperson_ids
-        else:
-            salesperson_ids = self.env['res.partner'].sudo().search([('is_salesperson', '=', True)])
+        salesperson_ids = self._get_report_salespersons(docs, data)
         return {
             'doc_ids': self.ids,
             'doc_model': model,

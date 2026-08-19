@@ -1,0 +1,201 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_commission_settlement_list" model="ir.ui.view">
+        <field name="name">sng.commission.settlement.list</field>
+        <field name="model">sng.commission.settlement</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="plan_id"/>
+                <field name="salesperson_id"/>
+                <field name="year"/>
+                <field name="month"/>
+                <field name="target_amount"/>
+                <field name="actual_sales_amount"/>
+                <field name="total_amount_applied_company" sum="Total aplicado"/>
+                <field name="achievement_percentage"/>
+                <field name="adjusted_commission_amount"/>
+                <field name="needs_recompute"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_commission_settlement_form" model="ir.ui.view">
+        <field name="name">sng.commission.settlement.form</field>
+        <field name="model">sng.commission.settlement</field>
+        <field name="arch" type="xml">
+            <form string="Liquidación de comisiones">
+                <header>
+                    <button name="action_generate_settlement" type="object" string="Generar" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_approve" type="object" string="Aprobar" invisible="state != 'draft'"/>
+                    <button name="action_close" type="object" string="Cerrar" invisible="state != 'approved'"/>
+                    <button name="action_reset_to_draft" type="object" string="Volver a borrador" invisible="state == 'draft'"/>
+                    <button name="action_print_report" type="object" string="Imprimir"/>
+                    <button name="action_print_payment_report_pdf" type="object" string="Reporte pagos PDF"/>
+                    <button name="action_export_payment_report_xlsx" type="object" string="Reporte pagos Excel"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,approved,closed"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_lines" type="object" class="oe_stat_button" icon="fa-list">
+                            <field name="line_count" string="Detalle" widget="statinfo"/>
+                        </button>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="plan_id"/>
+                            <field name="salesperson_id"/>
+                            <field name="needs_recompute" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="year"/>
+                            <field name="month"/>
+                            <field name="currency_id"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group>
+                            <field name="date_from" readonly="1"/>
+                            <field name="date_to" readonly="1"/>
+                            <field name="target_amount" readonly="1"/>
+                            <field name="actual_sales_amount" readonly="1"/>
+                            <field name="total_amount_applied_company" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="achievement_percentage" readonly="1"/>
+                            <field name="performance_rule_id" readonly="1"/>
+                            <field name="performance_factor" readonly="1" string="Factor aplicado (%)"/>
+                            <field name="gross_commission_amount" readonly="1"/>
+                            <field name="adjusted_commission_amount" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Detalle">
+                            <field name="line_ids" readonly="1">
+                                <list create="0" delete="0">
+                                    <field name="applied_date"/>
+                                    <field name="invoice_id"/>
+                                    <field name="payment_id"/>
+                                    <field name="customer_id"/>
+                                    <field name="source_currency_id"/>
+                                    <field name="amount_applied_source"/>
+                                    <field name="amount_applied_untaxed_source"/>
+                                    <field name="amount_applied_company"/>
+                                    <field name="days_overdue"/>
+                                    <field name="aging_bucket_label"/>
+                                    <field name="base_commission_percentage"/>
+                                    <field name="base_commission_amount"/>
+                                    <field name="performance_factor" string="Factor (%)"/>
+                                    <field name="final_commission_amount"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_sng_commission_settlement_search" model="ir.ui.view">
+        <field name="name">sng.commission.settlement.search</field>
+        <field name="model">sng.commission.settlement</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="plan_id"/>
+                <field name="salesperson_id"/>
+                <field name="year"/>
+                <field name="month"/>
+                <field name="state"/>
+                <filter name="filter_recompute" string="Requieren recálculo" domain="[('needs_recompute', '=', True)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_sng_commission_settlement_line_list" model="ir.ui.view">
+        <field name="name">sng.commission.settlement.line.list</field>
+        <field name="model">sng.commission.settlement.line</field>
+        <field name="arch" type="xml">
+            <list create="0" delete="0">
+                <field name="settlement_id"/>
+                <field name="applied_date"/>
+                <field name="salesperson_id"/>
+                <field name="invoice_id"/>
+                <field name="payment_id"/>
+                <field name="customer_id"/>
+                <field name="source_currency_id"/>
+                <field name="amount_applied_source"/>
+                <field name="amount_applied_untaxed_source"/>
+                <field name="amount_applied_company"/>
+                <field name="aging_bucket_label"/>
+                <field name="base_commission_amount"/>
+                <field name="final_commission_amount"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_sng_commission_settlement" model="ir.actions.act_window">
+        <field name="name">Liquidaciones</field>
+        <field name="res_model">sng.commission.settlement</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_sng_commission_settlement_line" model="ir.actions.act_window">
+        <field name="name">Detalle de liquidaciones</field>
+        <field name="res_model">sng.commission.settlement.line</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_sng_sales_commission_root"
+              name="Comisiones"
+              parent="sale.sale_menu_root"
+              sequence="36"
+              groups="sng_sales_commission.group_sng_sales_commission_user"/>
+
+    <menuitem id="menu_sng_sales_commission_operations"
+              name="Operaciones"
+              parent="menu_sng_sales_commission_root"
+              sequence="10"
+              groups="sng_sales_commission.group_sng_sales_commission_user"/>
+
+    <menuitem id="menu_sng_sales_commission_configuration"
+              name="Configuración"
+              parent="menu_sng_sales_commission_root"
+              sequence="20"
+              groups="sng_sales_commission.group_sng_sales_commission_manager"/>
+
+    <menuitem id="menu_sng_sales_commission_settlement"
+              name="Liquidaciones"
+              parent="menu_sng_sales_commission_operations"
+              action="action_sng_commission_settlement"
+              sequence="10"
+              groups="sng_sales_commission.group_sng_sales_commission_user"/>
+
+    <menuitem id="menu_sng_sales_commission_generate"
+              name="Generar liquidaciones"
+              parent="menu_sng_sales_commission_operations"
+              action="action_sng_commission_generate_wizard"
+              sequence="20"
+              groups="sng_sales_commission.group_sng_sales_commission_manager"/>
+
+    <menuitem id="menu_sng_sales_commission_lines"
+              name="Detalle"
+              parent="menu_sng_sales_commission_operations"
+              action="action_sng_commission_settlement_line"
+              sequence="30"
+              groups="sng_sales_commission.group_sng_sales_commission_user"/>
+
+    <menuitem id="menu_sng_sales_commission_plan"
+              name="Planes"
+              parent="menu_sng_sales_commission_configuration"
+              action="action_sng_commission_plan"
+              sequence="10"
+              groups="sng_sales_commission.group_sng_sales_commission_manager"/>
+
+    <menuitem id="menu_sng_sales_commission_target"
+              name="Metas"
+              parent="menu_sng_sales_commission_configuration"
+              action="action_sng_commission_target"
+              sequence="20"
+              groups="sng_sales_commission.group_sng_sales_commission_manager"/>
+</odoo>

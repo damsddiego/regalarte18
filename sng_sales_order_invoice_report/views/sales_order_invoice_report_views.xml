@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_sales_order_invoice_report_tree" model="ir.ui.view">
+        <field name="name">sng.sales.order.invoice.report.tree</field>
+        <field name="model">sng.sales.order.invoice.report</field>
+        <field name="arch" type="xml">
+            <list string="Ventas Ingresadas vs Facturadas" create="0" edit="0" delete="0" default_order="order_create_date desc">
+                <field name="order_create_date" string="Ingreso sistema"/>
+                <field name="order_date"/>
+                <field name="order_name"/>
+                <field name="partner_id"/>
+                <field name="salesperson_id"/>
+                <field name="company_id" optional="show"/>
+                <field name="currency_id" optional="show"/>
+                <field name="product_id"/>
+                <field name="categ_id" optional="show"/>
+                <field name="order_state" optional="hide"/>
+                <field name="order_invoice_status"/>
+                <field name="line_invoice_status" optional="show"/>
+                <field name="ordered_qty" sum="Cant. ingresada"/>
+                <field name="ordered_untaxed" sum="Subtotal ingresado"/>
+                <field name="ordered_total" sum="Total ingresado"/>
+                <field name="pending_qty" sum="Cant. no facturada"/>
+                <field name="pending_untaxed" sum="Subtotal no facturado"/>
+                <field name="pending_total" sum="Total no facturado"/>
+                <field name="invoiced_qty" sum="Cant. facturada"/>
+                <field name="invoiced_untaxed" sum="Subtotal facturado"/>
+                <field name="invoiced_total" sum="Total facturado"/>
+                <button name="action_open_order" type="object" string="Orden" class="btn-link"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_sales_order_invoice_report_search" model="ir.ui.view">
+        <field name="name">sng.sales.order.invoice.report.search</field>
+        <field name="model">sng.sales.order.invoice.report</field>
+        <field name="arch" type="xml">
+            <search string="Ventas Ingresadas vs Facturadas">
+                <field name="order_name"/>
+                <field name="partner_id"/>
+                <field name="salesperson_id"/>
+                <field name="company_id"/>
+                <field name="product_id"/>
+                <field name="categ_id"/>
+                <field name="order_invoice_status"/>
+                <field name="line_invoice_status"/>
+
+                <filter name="filter_pending" string="Con pendiente" domain="[('pending_total', '!=', 0)]"/>
+                <filter name="filter_invoiced" string="Con facturado" domain="[('invoiced_total', '!=', 0)]"/>
+                <filter name="filter_fully_invoiced" string="Ordenes facturadas" domain="[('order_invoice_status', '=', 'invoiced')]"/>
+                <filter name="filter_to_invoice" string="Ordenes por facturar" domain="[('order_invoice_status', '=', 'to invoice')]"/>
+
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_by_salesperson" string="Vendedor" context="{'group_by': 'salesperson_id'}"/>
+                    <filter name="group_by_partner" string="Cliente" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_by_company" string="Compania" context="{'group_by': 'company_id'}"/>
+                    <filter name="group_by_order" string="Orden" context="{'group_by': 'sale_order_id'}"/>
+                    <filter name="group_by_product" string="Producto" context="{'group_by': 'product_id'}"/>
+                    <filter name="group_by_category" string="Categoria" context="{'group_by': 'categ_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_sng_sales_order_invoice_report_pivot" model="ir.ui.view">
+        <field name="name">sng.sales.order.invoice.report.pivot</field>
+        <field name="model">sng.sales.order.invoice.report</field>
+        <field name="arch" type="xml">
+            <pivot string="Ventas Ingresadas vs Facturadas">
+                <field name="salesperson_id" type="row"/>
+                <field name="company_id" type="col"/>
+                <field name="ordered_qty" type="measure"/>
+                <field name="ordered_untaxed" type="measure"/>
+                <field name="ordered_total" type="measure"/>
+                <field name="pending_qty" type="measure"/>
+                <field name="pending_untaxed" type="measure"/>
+                <field name="pending_total" type="measure"/>
+                <field name="invoiced_qty" type="measure"/>
+                <field name="invoiced_untaxed" type="measure"/>
+                <field name="invoiced_total" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_sng_sales_order_invoice_report_graph" model="ir.ui.view">
+        <field name="name">sng.sales.order.invoice.report.graph</field>
+        <field name="model">sng.sales.order.invoice.report</field>
+        <field name="arch" type="xml">
+            <graph string="Ventas Ingresadas vs Facturadas" type="bar">
+                <field name="salesperson_id"/>
+                <field name="ordered_total" type="measure"/>
+                <field name="pending_total" type="measure"/>
+                <field name="invoiced_total" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_sng_sales_order_invoice_report" model="ir.actions.act_window">
+        <field name="name">Ventas Ingresadas vs Facturadas</field>
+        <field name="res_model">sng.sales.order.invoice.report</field>
+        <field name="view_mode">list,pivot,graph</field>
+        <field name="search_view_id" ref="view_sng_sales_order_invoice_report_search"/>
+        <field name="domain">[('run_user_id', '=', uid)]</field>
+        <field name="context">{'create': False, 'edit': False, 'delete': False}</field>
+        <field name="help" type="html">
+            <p>Ejecute el asistente para generar el snapshot del reporte.</p>
+        </field>
+    </record>
+</odoo>

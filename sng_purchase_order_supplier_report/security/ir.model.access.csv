@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_purchase_supplier_report_wizard_user,purchase.supplier.report.wizard.user,model_sng_purchase_supplier_report_wizard,purchase.group_purchase_user,1,1,1,1
+access_purchase_supplier_report_wizard_manager,purchase.supplier.report.wizard.manager,model_sng_purchase_supplier_report_wizard,purchase.group_purchase_manager,1,1,1,1
+access_purchase_supplier_report_line_user,purchase.supplier.report.line.user,model_sng_purchase_supplier_report_line,purchase.group_purchase_user,1,1,1,1
+access_purchase_supplier_report_line_manager,purchase.supplier.report.line.manager,model_sng_purchase_supplier_report_line,purchase.group_purchase_manager,1,1,1,1
+

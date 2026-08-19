@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sng_analisis_compras_wizard,sng.analisis.compras.wizard,model_sng_analisis_compras_wizard,base.group_user,1,1,1,1
+access_sng_analisis_compras_line,sng.analisis.compras.line,model_sng_analisis_compras_line,base.group_user,1,1,1,1

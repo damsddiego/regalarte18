@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_cycle_count_discrepancy">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <h2>Reporte de Discrepancias - Conteo Cíclico</h2>
+                    <div class="row">
+                        <div class="col-6">
+                            <strong>Referencia:</strong> <span t-field="doc.name"/><br/>
+                            <strong>Fecha:</strong> <span t-field="doc.count_date"/><br/>
+                            <strong>Operador:</strong> <span t-field="doc.user_id.name"/><br/>
+                            <strong>Configuración:</strong> <span t-field="doc.config_id.name"/>
+                        </div>
+                        <div class="col-6 text-right">
+                            <strong>Total Líneas:</strong> <span t-field="doc.total_lines"/><br/>
+                            <strong>Contadas:</strong> <span t-field="doc.counted_lines"/><br/>
+                            <strong>Discrepancias:</strong> <span t-field="doc.discrepancy_lines"/>
+                        </div>
+                    </div>
+                    <br/>
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th>Ubicación</th>
+                                <th>Lote/Serie</th>
+                                <th class="text-right">Teórico</th>
+                                <th class="text-right">Contado</th>
+                                <th class="text-right">Diferencia</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-set="discrepancy_lines" t-value="doc.line_ids.filtered(lambda l: abs(l.difference_qty) &gt; 0.0001)"/>
+                            <t t-if="not discrepancy_lines">
+                                <tr>
+                                    <td colspan="7" class="text-center">No se encontraron discrepancias.</td>
+                                </tr>
+                            </t>
+                            <t t-foreach="discrepancy_lines" t-as="line">
+                                <tr>
+                                    <td><span t-field="line.product_id.display_name"/></td>
+                                    <td><span t-field="line.location_id.display_name"/></td>
+                                    <td><span t-field="line.lot_id.name"/></td>
+                                    <td class="text-right"><span t-field="line.theoretical_qty"/></td>
+                                    <td class="text-right"><span t-field="line.counted_qty"/></td>
+                                    <td class="text-right"><span t-field="line.difference_qty"/></td>
+                                    <td><span t-field="line.notes"/></td>
+                                </tr>
+                            </t>
+                        </tbody>
+                    </table>
+                </div>
+            </t>
+            </t>
+        </t>
+    </template>
+</odoo>

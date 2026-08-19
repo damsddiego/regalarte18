@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_product_customer_report_pdf" model="ir.actions.report">
+        <field name="name">Clientes por producto facturado PDF</field>
+        <field name="model">sng.product.customer.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sng_customer_product_invoice_report.report_product_customer_document</field>
+        <field name="report_file">sng_customer_product_invoice_report.report_product_customer_document</field>
+        <field name="paperformat_id" ref="paperformat_customer_product_report"/>
+        <field name="print_report_name">'Clientes_por_Producto_%s_%s' % (object.date_from, object.date_to)</field>
+        <field name="groups_id" eval="[(4, ref('account.group_account_invoice')), (4, ref('account.group_account_readonly'))]"/>
+    </record>
+
+    <record id="action_product_customer_report_xlsx" model="ir.actions.report">
+        <field name="name">Clientes por producto facturado XLSX</field>
+        <field name="model">sng.product.customer.report.wizard</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">sng_customer_product_invoice_report.sales_xlsx</field>
+        <field name="report_file">sng_customer_product_invoice_report.sales_xlsx</field>
+        <field name="print_report_name">'Clientes_por_Producto_%s_%s' % (object.date_from, object.date_to)</field>
+        <field name="groups_id" eval="[(4, ref('account.group_account_invoice')), (4, ref('account.group_account_readonly'))]"/>
+    </record>
+</odoo>

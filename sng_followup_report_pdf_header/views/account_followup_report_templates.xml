@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="pdf_export_filters">
+        <t t-set="sng_partner" t-value="options.get('partner_ids') and env['res.partner'].browse(options['partner_ids'][0]) or False"/>
+
+        <t t-if="sng_partner">
+            <div class="row">
+                <div class="col-4">Nombre comercial:</div>
+                <div class="col-8 o_text_muted">
+                    <t t-out="sng_partner.commercial_name or sng_partner.name"/>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-4">Dirección:</div>
+                <div class="col-8 o_text_muted" style="white-space: pre-line;">
+                    <t t-out="sng_partner.contact_address or ''"/>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-4">Teléfono:</div>
+                <div class="col-8 o_text_muted">
+                    <t t-out="sng_partner.phone or sng_partner.mobile or ''"/>
+                </div>
+            </div>
+        </t>
+
+        <div class="row">
+            <div class="col-4">Fecha/hora:</div>
+            <div class="col-8 o_text_muted">
+                <t t-out="env['account.followup.report.handler']._sng_format_report_datetime()"/>
+            </div>
+        </div>
+    </template>
+</odoo>

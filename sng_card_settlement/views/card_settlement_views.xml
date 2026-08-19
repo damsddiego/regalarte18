@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_card_settlement_tree" model="ir.ui.view">
+        <field name="name">sng.card.settlement.list</field>
+        <field name="model">sng.card.settlement</field>
+        <field name="arch" type="xml">
+            <list create="false" delete="false" decoration-success="state == 'posted'">
+                <header>
+                    <button name="%(action_sng_card_settlement_wizard)d"
+                            string="Generar liquidación diaria"
+                            type="action"
+                            class="oe_highlight"
+                            groups="account.group_account_user"/>
+                </header>
+                <field name="name"/>
+                <field name="settlement_date"/>
+                <field name="transaction_date"/>
+                <field name="journal_id"/>
+                <field name="gross_amount" sum="Bruto"/>
+                <field name="deduction_amount" sum="Deducciones"/>
+                <field name="net_amount" sum="Neto"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_card_settlement_search" model="ir.ui.view">
+        <field name="name">sng.card.settlement.search</field>
+        <field name="model">sng.card.settlement</field>
+        <field name="arch" type="xml">
+            <search string="Liquidaciones de tarjeta">
+                <field name="name"/>
+                <field name="journal_id"/>
+                <field name="settlement_date"/>
+                <filter string="Borrador" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Publicado" name="posted" domain="[('state', '=', 'posted')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Banco" name="group_journal" context="{'group_by': 'journal_id'}"/>
+                    <filter string="Fecha liquidación" name="group_settlement_date" context="{'group_by': 'settlement_date'}"/>
+                    <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_sng_card_settlement_form" model="ir.ui.view">
+        <field name="name">sng.card.settlement.form</field>
+        <field name="model">sng.card.settlement</field>
+        <field name="arch" type="xml">
+            <form create="false" delete="false">
+                <header>
+                    <button name="action_post"
+                            string="Publicar"
+                            type="object"
+                            class="oe_highlight"
+                            invisible="state != 'draft'"
+                            groups="account.group_account_user"/>
+                    <button name="%(action_sng_card_settlement_wizard)d"
+                            string="Generar liquidación diaria"
+                            type="action"
+                            class="btn-secondary"
+                            groups="account.group_account_user"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,posted"/>
+                </header>
+                <sheet>
+                    <field name="currency_id" invisible="1"/>
+                    <field name="allowed_bank_journal_ids" invisible="1"/>
+                    <field name="allowed_deduction_account_ids" invisible="1"/>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_move"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-bars"
+                                invisible="not move_id">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Asiento</span>
+                            </div>
+                        </button>
+                        <button name="action_open_payments"
+                                type="object"
+                                class="oe_stat_button"
+                                icon="fa-money"
+                                invisible="payment_count == 0">
+                            <field name="payment_count" widget="statinfo" string="Pagos"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="company_id" readonly="state == 'posted'"/>
+                            <field name="journal_id" readonly="state == 'posted'"/>
+                            <field name="transaction_date" readonly="state == 'posted'"/>
+                            <field name="settlement_date" readonly="state == 'posted'"/>
+                            <field name="move_id" readonly="1"/>
+                        </group>
+                        <group string="Totales">
+                            <field name="gross_amount" readonly="1"/>
+                            <field name="deduction_amount" readonly="1"/>
+                            <field name="net_amount" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Pagos">
+                            <field name="payment_ids" readonly="1">
+                                <list create="false" delete="false">
+                                    <field name="date"/>
+                                    <field name="name"/>
+                                    <field name="partner_id"/>
+                                    <field name="payment_method_line_id"/>
+                                    <field name="amount" sum="Bruto"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Deducciones">
+                            <field name="deduction_ids" readonly="state == 'posted'">
+                                <list editable="bottom">
+                                    <field name="allowed_deduction_account_ids" column_invisible="1"/>
+                                    <field name="name"/>
+                                    <field name="account_id"/>
+                                    <field name="amount" sum="Deducciones"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sng_card_settlement" model="ir.actions.act_window">
+        <field name="name">Liquidaciones de tarjeta</field>
+        <field name="res_model">sng.card.settlement</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_sng_card_settlement_search"/>
+        <field name="context">{'create': False}</field>
+    </record>
+
+    <menuitem id="menu_sng_card_settlement"
+              name="Liquidaciones de tarjeta"
+              parent="account.menu_finance_entries"
+              action="action_sng_card_settlement"
+              sequence="20"
+              groups="account.group_account_readonly"/>
+
+    <menuitem id="menu_sng_card_settlement_generate"
+              name="Generar liquidación diaria"
+              parent="menu_sng_card_settlement"
+              action="action_sng_card_settlement_wizard"
+              sequence="10"
+              groups="account.group_account_user"/>
+</odoo>

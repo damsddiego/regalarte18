@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sng_fake_reconcile_config_user,SNG Fake Reconcile Config User,model_sng_fake_reconcile_config,sng_fake_bank_reconcile.group_sng_fake_bank_reconcile_user,1,0,0,0
+access_sng_fake_reconcile_config_manager,SNG Fake Reconcile Config Manager,model_sng_fake_reconcile_config,sng_fake_bank_reconcile.group_sng_fake_bank_reconcile_manager,1,1,1,1

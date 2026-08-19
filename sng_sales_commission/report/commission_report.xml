@@ -1,0 +1,310 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_sng_commission_settlement" model="ir.actions.report">
+        <field name="name">Liquidación de comisiones</field>
+        <field name="model">sng.commission.settlement</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sng_sales_commission.report_commission_settlement</field>
+        <field name="report_file">sng_sales_commission.report_commission_settlement</field>
+        <field name="binding_model_id" ref="model_sng_commission_settlement"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <record id="action_report_sng_commission_payment_detail" model="ir.actions.report">
+        <field name="name">Pagos de comisión</field>
+        <field name="model">sng.commission.settlement</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sng_sales_commission.report_commission_payment_detail</field>
+        <field name="report_file">sng_sales_commission.report_commission_payment_detail</field>
+        <field name="binding_model_id" ref="model_sng_commission_settlement"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_commission_settlement">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Liquidación de comisiones</h2>
+                        <div class="row mt16 mb16">
+                            <div class="col-6">
+                                <strong>Vendedor:</strong>
+                                <span t-esc="doc.salesperson_id.display_name"/>
+                            </div>
+                            <div class="col-6">
+                                <strong>Periodo:</strong>
+                                <span t-esc="month_names.get(doc.month)"/>
+                                <span t-esc="doc.year"/>
+                            </div>
+                        </div>
+                        <div class="row mb16">
+                            <div class="col-6">
+                                <strong>Plan:</strong>
+                                <span t-esc="doc.plan_id.display_name"/>
+                            </div>
+                            <div class="col-6">
+                                <strong>Estado:</strong>
+                                <span t-esc="dict(doc._fields['state'].selection).get(doc.state)"/>
+                            </div>
+                        </div>
+                        <table class="table table-sm table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td><strong>Meta</strong></td>
+                                    <td class="text-end">
+                                        <span t-esc="doc.target_amount" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                    <td><strong>Venta real sin IVA</strong></td>
+                                    <td class="text-end">
+                                        <span t-esc="doc.actual_sales_amount" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>% cumplimiento</strong></td>
+                                    <td class="text-end"><span t-esc="'{:.2f}%'.format(doc.achievement_percentage)"/></td>
+                                    <td><strong>Factor aplicado</strong></td>
+                                    <td class="text-end"><span t-esc="'%.4f' % doc.performance_factor"/></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Comisión bruta</strong></td>
+                                    <td class="text-end">
+                                        <span t-esc="doc.gross_commission_amount" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                    <td><strong>Comisión final</strong></td>
+                                    <td class="text-end">
+                                        <span t-esc="doc.adjusted_commission_amount" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <table class="table table-sm table-bordered mt32">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Factura</th>
+                                    <th>Pago</th>
+                                    <th>Cliente</th>
+                                    <th>Bucket</th>
+                                    <th class="text-end">Monto sin IVA</th>
+                                    <th class="text-end">Comisión base</th>
+                                    <th class="text-end">Comisión final</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="doc.line_ids" t-as="line">
+                                    <td><span t-esc="line.applied_date"/></td>
+                                    <td><span t-esc="line.invoice_id.name"/></td>
+                                    <td><span t-esc="line.payment_id.name or line.payment_move_id.name"/></td>
+                                    <td><span t-esc="line.customer_id.display_name"/></td>
+                                    <td><span t-esc="line.aging_bucket_label"/></td>
+                                    <td class="text-end">
+                                        <span t-esc="line.amount_applied_company" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="line.base_commission_amount" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="line.final_commission_amount" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+
+    <template id="report_commission_payment_detail">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-set="payment_data" t-value="payment_data_by_doc.get(doc.id)"/>
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Reporte de pagos de comisión</h2>
+                        <div t-if="doc.needs_recompute" class="alert alert-warning" role="alert">
+                            Esta liquidación requiere recálculo. Los pagos mostrados corresponden al último cálculo guardado.
+                        </div>
+                        <div class="row mt16 mb16">
+                            <div class="col-6">
+                                <strong>Liquidación:</strong>
+                                <span t-esc="doc.name"/>
+                            </div>
+                            <div class="col-6">
+                                <strong>Compañía:</strong>
+                                <span t-esc="doc.company_id.display_name"/>
+                            </div>
+                        </div>
+                        <div class="row mb16">
+                            <div class="col-6">
+                                <strong>Vendedor:</strong>
+                                <span t-esc="doc.salesperson_id.display_name"/>
+                            </div>
+                            <div class="col-6">
+                                <strong>Periodo:</strong>
+                                <span t-esc="month_names.get(doc.month)"/>
+                                <span t-esc="doc.year"/>
+                            </div>
+                        </div>
+                        <div class="row mb16">
+                            <div class="col-6">
+                                <strong>Plan:</strong>
+                                <span t-esc="doc.plan_id.display_name"/>
+                            </div>
+                            <div class="col-6">
+                                <strong>Estado:</strong>
+                                <span t-esc="dict(doc._fields['state'].selection).get(doc.state)"/>
+                            </div>
+                        </div>
+
+                        <h4>Resumen de comisión</h4>
+                        <table class="table table-sm table-bordered">
+                            <tbody>
+                                <tr>
+                                    <td><strong>Meta</strong></td>
+                                    <td class="text-end">
+                                        <span t-esc="doc.target_amount" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                    <td><strong>Venta real sin IVA</strong></td>
+                                    <td class="text-end">
+                                        <span t-esc="doc.actual_sales_amount" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>% cumplimiento</strong></td>
+                                    <td class="text-end"><span t-esc="'{:.2f}%'.format(doc.achievement_percentage)"/></td>
+                                    <td><strong>Factor aplicado</strong></td>
+                                    <td class="text-end"><span t-esc="'{:.2f}%'.format(doc.performance_factor)"/></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Comisión bruta</strong></td>
+                                    <td class="text-end">
+                                        <span t-esc="doc.gross_commission_amount" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                    <td><strong>Comisión final</strong></td>
+                                    <td class="text-end">
+                                        <span t-esc="doc.adjusted_commission_amount" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h4 class="mt24">Resumen por pago</h4>
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Pago / asiento</th>
+                                    <th>Moneda</th>
+                                    <th class="text-end">Facturas</th>
+                                    <th>Desde</th>
+                                    <th>Hasta</th>
+                                    <th class="text-end">Monto origen</th>
+                                    <th class="text-end">Sin IVA origen</th>
+                                    <th class="text-end">Monto compañía</th>
+                                    <th class="text-end">Comisión base</th>
+                                    <th class="text-end">Comisión final</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="payment_data['summaries']" t-as="summary">
+                                    <td><span t-esc="summary['payment_label']"/></td>
+                                    <td><span t-esc="summary['source_currency'].name"/></td>
+                                    <td class="text-end"><span t-esc="summary['invoice_count']"/></td>
+                                    <td><span t-esc="summary['date_from']"/></td>
+                                    <td><span t-esc="summary['date_to']"/></td>
+                                    <td class="text-end">
+                                        <span t-esc="summary['amount_applied_source']" t-options='{"widget": "monetary", "display_currency": summary["source_currency"]}'/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="summary['amount_applied_untaxed_source']" t-options='{"widget": "monetary", "display_currency": summary["source_currency"]}'/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="summary['amount_applied_company']" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="summary['base_commission_amount']" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="summary['final_commission_amount']" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th colspan="2">Total</th>
+                                    <th class="text-end"><span t-esc="payment_data['totals']['invoice_count']"/></th>
+                                    <th colspan="4"/>
+                                    <th class="text-end">
+                                        <span t-esc="payment_data['totals']['amount_applied_company']" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </th>
+                                    <th class="text-end">
+                                        <span t-esc="payment_data['totals']['base_commission_amount']" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </th>
+                                    <th class="text-end">
+                                        <span t-esc="payment_data['totals']['final_commission_amount']" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </th>
+                                </tr>
+                            </tfoot>
+                        </table>
+
+                        <h4 class="mt24">Detalle de pagos</h4>
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Fecha aplicación</th>
+                                    <th>Pago</th>
+                                    <th>Asiento</th>
+                                    <th>Factura</th>
+                                    <th>Cliente</th>
+                                    <th>Moneda</th>
+                                    <th class="text-end">Monto origen</th>
+                                    <th class="text-end">Sin IVA origen</th>
+                                    <th class="text-end">Monto compañía</th>
+                                    <th>Fecha factura</th>
+                                    <th>Vencimiento</th>
+                                    <th class="text-end">Días</th>
+                                    <th>Bucket</th>
+                                    <th class="text-end">% base</th>
+                                    <th class="text-end">Comisión base</th>
+                                    <th class="text-end">Factor</th>
+                                    <th class="text-end">Comisión final</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="payment_data['details']" t-as="detail">
+                                    <td><span t-esc="detail['applied_date']"/></td>
+                                    <td><span t-esc="detail['payment'].name if detail['payment'] else ''"/></td>
+                                    <td><span t-esc="detail['payment_move'].name if detail['payment_move'] else ''"/></td>
+                                    <td><span t-esc="detail['invoice'].name"/></td>
+                                    <td><span t-esc="detail['customer'].display_name"/></td>
+                                    <td><span t-esc="detail['source_currency'].name"/></td>
+                                    <td class="text-end">
+                                        <span t-esc="detail['amount_applied_source']" t-options='{"widget": "monetary", "display_currency": detail["source_currency"]}'/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="detail['amount_applied_untaxed_source']" t-options='{"widget": "monetary", "display_currency": detail["source_currency"]}'/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="detail['amount_applied_company']" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                    <td><span t-esc="detail['invoice_date']"/></td>
+                                    <td><span t-esc="detail['invoice_due_date']"/></td>
+                                    <td class="text-end"><span t-esc="detail['days_overdue']"/></td>
+                                    <td><span t-esc="detail['aging_bucket_label']"/></td>
+                                    <td class="text-end"><span t-esc="'{:.2f}%'.format(detail['base_commission_percentage'])"/></td>
+                                    <td class="text-end">
+                                        <span t-esc="detail['base_commission_amount']" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                    <td class="text-end"><span t-esc="'{:.2f}%'.format(detail['performance_factor'])"/></td>
+                                    <td class="text-end">
+                                        <span t-esc="detail['final_commission_amount']" t-options='{"widget": "monetary", "display_currency": doc.currency_id}'/>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista tree: añade columnas de conciliación falsa -->
+    <record id="view_bank_statement_line_tree_fake_reconcile" model="ir.ui.view">
+        <field name="name">account.bank.statement.line.tree.fake.reconcile</field>
+        <field name="model">account.bank.statement.line</field>
+        <field name="inherit_id" ref="account_accountant.view_bank_statement_line_tree_bank_rec_widget"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="decoration-info">fake_reconcile_state == 'suggested'</attribute>
+                <attribute name="decoration-muted">fake_reconcile_state == 'ignored'</attribute>
+                <attribute name="decoration-success">fake_reconcile_state == 'confirmed'</attribute>
+            </xpath>
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="suggested_payment_id" optional="show"/>
+                <field name="fake_reconcile_state" optional="show" decoration-info="fake_reconcile_state == 'suggested'" decoration-success="fake_reconcile_state == 'confirmed'" decoration-muted="fake_reconcile_state == 'ignored'" widget="badge"/>
+                <field name="fake_reconcile_score" optional="show"/>
+                <field name="fake_reconcile_notes" optional="hide"/>
+            </xpath>
+            <xpath expr="//list" position="inside">
+                <header>
+                    <button name="action_sng_fake_reconcile_search" type="object" string="Buscar Pagos Candidatos" class="btn-primary"/>
+                    <button name="action_sng_fake_reconcile_ignore" type="object" string="Ignorar Seleccionados" confirm="¿Ignorar las líneas seleccionadas?"/>
+                    <button name="action_sng_fake_reconcile_reset" type="object" string="Reiniciar Seleccionados" confirm="¿Volver a pendiente las líneas seleccionadas?"/>
+                </header>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Vista form: añade pestaña de conciliación falsa -->
+    <record id="view_bank_statement_line_form_fake_reconcile" model="ir.ui.view">
+        <field name="name">account.bank.statement.line.form.fake.reconcile</field>
+        <field name="model">account.bank.statement.line</field>
+        <field name="inherit_id" ref="account_accountant.view_bank_statement_line_form_bank_rec_widget"/>
+        <field name="arch" type="xml">
+            <xpath expr="//footer" position="before">
+                <notebook>
+                    <page string="Conciliación Falsa" name="fake_reconcile">
+                        <group>
+                            <field name="fake_reconcile_state"/>
+                            <field name="suggested_payment_id"/>
+                            <field name="fake_reconcile_score"/>
+                            <field name="fake_reconcile_notes"/>
+                        </group>
+                        <field name="candidate_payment_ids" readonly="1">
+                            <list>
+                                <field name="name"/>
+                                <field name="partner_id"/>
+                                <field name="amount"/>
+                                <field name="date"/>
+                                <field name="journal_id"/>
+                            </list>
+                        </field>
+                        <div class="oe_button_box" name="fake_reconcile_buttons">
+                            <button name="action_sng_fake_reconcile_search" type="object" string="Buscar Candidatos" class="btn-primary"/>
+                            <button name="action_sng_fake_reconcile_confirm" type="object" string="Confirmar Sugerencia" invisible="fake_reconcile_state != 'suggested'" class="btn-success"/>
+                            <button name="action_sng_fake_reconcile_ignore" type="object" string="Ignorar" invisible="fake_reconcile_state in ('ignored', 'confirmed')"/>
+                            <button name="action_sng_fake_reconcile_reset" type="object" string="Reiniciar" invisible="fake_reconcile_state == 'pending'"/>
+                        </div>
+                    </page>
+                </notebook>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Búsqueda con filtros de conciliación falsa -->
+    <record id="view_bank_statement_line_search_fake_reconcile" model="ir.ui.view">
+        <field name="name">account.bank.statement.line.search.fake.reconcile</field>
+        <field name="model">account.bank.statement.line</field>
+        <field name="inherit_id" ref="account_accountant.view_bank_statement_line_search_bank_rec_widget"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter name="fake_reconcile_pending" string="Pendientes" domain="[('fake_reconcile_state', '=', 'pending')]"/>
+                <filter name="fake_reconcile_suggested" string="Sugeridos" domain="[('fake_reconcile_state', '=', 'suggested')]"/>
+                <filter name="fake_reconcile_confirmed" string="Confirmados" domain="[('fake_reconcile_state', '=', 'confirmed')]"/>
+                <filter name="fake_reconcile_ignored" string="Ignorados" domain="[('fake_reconcile_state', '=', 'ignored')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_by_state" string="Estado Conciliación Falsa" context="{'group_by': 'fake_reconcile_state'}"/>
+                    <filter name="group_by_suggested_payment" string="Pago Sugerido" context="{'group_by': 'suggested_payment_id'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Acción para ver líneas pendientes -->
+    <record id="action_sng_fake_reconcile_pending_lines" model="ir.actions.act_window">
+        <field name="name">Líneas de Extracto</field>
+        <field name="res_model">account.bank.statement.line</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('journal_id.type', '=', 'bank'), ('is_reconciled', '=', False)]</field>
+        <field name="context">{'search_default_fake_reconcile_pending': 1}</field>
+    </record>
+</odoo>

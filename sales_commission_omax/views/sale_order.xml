@@ -7,7 +7,7 @@
             <field name="inherit_id" ref="sale.view_order_form"/>
             <field name="arch" type="xml">
                 <field name="user_id" position="after">
-                    <field name="salesperson_id"/>
+                    <field name="salesperson_id" string="Vendedor (Contacto)"/>
                 </field>
                 <xpath expr="//sheet/notebook/page[@name='order_lines']" position="after">
                     <page string="Sales Commission" name="sale_commission_analysis">
@@ -34,6 +34,28 @@
                         </field>
                     </page>
                 </xpath>
+            </field>
+        </record>
+
+        <record id="view_order_tree_inherit_commission" model="ir.ui.view">
+            <field name="name">sale.order.list.inherit.commission</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_order_tree"/>
+            <field name="arch" type="xml">
+                <field name="user_id" position="after">
+                    <field name="salesperson_id" string="Vendedor (Contacto)"/>
+                </field>
+            </field>
+        </record>
+
+        <record id="view_quotation_tree_inherit_commission" model="ir.ui.view">
+            <field name="name">sale.quotation.list.inherit.commission</field>
+            <field name="model">sale.order</field>
+            <field name="inherit_id" ref="sale.view_quotation_tree_with_onboarding"/>
+            <field name="arch" type="xml">
+                <field name="user_id" position="after">
+                    <field name="salesperson_id" string="Vendedor (Contacto)"/>
+                </field>
             </field>
         </record>
     </data>

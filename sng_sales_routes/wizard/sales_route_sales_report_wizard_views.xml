@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_sales_route_sales_report_wizard_form" model="ir.ui.view">
+        <field name="name">sng.sales.route.sales.report.wizard.form</field>
+        <field name="model">sng.sales.route.sales.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Ventas por Ruta y Vendedor">
+                <group>
+                    <group>
+                        <field name="date_from"/>
+                        <field name="date_to"/>
+                    </group>
+                    <group>
+                        <field name="include_zero"/>
+                    </group>
+                </group>
+                <div class="text-muted">
+                    Considera facturas y notas de crédito de cliente publicadas, por importe sin impuestos.
+                </div>
+                <footer>
+                    <button name="action_open_report" string="Ver reporte" type="object" class="btn-primary"/>
+                    <button name="action_export_xlsx" string="Exportar Excel" type="object" class="btn-secondary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sng_sales_route_sales_report_wizard" model="ir.actions.act_window">
+        <field name="name">Ventas por Ruta y Vendedor</field>
+        <field name="res_model">sng.sales.route.sales.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_sng_sales_route_sales_report"
+              name="Ventas por Ruta y Vendedor"
+              parent="sale.menu_sale_report"
+              action="action_sng_sales_route_sales_report_wizard"
+              sequence="45"/>
+</odoo>

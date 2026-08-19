@@ -6,7 +6,7 @@
     "website": "https://sngcloud.com",
     "category": "Inventory",
     "summary": "Traslados internos con precios para entregas en consignación",
-    "depends": ["stock"],
+    "depends": ["account", "stock"],
     "data": [
         "security/groups.xml",
         "security/ir.model.access.csv",

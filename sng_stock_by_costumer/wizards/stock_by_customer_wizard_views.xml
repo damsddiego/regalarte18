@@ -1,42 +1,52 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Wizard Form View -->
     <record id="view_stock_by_customer_wizard_form" model="ir.ui.view">
         <field name="name">stock.by.customer.wizard.form</field>
         <field name="model">stock.by.customer.wizard</field>
         <field name="arch" type="xml">
-            <form string="Stock by Customer Report">
-                <group>
-                    <group name="filters" invisible="state == 'done'">
-                        <field name="state" invisible="1"/>
-                        <field name="company_id" groups="base.group_multi_company" options="{'no_create': True}"/>
-                        <field name="date_report"/>
-                        <field name="include_zero_stock"/>
+            <form string="Stock por Cliente" create="0" edit="1">
+                <sheet>
+                    <group>
+                        <group string="General">
+                            <field name="company_id"
+                                   groups="base.group_multi_company"
+                                   options="{'no_create': True}"/>
+                            <field name="date_report"/>
+                            <field name="include_zero_stock"/>
+                        </group>
+                        <group string="Filtros opcionales">
+                            <field name="partner_ids"
+                                   widget="many2many_tags"
+                                   string="Clientes"
+                                   options="{'no_create': True}"
+                                   placeholder="Todos los clientes con ubicación asignada"/>
+                            <field name="salesperson_ids"
+                                   widget="many2many_tags"
+                                   string="Vendedores"
+                                   options="{'no_create': True}"
+                                   placeholder="Todos los vendedores"/>
+                            <field name="location_ids"
+                                   widget="many2many_tags"
+                                   string="Ubicaciones"
+                                   options="{'no_create': True}"
+                                   placeholder="Todas las ubicaciones"/>
+                            <field name="product_ids"
+                                   widget="many2many_tags"
+                                   string="Productos"
+                                   options="{'no_create': True}"
+                                   placeholder="Todos los productos"/>
+                        </group>
                     </group>
-                    <group name="download" invisible="state != 'done'">
-                        <field name="report_filename" invisible="1"/>
-                        <field name="report_file" filename="report_filename" invisible="1"/>
-                        <div class="alert alert-success" role="alert">
-                            <p><strong>Reporte generado exitosamente!</strong></p>
-                            <p>Click en el botón "Descargar" para obtener el archivo Excel.</p>
-                        </div>
-                    </group>
-                </group>
-
+                    <div class="text-muted o_form_label">
+                        Al generar, el reporte se abrirá en una vista analítica con filtros, agrupaciones, pivot y gráfico.
+                    </div>
+                </sheet>
                 <footer>
                     <button name="action_generate_report"
                             string="Generar Reporte"
                             type="object"
-                            class="btn-primary"
-                            invisible="state == 'done'"/>
-
-                    <button name="action_download"
-                            string="Descargar"
-                            type="object"
-                            class="btn-primary"
-                            invisible="state != 'done'"/>
-
+                            class="btn-primary"/>
                     <button string="Cerrar"
                             class="btn-secondary"
                             special="cancel"/>
@@ -45,23 +55,175 @@
         </field>
     </record>
 
-    <!-- Wizard Action -->
+    <record id="view_stock_by_customer_line_list" model="ir.ui.view">
+        <field name="name">stock.by.customer.wizard.line.list</field>
+        <field name="model">stock.by.customer.wizard.line</field>
+        <field name="arch" type="xml">
+            <list string="Stock por Cliente" create="0" edit="0" delete="0" default_order="total_amount desc, partner_id, product_id">
+                <header>
+                    <button name="action_download_report"
+                            string="Descargar Excel"
+                            type="object"
+                            class="btn-primary"
+                            display="always"/>
+                    <button name="action_open_filters"
+                            string="Cambiar Filtros"
+                            type="object"
+                            class="btn-secondary"
+                            display="always"/>
+                </header>
+                <field name="wizard_id" column_invisible="1"/>
+                <field name="company_id" column_invisible="1"/>
+                <field name="date_report" optional="show"/>
+                <field name="partner_id"/>
+                <field name="partner_ref" optional="show"/>
+                <field name="salesperson_id" optional="show"/>
+                <field name="root_location_id" string="Ubicación Cliente" optional="show"/>
+                <field name="location_id" optional="show"/>
+                <field name="product_id"/>
+                <field name="product_default_code" optional="show"/>
+                <field name="uom_id" optional="show"/>
+                <field name="quantity" sum="Cantidad Total"/>
+                <field name="unit_price" optional="show"/>
+                <field name="subtotal_amount" sum="Subtotal General"/>
+                <field name="tax_amount" sum="Impuesto General" optional="show"/>
+                <field name="total_amount" sum="Total General"/>
+                <field name="is_zero_stock_line" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_stock_by_customer_line_form" model="ir.ui.view">
+        <field name="name">stock.by.customer.wizard.line.form</field>
+        <field name="model">stock.by.customer.wizard.line</field>
+        <field name="arch" type="xml">
+            <form string="Detalle Stock por Cliente" create="0" edit="0" delete="0">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="date_report" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="partner_ref" readonly="1"/>
+                            <field name="salesperson_id" readonly="1"/>
+                            <field name="root_location_id" readonly="1"/>
+                            <field name="location_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="product_id" readonly="1"/>
+                            <field name="product_default_code" readonly="1"/>
+                            <field name="uom_id" readonly="1"/>
+                            <field name="quantity" readonly="1"/>
+                            <field name="unit_price" readonly="1"/>
+                            <field name="subtotal_amount" readonly="1"/>
+                            <field name="tax_amount" readonly="1"/>
+                            <field name="total_amount" readonly="1"/>
+                            <field name="is_zero_stock_line" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_stock_by_customer_line_search" model="ir.ui.view">
+        <field name="name">stock.by.customer.wizard.line.search</field>
+        <field name="model">stock.by.customer.wizard.line</field>
+        <field name="arch" type="xml">
+            <search string="Stock por Cliente">
+                <field name="partner_id"/>
+                <field name="partner_ref"/>
+                <field name="salesperson_id"/>
+                <field name="root_location_id"/>
+                <field name="location_id"/>
+                <field name="product_id"/>
+
+                <filter name="filter_with_stock"
+                        string="Con Stock"
+                        domain="[('quantity', '&gt;', 0)]"/>
+                <filter name="filter_zero_stock"
+                        string="Sin Stock"
+                        domain="[('is_zero_stock_line', '=', True)]"/>
+                <separator/>
+                <filter name="filter_without_product"
+                        string="Sin Producto"
+                        domain="[('product_id', '=', False)]"/>
+
+                <group expand="1" string="Agrupar por">
+                    <filter name="group_partner"
+                            string="Cliente"
+                            context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_salesperson"
+                            string="Vendedor"
+                            context="{'group_by': 'salesperson_id'}"/>
+                    <filter name="group_root_location"
+                            string="Ubicación Cliente"
+                            context="{'group_by': 'root_location_id'}"/>
+                    <filter name="group_location"
+                            string="Ubicación"
+                            context="{'group_by': 'location_id'}"/>
+                    <filter name="group_product"
+                            string="Producto"
+                            context="{'group_by': 'product_id'}"/>
+                    <filter name="group_date"
+                            string="Fecha"
+                            context="{'group_by': 'date_report'}"/>
+                    <filter name="group_company"
+                            string="Compañía"
+                            context="{'group_by': 'company_id'}"
+                            groups="base.group_multi_company"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_stock_by_customer_line_pivot" model="ir.ui.view">
+        <field name="name">stock.by.customer.wizard.line.pivot</field>
+        <field name="model">stock.by.customer.wizard.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Stock por Cliente" disable_linking="True">
+                <field name="partner_id" type="row"/>
+                <field name="product_id" type="row"/>
+                <field name="quantity" type="measure"/>
+                <field name="subtotal_amount" type="measure"/>
+                <field name="tax_amount" type="measure"/>
+                <field name="total_amount" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_stock_by_customer_line_graph" model="ir.ui.view">
+        <field name="name">stock.by.customer.wizard.line.graph</field>
+        <field name="model">stock.by.customer.wizard.line</field>
+        <field name="arch" type="xml">
+            <graph string="Stock por Cliente" type="bar">
+                <field name="partner_id" type="row"/>
+                <field name="total_amount" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="action_stock_by_customer_lines" model="ir.actions.act_window">
+        <field name="name">Stock por Cliente</field>
+        <field name="res_model">stock.by.customer.wizard.line</field>
+        <field name="view_mode">list,pivot,graph,form</field>
+        <field name="search_view_id" ref="view_stock_by_customer_line_search"/>
+    </record>
+
     <record id="action_stock_by_customer_wizard" model="ir.actions.act_window">
-        <field name="name">Stock by Customer Report</field>
+        <field name="name">Stock por Cliente</field>
         <field name="res_model">stock.by.customer.wizard</field>
         <field name="view_mode">form</field>
         <field name="target">new</field>
         <field name="binding_model_id" ref="base.model_res_partner"/>
     </record>
 
-    <!-- Menu Items -->
     <menuitem id="menu_stock_by_customer_root"
               name="Stock by Customer"
               parent="stock.menu_stock_warehouse_mgmt"
               sequence="100"/>
 
     <menuitem id="menu_stock_by_customer_report"
-              name="Stock by Customer Report"
+              name="Stock por Cliente"
               parent="menu_stock_by_customer_root"
               action="action_stock_by_customer_wizard"
               sequence="10"/>

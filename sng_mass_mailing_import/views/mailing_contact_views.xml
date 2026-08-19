@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="mailing_contact_view_form_inherit_partner" model="ir.ui.view">
+        <field name="name">mailing.contact.form.inherit.partner</field>
+        <field name="model">mailing.contact</field>
+        <field name="inherit_id" ref="mass_mailing.mailing_contact_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='company_name']" position="after">
+                <field name="partner_id"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

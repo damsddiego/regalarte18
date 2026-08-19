@@ -9,9 +9,59 @@ class AccountMove(models.Model):
 
     commission_analysis_line = fields.One2many('sales.commission.analysis','move_id','Sales Commission')
     created_by_commission = fields.Boolean('Created from Sales Commission')
-    salesperson_id = fields.Many2one('res.partner', 'Salesperson', domain="[('is_salesperson', '=', True)]", help="Salesperson assigned to this invoice for commission purposes.")
+    salesperson_id = fields.Many2one(
+        'res.partner', 'Salesperson', 
+        domain="[('is_salesperson', '=', True)]", 
+        help="Salesperson assigned to this invoice for commission purposes.",
+        compute='_compute_salesperson_id',
+        store=True,
+        readonly=False,
+        precompute=True,
+        default=lambda self: self.env.user.partner_id,
+    )
+
+    @api.depends('partner_id', 'partner_id.assigned_salesperson_id', 'invoice_user_id')
+    def _compute_salesperson_id(self):
+        for move in self:
+            if move.partner_id and move.partner_id.assigned_salesperson_id:
+                move.salesperson_id = move.partner_id.assigned_salesperson_id
+            else:
+                move.salesperson_id = (
+                    move.salesperson_id
+                    or move.invoice_user_id.partner_id
+                    or self.env.user.partner_id
+                )
+
+    def _get_commission_salesperson(self):
+        self.ensure_one()
+        return self.salesperson_id or self.invoice_user_id.partner_id or self.env.user.partner_id
+
+    def _get_commission_payment_date(self):
+        self.ensure_one()
+        receivable_lines = self.line_ids.filtered(lambda line: line.account_id.account_type == 'asset_receivable')
+        partials = receivable_lines.mapped('matched_debit_ids') | receivable_lines.mapped('matched_credit_ids')
+        counterpart_lines = (
+            partials.mapped('debit_move_id') | partials.mapped('credit_move_id')
+        ).filtered(lambda line: line.move_id != self)
+
+        dates = [date for date in counterpart_lines.mapped('payment_id.date') if date]
+        dates += [date for date in partials.mapped('max_date') if date]
+        dates += [date for date in counterpart_lines.mapped('date') if date]
+        return max(dates) if dates else False
+
+    def _get_commission_analysis_date(self, commission):
+        self.ensure_one()
+        if commission.commission_apply_on == 'invoice_payment':
+            return self._get_commission_payment_date() or self.invoice_date or fields.Date.context_today(self)
+        if commission.commission_apply_on == 'invoice':
+            return self.invoice_date or fields.Date.context_today(self)
+        return fields.Date.context_today(self)
 
     def create_product_commission_analysis_line(self, commission, commission_line, order_lines):
+        salesperson = self._get_commission_salesperson()
+        if not salesperson:
+            return
+        analysis_date = self._get_commission_analysis_date(commission)
         for line in order_lines:
             #Fix Price
             if commission_line.com_with == 'fix_price':
@@ -30,8 +80,8 @@ class AccountMove(models.Model):
                     if commission_amount > 0:#
                         vals = {
                             'name':name,
-                            'date':fields.date.today(),
-                            'sales_person_id':self.salesperson_id.id,
+                            'date':analysis_date,
+                            'sales_person_id':salesperson.id,
                             'move_id':self.id,
                             'commission_id':commission.id,
                             'commission_type':commission.commission_type,
@@ -66,8 +116,8 @@ class AccountMove(models.Model):
                 if commission_amount > 0:#
                     vals = {
                         'name':name,
-                        'date':fields.date.today(),
-                        'sales_person_id':self.salesperson_id.id,
+                        'date':analysis_date,
+                        'sales_person_id':salesperson.id,
                         'move_id':self.id,
                         'commission_id':commission.id,
                         'commission_type':commission.commission_type,
@@ -89,8 +139,8 @@ class AccountMove(models.Model):
                 if commission_amount > 0:#
                     vals = {
                         'name':name,
-                        'date':fields.date.today(),
-                        'sales_person_id':self.salesperson_id.id,
+                        'date':analysis_date,
+                        'sales_person_id':salesperson.id,
                         'move_id':self.id,
                         'commission_id':commission.id,
                         'commission_type':commission.commission_type,
@@ -100,6 +150,10 @@ class AccountMove(models.Model):
                     self.env["sales.commission.analysis"].sudo().create(vals)
 
     def create_product_categ_commission_analysis_line(self, commission, commission_line, order_lines):
+        salesperson = self._get_commission_salesperson()
+        if not salesperson:
+            return
+        analysis_date = self._get_commission_analysis_date(commission)
         for line in order_lines:
             #Fix Price
             if commission_line.com_with == 'fix_price':
@@ -118,8 +172,8 @@ class AccountMove(models.Model):
                     if commission_amount > 0:#
                         vals = {
                             'name':name,
-                            'date':fields.date.today(),
-                            'sales_person_id':self.salesperson_id.id,
+                            'date':analysis_date,
+                            'sales_person_id':salesperson.id,
                             'move_id':self.id,
                             'commission_id':commission.id,
                             'commission_type':commission.commission_type,
@@ -156,8 +210,8 @@ class AccountMove(models.Model):
                 if commission_amount > 0:#
                     vals = {
                         'name':name,
-                        'date':fields.date.today(),
-                        'sales_person_id':self.salesperson_id.id,
+                        'date':analysis_date,
+                        'sales_person_id':salesperson.id,
                         'move_id':self.id,
                         'commission_id':commission.id,
                         'commission_type':commission.commission_type,
@@ -180,8 +234,8 @@ class AccountMove(models.Model):
                 if commission_amount > 0:#
                     vals = {
                         'name':name,
-                        'date':fields.date.today(),
-                        'sales_person_id':self.salesperson_id.id,
+                        'date':analysis_date,
+                        'sales_person_id':salesperson.id,
                         'move_id':self.id,
                         'commission_id':commission.id,
                         'commission_type':commission.commission_type,
@@ -209,6 +263,10 @@ class AccountMove(models.Model):
             return commission.days_90_plus_commission
 
     def create_standard_commission(self, commission):
+        salesperson = self._get_commission_salesperson()
+        if not salesperson:
+            return
+        analysis_date = self._get_commission_analysis_date(commission)
         for line in self.invoice_line_ids.filtered(lambda l: l.display_type == 'product'):
             # Si la comisión está basada en días, calcular el porcentaje según los días
             if commission.commission_by_days:
@@ -229,8 +287,8 @@ class AccountMove(models.Model):
             if commission_amount > 0:#
                 vals = {
                     'name':name,
-                    'date':fields.date.today(),
-                    'sales_person_id':self.invoice_user_id.id,
+                    'date':analysis_date,
+                    'sales_person_id':salesperson.id,
                     'move_id':self.id,
                     'commission_id':commission.id,
                     'commission_type':commission.commission_type,
@@ -239,6 +297,10 @@ class AccountMove(models.Model):
                 self.env["sales.commission.analysis"].sudo().create(vals)
 
     def create_partner_based_commission(self, commission):
+        salesperson = self._get_commission_salesperson()
+        if not salesperson:
+            return
+        analysis_date = self._get_commission_analysis_date(commission)
         for line in self.invoice_line_ids.filtered(lambda l: l.display_type == 'product'):
             if self.partner_id.affiliated:
                 commission_percentage = commission.affiliated_partner_commission
@@ -258,8 +320,8 @@ class AccountMove(models.Model):
             if commission_amount > 0:#
                 vals = {
                     'name':name,
-                    'date':fields.date.today(),
-                    'sales_person_id':self.invoice_user_id.id,
+                    'date':analysis_date,
+                    'sales_person_id':salesperson.id,
                     'move_id':self.id,
                     'commission_id':commission.id,
                     'commission_type':commission.commission_type,
@@ -274,8 +336,11 @@ class AccountMove(models.Model):
         #commission_on_invoice=self.env['ir.config_parameter'].sudo().get_param('commission_on_invoice')
         #if commission_on_invoice == 'True':
         for rec in self:
+            salesperson = rec.salesperson_id or rec.invoice_user_id.partner_id
+            if not salesperson:
+                continue
             #commission = self.env["sales.commission"].sudo().search([('company_id','=',self.env.company.id), ('salesperson_ids','in',rec.salesperson_id.id)])
-            commission = self.env["sales.commission"].sudo().search([('company_id','=',self.env.company.id), ('salesperson_ids','in',rec.salesperson_id.id),('start_date','<=',rec.invoice_date),('end_date','>=',rec.invoice_date), ('commission_apply_on','=','invoice')])
+            commission = self.env["sales.commission"].sudo().search([('company_id','=',self.env.company.id), ('salesperson_ids','in',salesperson.id),('start_date','<=',rec.invoice_date),('end_date','>=',rec.invoice_date), ('commission_apply_on','=','invoice')])
             
             if commission and rec.move_type == 'out_invoice':
                 #Standard
@@ -349,7 +414,10 @@ class AccountMove(models.Model):
         #if commission_on_payment == 'True':
         for move in self:
             if move.move_type == 'out_invoice':
-                commission = self.env["sales.commission"].sudo().search([('company_id','=',self.env.company.id), ('salesperson_ids','in',move.salesperson_id.id),('start_date','<=',move.invoice_date),('end_date','>=',move.invoice_date), ('commission_apply_on','=','invoice_payment')])
+                salesperson = move.salesperson_id or move.invoice_user_id.partner_id
+                if not salesperson:
+                    continue
+                commission = self.env["sales.commission"].sudo().search([('company_id','=',self.env.company.id), ('salesperson_ids','in',salesperson.id),('start_date','<=',move.invoice_date),('end_date','>=',move.invoice_date), ('commission_apply_on','=','invoice_payment')])
                 if not move.amount_residual and not move.commission_analysis_line and commission:
                     #Standard
                     if commission.commission_type == 'standard':

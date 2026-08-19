@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_consolidated_customer_payment_search" model="ir.ui.view">
+        <field name="name">consolidated.customer.payment.search</field>
+        <field name="model">consolidated.customer.payment</field>
+        <field name="arch" type="xml">
+            <search string="Pagos consolidados">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="company_id"/>
+                <field name="payment_date"/>
+                <filter name="filter_draft" string="Borrador" domain="[('state', '=', 'draft')]"/>
+                <filter name="filter_confirmed" string="Confirmado" domain="[('state', '=', 'confirmed')]"/>
+                <filter name="filter_posted" string="Publicado" domain="[('state', '=', 'posted')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_company" string="Compania" context="{'group_by': 'company_id'}"/>
+                    <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
+                    <filter name="group_partner" string="Cliente" context="{'group_by': 'partner_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_consolidated_customer_payment_list" model="ir.ui.view">
+        <field name="name">consolidated.customer.payment.list</field>
+        <field name="model">consolidated.customer.payment</field>
+        <field name="arch" type="xml">
+            <list string="Pagos consolidados" default_order="payment_date desc">
+                <field name="name"/>
+                <field name="payment_date"/>
+                <field name="company_id"/>
+                <field name="partner_id"/>
+                <field name="amount"/>
+                <field name="allocated_amount"/>
+                <field name="unallocated_amount"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_consolidated_customer_payment_form" model="ir.ui.view">
+        <field name="name">consolidated.customer.payment.form</field>
+        <field name="model">consolidated.customer.payment</field>
+        <field name="arch" type="xml">
+            <form string="Pago consolidado">
+                <header>
+                    <button name="action_confirm" type="object" string="Confirmar" class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_post" type="object" string="Publicar" class="oe_highlight" invisible="state != 'confirmed'"/>
+                    <button name="action_load_open_invoices" type="object" string="Cargar facturas" invisible="state != 'draft'"/>
+                    <button name="action_auto_allocate" type="object" string="Autoasignar" invisible="state != 'draft'"/>
+                    <button name="action_reset_to_draft" type="object" string="Volver a borrador" invisible="state not in ('confirmed', 'cancelled')"/>
+                    <button name="action_cancel" type="object" string="Cancelar" invisible="state in ('posted', 'cancelled')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,posted,cancelled"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_payments" type="object" class="oe_stat_button" icon="fa-money" invisible="payment_count == 0">
+                            <div class="o_stat_info">
+                                <field name="payment_count" widget="statinfo" string="Pagos"/>
+                            </div>
+                        </button>
+                        <button name="action_open_entries" type="object" class="oe_stat_button" icon="fa-book" invisible="move_count == 0">
+                            <div class="o_stat_info">
+                                <field name="move_count" widget="statinfo" string="Asientos"/>
+                            </div>
+                        </button>
+                        <button name="action_open_invoices" type="object" class="oe_stat_button" icon="fa-file-text-o" invisible="invoice_count == 0">
+                            <div class="o_stat_info">
+                                <field name="invoice_count" widget="statinfo" string="Facturas"/>
+                            </div>
+                        </button>
+                        <button name="action_open_reconciliation" type="object" class="oe_stat_button" icon="fa-random" invisible="move_count == 0 and payment_count == 0">
+                            <div class="o_stat_info">
+                                <field name="reconciliation_count" widget="statinfo" string="Conciliadas"/>
+                            </div>
+                        </button>
+                    </div>
+
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="company_id" readonly="state != 'draft'"/>
+                            <field name="payment_date" readonly="state != 'draft'"/>
+                            <field name="journal_id" readonly="state != 'draft'"/>
+                            <field name="payment_method_line_id" readonly="state != 'draft'"/>
+                        </group>
+                        <group>
+                            <field name="partner_id" readonly="state != 'draft'"/>
+                            <field name="currency_id"/>
+                            <field name="amount" readonly="state != 'draft'"/>
+                            <field name="allocated_amount"/>
+                            <field name="unallocated_amount"/>
+                            <field name="auto_reconcile" readonly="state != 'draft'"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="memo" readonly="state != 'draft'"/>
+                    </group>
+                    <notebook>
+                        <page string="Asignaciones">
+                            <field name="line_ids" readonly="state != 'draft'">
+                                <list editable="bottom" string="Facturas a distribuir">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="company_id"/>
+                                    <field name="invoice_move_id"/>
+                                    <field name="invoice_date" optional="show"/>
+                                    <field name="invoice_date_due" optional="show"/>
+                                    <field name="residual_amount_at_load" optional="show"/>
+                                    <field name="residual_amount"/>
+                                    <field name="allocated_amount"/>
+                                    <field name="invoice_payment_state" optional="show"/>
+                                    <field name="is_target_reconciled" optional="show" readonly="1"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Generado" invisible="state != 'posted'">
+                            <group>
+                                <field name="payment_ids" readonly="1">
+                                    <list string="Pagos">
+                                        <field name="company_id"/>
+                                        <field name="name"/>
+                                        <field name="date"/>
+                                        <field name="amount"/>
+                                        <field name="state"/>
+                                    </list>
+                                </field>
+                            </group>
+                            <group>
+                                <field name="move_ids" readonly="1">
+                                    <list string="Asientos">
+                                        <field name="company_id"/>
+                                        <field name="name"/>
+                                        <field name="date"/>
+                                        <field name="ref"/>
+                                        <field name="consolidated_payment_role"/>
+                                        <field name="state"/>
+                                    </list>
+                                </field>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_consolidated_customer_payment" model="ir.actions.act_window">
+        <field name="name">Consolidated Customer Payments</field>
+        <field name="res_model">consolidated.customer.payment</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_consolidated_customer_payment_search"/>
+    </record>
+
+    <menuitem
+        id="menu_consolidated_customer_payment"
+        name="Consolidated Payments"
+        parent="account.menu_finance_receivables"
+        action="action_consolidated_customer_payment"
+        groups="account.group_account_readonly,account.group_account_invoice"
+        sequence="40"/>
+</odoo>

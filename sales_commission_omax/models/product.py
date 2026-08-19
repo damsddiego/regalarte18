@@ -10,9 +10,9 @@ class ProductProduct(models.Model):
 
     def unlink(self):
         commission_product = self.env.ref('sales_commission_omax.sales_commission_product_0')
-        if self.id == commission_product.id:
-            raise ValidationError(_("The '%s' is a commission product restricted for delete. It is important for Sales commission flow.", self.name))
-        return super(ProductProduct, self).unlink()
+        if commission_product in self:
+            raise ValidationError(_("The '%s' is a commission product restricted for delete. It is important for Sales commission flow.", commission_product.name))
+        return super().unlink()
 
 
 class ProductTemplate(models.Model):
@@ -20,7 +20,7 @@ class ProductTemplate(models.Model):
 
     def unlink(self):
         commission_product = self.env.ref('sales_commission_omax.sales_commission_product_0')
-        if commission_product.id in self.product_variant_ids.ids:
-            raise ValidationError(_("The '%s' is a commission product restricted for delete. It is important for Sales commission flow.", self.name))
-        return super(ProductProduct, self).unlink()
+        if commission_product.product_tmpl_id in self:
+            raise ValidationError(_("The '%s' is a commission product restricted for delete. It is important for Sales commission flow.", commission_product.product_tmpl_id.name))
+        return super().unlink()
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_consolidated_customer_payment_load_wizard_form" model="ir.ui.view">
+        <field name="name">consolidated.customer.payment.load.wizard.form</field>
+        <field name="model">consolidated.customer.payment.load.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Cargar facturas abiertas">
+                <group>
+                    <field name="payment_id" readonly="1"/>
+                    <field name="company_ids" widget="many2many_tags"/>
+                    <field name="only_overdue"/>
+                    <field name="clear_existing_lines"/>
+                    <field name="auto_allocate"/>
+                </group>
+                <footer>
+                    <button name="action_load" type="object" string="Cargar" class="btn-primary"/>
+                    <button string="Cerrar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

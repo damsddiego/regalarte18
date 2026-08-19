@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_regalia" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.regalia</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="account.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='account']" position="inside">
+                <block title="Regalías a clientes" name="regalia_settings"
+                       groups="sng_entrega_regalias.group_regalia_manager">
+                    <setting id="regalia_expense_account"
+                             string="Cuenta de gasto"
+                             company_dependent="1"
+                             help="Cuenta que se debita con el costo de los productos regalados.">
+                        <field name="regalia_expense_account_id"
+                               domain="[('deprecated', '=', False)]"/>
+                    </setting>
+                    <setting id="regalia_counterpart_account"
+                             string="Cuenta contrapartida"
+                             company_dependent="1"
+                             help="Cuenta de inventario/contrapartida que se acredita al entregar regalías.">
+                        <field name="regalia_counterpart_account_id"
+                               domain="[('deprecated', '=', False)]"/>
+                    </setting>
+                    <setting id="regalia_journal"
+                             string="Diario"
+                             company_dependent="1"
+                             help="Diario misceláneo para los asientos de regalías. Si está vacío se usa el primer diario misceláneo de la compañía.">
+                        <field name="regalia_journal_id"
+                               domain="[('type', '=', 'general'), ('company_id', '=', company_id)]"/>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

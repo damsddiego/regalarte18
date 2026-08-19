@@ -20,6 +20,7 @@
 #
 ###############################################################################
 from odoo import api, fields, models
+from odoo.osv import expression
 
 
 class ResPartner(models.Model):
@@ -49,3 +50,26 @@ class ResPartner(models.Model):
                 rec.unique_id = code
                 company.write({'next_code': code + 1})
         return records
+
+    @api.model
+    def name_search(self, name='', args=None, operator='ilike', limit=100):
+        args = args or []
+        if not name:
+            return super().name_search(name=name, args=args, operator=operator, limit=limit)
+
+        partners = self.search(
+            expression.AND([[('unique_id', operator, name)], args]),
+            limit=limit,
+        )
+        result = [(partner.id, partner.display_name) for partner in partners.sudo()]
+        remaining = limit - len(result) if limit else None
+        if remaining is not None and remaining <= 0:
+            return result
+
+        found_ids = set(partners.ids)
+        for partner_id, display_name in super().name_search(
+            name=name, args=args, operator=operator, limit=remaining
+        ):
+            if partner_id not in found_ids:
+                result.append((partner_id, display_name))
+        return result

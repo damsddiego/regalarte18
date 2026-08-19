@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_property_form_import_bill_expense_account" model="ir.ui.view">
+        <field name="name">res.partner.property.form.import.bill.expense.account</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="account.view_partner_property_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='accounting_entries']" position="inside">
+                <field
+                    name="import_bill_expense_account_id"
+                    options="{'no_create_edit': True}"
+                />
+            </xpath>
+        </field>
+    </record>
+</odoo>

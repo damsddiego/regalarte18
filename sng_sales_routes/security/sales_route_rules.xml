@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="rule_sng_sales_route_company" model="ir.rule">
+        <field name="name">Rutas/Territorios por compañía</field>
+        <field name="model_id" ref="model_sng_sales_route"/>
+        <field name="groups" eval="[(4, ref('base.group_user'))]"/>
+        <field name="domain_force">[]</field>
+    </record>
+
+    <!-- El snapshot de ventas por ruta se construye por usuario: cada quien ve solo sus filas -->
+    <record id="rule_sng_sales_route_sales_report_own_snapshot" model="ir.rule">
+        <field name="name">Ventas por Ruta: solo snapshot propio</field>
+        <field name="model_id" ref="model_sng_sales_route_sales_report"/>
+        <field name="domain_force">[('user_id', '=', user.id)]</field>
+        <field name="global" eval="True"/>
+    </record>
+</odoo>

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem
+        id="menu_sng_contacts_reports"
+        name="Reportes"
+        parent="contacts.menu_contacts"
+        sequence="10"
+        groups="sales_team.group_sale_manager"/>
+
+    <menuitem
+        id="menu_sng_new_reactivated_customer_report_wizard"
+        name="Clientes Nuevos-React"
+        parent="menu_sng_contacts_reports"
+        action="action_sng_new_reactivated_customer_report_wizard"
+        sequence="10"
+        groups="sales_team.group_sale_manager"/>
+
+    <menuitem
+        id="menu_sng_new_reactivated_customer_report"
+        name="Consulta Clientes Nuevos-React"
+        parent="menu_sng_contacts_reports"
+        action="action_sng_new_reactivated_customer_report"
+        sequence="11"
+        groups="sales_team.group_sale_manager"/>
+</odoo>

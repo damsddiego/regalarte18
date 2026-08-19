@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista formulario de facturas - Agregar tipo de cambio personalizado -->
+    <record id="view_move_form_inherit_custom_exchange" model="ir.ui.view">
+        <field name="name">account.move.form.inherit.custom.exchange</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <!-- Agregar campos fuera del bloque nativo de moneda para evitar heredar sus grupos/visibilidad -->
+            <xpath expr="//div[@name='journal_div']" position="after">
+                <div name="sng_custom_rate_div"
+                     class="d-flex flex-column gap-1 ms-3"
+                     invisible="currency_id == company_currency_id or move_type not in ('in_invoice', 'in_refund', 'in_receipt', 'out_invoice', 'out_refund')">
+                    <field name="sng_official_exchange_rate" invisible="1"/>
+                    <div class="d-flex align-items-center gap-2">
+                        <field name="sng_use_custom_rate" readonly="state != 'draft'"/>
+                        <label for="sng_use_custom_rate" string="TC Personalizado"/>
+                    </div>
+                    <div class="d-flex gap-1 text-muted"
+                         invisible="not sng_use_custom_rate">
+                        <span>TC (CRC/USD):</span>
+                        <field name="sng_custom_exchange_rate" digits="[12,6]" readonly="state != 'draft'"/>
+                        <span class="text-info">(Oficial: <field name="sng_official_exchange_rate" digits="[12,6]" readonly="1" class="oe_inline"/>)</span>
+                    </div>
+                </div>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Vista lista de facturas - Agregar indicador de tipo de cambio personalizado -->
+    <record id="view_invoice_tree_inherit_custom_exchange" model="ir.ui.view">
+        <field name="name">account.invoice.tree.inherit.custom.exchange</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_invoice_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='currency_id']" position="after">
+                <field name="sng_use_custom_rate" optional="hide"/>
+                <field name="sng_custom_exchange_rate" optional="hide" digits="[12, 6]"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Vista de búsqueda - Agregar filtro por tipo de cambio personalizado -->
+    <record id="view_account_move_filter_inherit_custom_exchange" model="ir.ui.view">
+        <field name="name">account.move.search.inherit.custom.exchange</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_account_move_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='to_check']" position="after">
+                <separator/>
+                <filter name="sng_custom_rate_used"
+                        string="Con Tipo de Cambio Personalizado"
+                        domain="[('sng_use_custom_rate', '=', True)]"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

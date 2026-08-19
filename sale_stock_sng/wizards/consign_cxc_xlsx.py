@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import models, _
 from odoo.tools import date_utils
-from datetime import datetime, date, time as dt_time
+from datetime import datetime, time as dt_time
 
 
 class ConsignCxcXlsx(models.AbstractModel):
@@ -68,7 +68,7 @@ class ConsignCxcXlsx(models.AbstractModel):
             total += (q.quantity or 0.0) * (q.product_id.standard_price or 0.0)
         return total
 
-    def _last_movement_date_in_partner_location(self, partner, upper_dt, wiz_locations=None):
+    def _last_movement_date_in_partner_location(self, partner, lower_dt, upper_dt, wiz_locations=None):
         """
         U/Traslado = último movimiento DONE que toque la bodega del cliente:
         - stock.move.line con date <= upper_dt
@@ -80,9 +80,10 @@ class ConsignCxcXlsx(models.AbstractModel):
         if not self._location_allowed_by_wizard(root, wiz_locations):
             return False
 
-        domain = [
-            ("state", "=", "done"),
-            ("date", "<=", upper_dt),
+        domain = [("state", "=", "done"), ("date", "<=", upper_dt)]
+        if lower_dt:
+            domain.append(("date", ">=", lower_dt))
+        domain += [
             "|",
             ("location_id", "child_of", root.id),
             ("location_dest_id", "child_of", root.id),
@@ -101,33 +102,41 @@ class ConsignCxcXlsx(models.AbstractModel):
     # =========================
     #   HELPERS: ventas / cxc
     # =========================
-    def _last_sale_or_refund_date(self, partner, upper_d):
+    def _last_sale_or_refund_date(self, partner, lower_d, upper_d):
         """
         Última venta o NTC = último account.move posteado (out_invoice / out_refund)
         """
+        domain = [
+            ("move_type", "in", ("out_invoice", "out_refund")),
+            ("state", "=", "posted"),
+            ("partner_id", "=", partner.id),
+            ("invoice_date", "<=", upper_d),
+        ]
+        if lower_d:
+            domain.append(("invoice_date", ">=", lower_d))
+
         inv = self.env["account.move"].sudo().search(
-            [
-                ("move_type", "in", ("out_invoice", "out_refund")),
-                ("state", "=", "posted"),
-                ("partner_id", "=", partner.id),
-                ("invoice_date", "<=", upper_d),
-            ],
+            domain,
             order="invoice_date desc, id desc",
             limit=1,
         )
         return inv.invoice_date if inv else False
 
-    def _partner_pending_balance(self, partner, upper_d):
+    def _partner_pending_balance(self, partner, lower_d, upper_d):
         """
         Saldo pendiente (CxC) = sum(amount_residual_signed) de facturas/NTC posteadas
         """
+        domain = [
+            ("move_type", "in", ("out_invoice", "out_refund")),
+            ("state", "=", "posted"),
+            ("partner_id", "=", partner.id),
+            ("invoice_date", "<=", upper_d),
+        ]
+        if lower_d:
+            domain.append(("invoice_date", ">=", lower_d))
+
         rows = self.env["account.move"].sudo().search_read(
-            [
-                ("move_type", "in", ("out_invoice", "out_refund")),
-                ("state", "=", "posted"),
-                ("partner_id", "=", partner.id),
-                ("invoice_date", "<=", upper_d),
-            ],
+            domain,
             ["amount_residual_signed"],
         )
         return sum(r.get("amount_residual_signed", 0.0) for r in rows)
@@ -235,11 +244,14 @@ class ConsignCxcXlsx(models.AbstractModel):
             date_to = wiz.date_to
             date_to_dt = date_utils.end_of(date_to, "day")
 
-            # Fecha desde (no 1970)
-            date_from = wiz.date_from
-            if not date_from:
+            # Fecha desde: si no viene en el wizard, solo se usa para mostrar
+            # el primer dato detectado; no se limita el rango inferior.
+            query_date_from = wiz.date_from
+            query_date_from_dt = date_utils.start_of(query_date_from, "day") if query_date_from else False
+            display_date_from = query_date_from
+            if not display_date_from:
                 detected = self._detect_min_date(partners)
-                date_from = detected or date_to
+                display_date_from = detected or date_to
 
             # Monedas objetivo
             company_currency = self.env.company.currency_id
@@ -259,7 +271,7 @@ class ConsignCxcXlsx(models.AbstractModel):
 
             # Filtros
             ws.write(row, 0, _("Fecha desde"))
-            ws.write_datetime(row, 1, datetime.combine(date_from, dt_time.min), date_fmt)
+            ws.write_datetime(row, 1, datetime.combine(display_date_from, dt_time.min), date_fmt)
             row += 1
             ws.write(row, 0, _("Fecha hasta"))
             ws.write_datetime(row, 1, datetime.combine(date_to, dt_time.min), date_fmt)
@@ -319,11 +331,13 @@ class ConsignCxcXlsx(models.AbstractModel):
                 if not self._location_allowed_by_wizard(root, wiz.location_ids):
                     continue
 
-                last_move_dt = self._last_movement_date_in_partner_location(p, date_to_dt, wiz.location_ids)
-                last_sale_d = self._last_sale_or_refund_date(p, date_to)
+                last_move_dt = self._last_movement_date_in_partner_location(
+                    p, query_date_from_dt, date_to_dt, wiz.location_ids
+                )
+                last_sale_d = self._last_sale_or_refund_date(p, query_date_from, date_to)
 
                 consign_company = self._valued_stock_now(p, wiz.location_ids)
-                pendiente_company = self._partner_pending_balance(p, date_to)
+                pendiente_company = self._partner_pending_balance(p, query_date_from, date_to)
                 general_company = (consign_company or 0.0) + (pendiente_company or 0.0)
 
                 # Convertir por fecha (date_to)

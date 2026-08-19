@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem
+        id="menu_sng_fake_bank_reconcile_root"
+        name="Conciliación Falsa"
+        parent="account.account_banks_menu"
+        sequence="50"/>
+
+    <menuitem
+        id="menu_sng_fake_bank_reconcile_pending_lines"
+        name="Líneas Pendientes"
+        parent="menu_sng_fake_bank_reconcile_root"
+        action="action_sng_fake_reconcile_pending_lines"
+        sequence="10"/>
+
+    <menuitem
+        id="menu_sng_fake_bank_reconcile_config"
+        name="Configuración"
+        parent="menu_sng_fake_bank_reconcile_root"
+        action="action_sng_fake_reconcile_config"
+        sequence="20"
+        groups="sng_fake_bank_reconcile.group_sng_fake_bank_reconcile_manager"/>
+</odoo>

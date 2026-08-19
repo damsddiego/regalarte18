@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_sng_analisis_compras_line_list" model="ir.ui.view">
+        <field name="name">sng.analisis.compras.line.list</field>
+        <field name="model">sng.analisis.compras.line</field>
+        <field name="arch" type="xml">
+            <list string="Análisis de Compras"
+                  decoration-danger="meses_inventario &gt; 12"
+                  decoration-warning="qty_sold == 0 and inv_actual &gt; 0"
+                  decoration-success="meses_inventario &gt; 0 and meses_inventario &lt;= 3"
+                  create="false" delete="false" import="false">
+                <field name="codigo" optional="show" string="Código"/>
+                <field name="descripcion" string="Descripción"/>
+                <field name="costo" optional="show" groups="custom_ui_security.group_view_product_cost"/>
+                <field name="precio" optional="show"/>
+                <field name="mes_6" sum="Total" optional="show"/>
+                <field name="mes_5" sum="Total" optional="show"/>
+                <field name="mes_4" sum="Total" optional="show"/>
+                <field name="mes_3" sum="Total" optional="show"/>
+                <field name="mes_2" sum="Total" optional="show"/>
+                <field name="mes_1" sum="Total" optional="show"/>
+                <field name="total_6m" sum="Total"/>
+                <field name="qty_sold" sum="Total" optional="show"/>
+                <field name="qty_undelivered" sum="Total" optional="show"/>
+                <field name="promedio_mensual" avg="Prom"/>
+                <field name="inv_actual" sum="Total"/>
+                <field name="meses_inventario" avg="Prom"/>
+                <field name="is_outlier" optional="show"/>
+                <field name="qty_in_purchase" sum="Total" optional="show"/>
+                <field name="lead_time_months" optional="show"/>
+                <field name="suggested_purchase_qty" sum="Total"/>
+                <field name="qty_to_buy" sum="Total"/>
+                <field name="demanda_ponderada" optional="show"/>
+                <field name="compra_sugerida_ajustada" sum="Total"/>
+                <field name="estado" widget="badge"
+                       decoration-danger="estado in ('quiebre', 'datos_incompletos')"
+                       decoration-warning="estado in ('reordenar', 'inestable')"
+                       decoration-info="estado == 'exceso'"
+                       decoration-success="estado == 'saludable'"/>
+                <field name="clase_abc" optional="show"/>
+                <field name="vendor_id" optional="show"/>
+                <field name="desviacion_demanda" optional="hide"/>
+                <field name="coef_variacion" optional="hide"/>
+                <field name="stock_disponible" optional="hide" sum="Total"/>
+                <field name="stock_proyectado" optional="hide"/>
+                <field name="stock_seguridad" optional="hide"/>
+                <field name="punto_reorden" optional="hide"/>
+                <field name="stock_objetivo" optional="hide"/>
+                <field name="necesidad_neta" optional="hide"/>
+                <field name="moq" optional="hide"/>
+                <field name="cobertura_meses" optional="hide"/>
+                <field name="exceso_unidades" optional="hide" sum="Total"/>
+                <field name="venta_valorizada" optional="hide" sum="Total"/>
+                <field name="margen_pct" optional="hide" groups="custom_ui_security.group_view_product_cost"/>
+                <field name="valor_inventario" optional="hide" sum="Total" groups="custom_ui_security.group_view_product_cost"/>
+                <field name="valor_exceso" optional="hide" sum="Total" groups="custom_ui_security.group_view_product_cost"/>
+                <field name="accion" optional="hide"/>
+                <field name="product_id" optional="hide"/>
+                <field name="analysis_months" optional="hide"/>
+                <field name="coverage_months" optional="hide"/>
+                <field name="company_currency_id" column_invisible="1"/>
+                <button name="action_open_product"
+                        type="object"
+                        icon="fa-external-link"
+                        title="Abrir producto"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_analisis_compras_line_search" model="ir.ui.view">
+        <field name="name">sng.analisis.compras.line.search</field>
+        <field name="model">sng.analisis.compras.line</field>
+        <field name="arch" type="xml">
+            <search string="Buscar">
+                <field name="descripcion" string="Producto"/>
+                <field name="codigo" string="Código"/>
+                <field name="vendor_id" string="Proveedor"/>
+                <separator/>
+                <filter string="Con ventas"
+                        name="con_ventas"
+                        domain="[('qty_sold', '&gt;', 0)]"/>
+                <filter string="Sin ventas (con inventario)"
+                        name="muertos"
+                        domain="[('qty_sold', '=', 0), ('inv_actual', '&gt;', 0)]"/>
+                <filter string="Sobrestock (&gt;12 meses)"
+                        name="sobrestock"
+                        domain="[('meses_inventario', '&gt;', 12)]"/>
+                <filter string="Stock bajo (≤3 meses)"
+                        name="stock_bajo"
+                        domain="[('meses_inventario', '&gt;', 0), ('meses_inventario', '&lt;=', 3)]"/>
+                <filter string="Requiere compra"
+                        name="requiere_compra"
+                        domain="[('qty_to_buy', '&gt;', 0)]"/>
+                <filter string="Ventas atípicas"
+                        name="atipicas"
+                        domain="[('is_outlier', '=', True)]"/>
+                <separator/>
+                <filter string="Quiebre proyectado"
+                        name="estado_quiebre"
+                        domain="[('estado', '=', 'quiebre')]"/>
+                <filter string="Reordenar"
+                        name="estado_reordenar"
+                        domain="[('estado', '=', 'reordenar')]"/>
+                <filter string="Exceso"
+                        name="estado_exceso"
+                        domain="[('estado', '=', 'exceso')]"/>
+                <filter string="Demanda inestable"
+                        name="estado_inestable"
+                        domain="[('estado', '=', 'inestable')]"/>
+                <filter string="Datos incompletos"
+                        name="estado_datos_incompletos"
+                        domain="[('estado', '=', 'datos_incompletos')]"/>
+                <separator/>
+                <filter string="Clase A"
+                        name="clase_a"
+                        domain="[('clase_abc', '=', 'a')]"/>
+                <filter string="Clase B"
+                        name="clase_b"
+                        domain="[('clase_abc', '=', 'b')]"/>
+                <filter string="Clase C"
+                        name="clase_c"
+                        domain="[('clase_abc', '=', 'c')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Proveedor"
+                            name="group_by_vendor"
+                            context="{'group_by': 'vendor_id'}"/>
+                    <filter string="Riesgo / Estado"
+                            name="group_by_estado"
+                            context="{'group_by': 'estado'}"/>
+                    <filter string="Clase ABC"
+                            name="group_by_clase"
+                            context="{'group_by': 'clase_abc'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sng_analisis_compras_line" model="ir.actions.act_window">
+        <field name="name">Análisis de Compras</field>
+        <field name="res_model">sng.analisis.compras.line</field>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="view_sng_analisis_compras_line_list"/>
+        <field name="search_view_id" ref="view_sng_analisis_compras_line_search"/>
+    </record>
+
+</odoo>

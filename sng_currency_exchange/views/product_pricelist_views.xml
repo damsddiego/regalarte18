@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_pricelist_view_inherit_sng_custom_rate" model="ir.ui.view">
+        <field name="name">product.pricelist.form.inherit.sng.custom.rate</field>
+        <field name="model">product.pricelist</field>
+        <field name="inherit_id" ref="product.product_pricelist_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group[@name='pricelist_settings']/field[@name='company_id']" position="after">
+                <field name="sng_is_usd_currency" invisible="1"/>
+                <field name="sng_use_custom_rate" invisible="not sng_is_usd_currency"/>
+                <field name="sng_custom_exchange_rate"
+                       digits="[16, 6]"
+                       invisible="not sng_is_usd_currency or not sng_use_custom_rate"
+                       required="sng_use_custom_rate"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="product_pricelist_view_tree_inherit_sng_custom_rate" model="ir.ui.view">
+        <field name="name">product.pricelist.list.inherit.sng.custom.rate</field>
+        <field name="model">product.pricelist</field>
+        <field name="inherit_id" ref="product.product_pricelist_view_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='currency_id']" position="after">
+                <field name="sng_is_usd_currency" column_invisible="True"/>
+                <field name="sng_use_custom_rate" optional="hide" invisible="not sng_is_usd_currency"/>
+                <field name="sng_custom_exchange_rate" optional="hide" digits="[16, 6]" invisible="not sng_is_usd_currency"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

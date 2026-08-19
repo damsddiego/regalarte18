@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Heredar la vista form de sale.order para modificar la lista embebida de order_line -->
+    <record id="view_order_form_inherit_sng_orders_line_sum" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.sng.orders.line.sum</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <!-- Agregar número de línea a la izquierda del handle de sequence -->
+            <xpath expr="//page[@name='order_lines']/field[@name='order_line']/list/field[@name='sequence']" position="before">
+                <field name="line_number" width="40px"/>
+            </xpath>
+
+            <!-- Agregar sumatoria al campo de cantidad solicitada -->
+            <xpath expr="//page[@name='order_lines']/field[@name='order_line']/list/field[@name='product_uom_qty']" position="attributes">
+                <attribute name="sum">Total Qty</attribute>
+            </xpath>
+
+            <!-- Agregar sumatoria al campo de cantidad entregada -->
+            <xpath expr="//page[@name='order_lines']/field[@name='order_line']/list/field[@name='qty_delivered']" position="attributes">
+                <attribute name="sum">Total Entregado</attribute>
+            </xpath>
+
+            <!-- Agregar sumatoria al campo de cantidad facturada -->
+            <xpath expr="//page[@name='order_lines']/field[@name='order_line']/list/field[@name='qty_invoiced']" position="attributes">
+                <attribute name="sum">Total Facturado</attribute>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

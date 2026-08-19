@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <title>Manual de Usuario - SNG Sales Commission</title>
+    <style>
+        body {
+            font-family: "DejaVu Sans", sans-serif;
+            color: #1f2933;
+            margin: 32px 40px;
+            line-height: 1.45;
+            font-size: 12px;
+        }
+        h1, h2, h3 {
+            color: #102a43;
+            margin-bottom: 8px;
+        }
+        h1 {
+            font-size: 26px;
+            border-bottom: 2px solid #d9e2ec;
+            padding-bottom: 8px;
+        }
+        h2 {
+            font-size: 18px;
+            margin-top: 28px;
+        }
+        h3 {
+            font-size: 14px;
+            margin-top: 18px;
+        }
+        p {
+            margin: 6px 0 10px;
+        }
+        ul, ol {
+            margin: 6px 0 12px 20px;
+        }
+        li {
+            margin-bottom: 4px;
+        }
+        .box {
+            background: #f0f4f8;
+            border-left: 4px solid #486581;
+            padding: 10px 14px;
+            margin: 14px 0;
+        }
+        .path {
+            font-family: "DejaVu Sans Mono", monospace;
+            background: #f7f9fb;
+            border: 1px solid #d9e2ec;
+            padding: 8px 10px;
+            margin: 8px 0 12px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0 16px;
+        }
+        th, td {
+            border: 1px solid #bcccdc;
+            padding: 8px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background: #eaf2f8;
+        }
+        .footer-note {
+            margin-top: 24px;
+            font-size: 11px;
+            color: #486581;
+        }
+    </style>
+</head>
+<body>
+    <h1>Manual de Usuario<br>SNG Sales Commission</h1>
+
+    <p>Este manual explica cómo configurar y usar el módulo <strong>SNG Sales Commission</strong> para liquidar comisiones de vendedores a partir de cobros reales, reglas de antigüedad y cumplimiento de metas mensuales.</p>
+
+    <div class="box">
+        <strong>Resumen funcional</strong><br>
+        El módulo calcula la comisión cuando una factura de cliente es cobrada y conciliada. La comisión base depende del bucket de antigüedad al momento del cobro, y el monto final del mes se ajusta con una tabla de cumplimiento contra la meta del vendedor.
+    </div>
+
+    <h2>1. Qué necesita el usuario antes de empezar</h2>
+    <ul>
+        <li>El módulo <strong>sng_sales_commission</strong> debe estar instalado.</li>
+        <li>El módulo <strong>sales_commission_omax</strong> debe estar instalado.</li>
+        <li>Deben existir diarios bancarios y métodos de pago de entrada configurados.</li>
+        <li>Los vendedores deben existir como contactos.</li>
+        <li>Los clientes deben tener asignado un vendedor.</li>
+    </ul>
+
+    <h2>2. Cómo funciona el módulo</h2>
+    <p>El módulo trabaja con esta lógica:</p>
+    <ol>
+        <li>Se emite una factura de cliente.</li>
+        <li>La factura queda asociada a un vendedor.</li>
+        <li>Se registra un pago y se concilia total o parcialmente.</li>
+        <li>El sistema toma la fecha real de conciliación.</li>
+        <li>Calcula cuántos días vencidos tenía la factura al cobrarse.</li>
+        <li>Busca el bucket de antigüedad correspondiente.</li>
+        <li>Calcula la comisión base sobre el monto cobrado sin IVA.</li>
+        <li>Al generar la liquidación del mes, calcula el porcentaje de cumplimiento de meta.</li>
+        <li>Aplica el factor de cumplimiento a la comisión bruta.</li>
+    </ol>
+
+    <h2>3. Configuración inicial</h2>
+
+    <h3>3.1. Configurar vendedores</h3>
+    <p>En este módulo, el vendedor es un contacto <strong>res.partner</strong>.</p>
+    <ol>
+        <li>Ir a <strong>Contactos</strong>.</li>
+        <li>Abrir el contacto que representa al vendedor.</li>
+        <li>Marcar la opción <strong>Is Salesperson</strong>.</li>
+    </ol>
+
+    <h3>3.2. Asignar vendedor a los clientes</h3>
+    <ol>
+        <li>Ir a <strong>Contactos</strong>.</li>
+        <li>Abrir el cliente.</li>
+        <li>En el campo <strong>Assigned Salesperson</strong>, seleccionar el vendedor.</li>
+    </ol>
+
+    <div class="box">
+        <strong>Importante</strong><br>
+        La liquidación toma el vendedor desde la factura. Si la factura no tiene vendedor directo, usa el vendedor asignado al cliente.
+    </div>
+
+    <h2>4. Crear el plan de comisión</h2>
+    <div class="path">Ventas &gt; Comisiones &gt; Configuración &gt; Planes</div>
+
+    <p>El plan define la vigencia y todas las reglas de cálculo.</p>
+
+    <h3>4.1. Encabezado del plan</h3>
+    <p>Complete estos campos:</p>
+    <ul>
+        <li><strong>Nombre</strong>: nombre del plan.</li>
+        <li><strong>Compañía</strong>: compañía a la que aplica.</li>
+        <li><strong>Moneda de liquidación</strong>: normalmente la moneda de la compañía.</li>
+        <li><strong>Fecha inicio</strong>: primer día desde el que aplica el plan.</li>
+        <li><strong>Fecha fin</strong>: opcional. Déjela vacía para que el plan aplique a todos los meses futuros.</li>
+    </ul>
+
+    <div class="box">
+        <strong>Vigencia continua</strong><br>
+        Si activa un plan nuevo con una fecha de inicio posterior, el sistema cerrará el plan activo anterior el día previo.
+    </div>
+
+    <h3>4.2. Buckets de antigüedad</h3>
+    <p>En la pestaña de buckets debe crear los rangos que determinan el porcentaje base de comisión.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Etiqueta</th>
+                <th>Tipo</th>
+                <th>Rango de días</th>
+                <th>% comisión base</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>No vencido</td>
+                <td>No vencido</td>
+                <td>No aplica</td>
+                <td>2.00</td>
+            </tr>
+            <tr>
+                <td>1-45 días</td>
+                <td>Vencido</td>
+                <td>1 a 45</td>
+                <td>1.50</td>
+            </tr>
+            <tr>
+                <td>46-60 días</td>
+                <td>Vencido</td>
+                <td>46 a 60</td>
+                <td>1.00</td>
+            </tr>
+            <tr>
+                <td>61-90 días</td>
+                <td>Vencido</td>
+                <td>61 a 90</td>
+                <td>0.50</td>
+            </tr>
+            <tr>
+                <td>91+ días</td>
+                <td>Vencido</td>
+                <td>91 a 999</td>
+                <td>0.00</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>Reglas importantes:</p>
+    <ul>
+        <li>Solo puede existir un bucket <strong>No vencido</strong> por plan.</li>
+        <li>Los buckets vencidos no pueden traslaparse.</li>
+        <li>Si una factura se cobra antes o exactamente en la fecha de vencimiento, entra en <strong>No vencido</strong>.</li>
+    </ul>
+
+    <h3>4.3. Tabla de cumplimiento</h3>
+    <p>En esta pestaña se define el factor que se aplicará al total bruto mensual según el porcentaje de cumplimiento del vendedor.</p>
+
+    <table>
+        <thead>
+            <tr>
+                <th>% desde</th>
+                <th>% hasta</th>
+                <th>Factor de pago</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>110.00</td>
+                <td>119.9999</td>
+                <td>1.15</td>
+            </tr>
+            <tr>
+                <td>100.00</td>
+                <td>109.9999</td>
+                <td>1.00</td>
+            </tr>
+            <tr>
+                <td>95.00</td>
+                <td>99.9999</td>
+                <td>0.95</td>
+            </tr>
+            <tr>
+                <td>70.00</td>
+                <td>94.9999</td>
+                <td>0.50</td>
+            </tr>
+            <tr>
+                <td>0.00</td>
+                <td>69.9999</td>
+                <td>0.00</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <p>Después de crear el plan, use el botón <strong>Activar</strong>.</p>
+
+    <h2>5. Registrar metas mensuales</h2>
+    <div class="path">Ventas &gt; Comisiones &gt; Configuración &gt; Metas</div>
+
+    <p>Debe crear una meta por vendedor y por periodo.</p>
+    <ul>
+        <li><strong>Plan</strong></li>
+        <li><strong>Vendedor</strong></li>
+        <li><strong>Año</strong></li>
+        <li><strong>Mes</strong></li>
+        <li><strong>Meta</strong></li>
+    </ul>
+
+    <div class="box">
+        <strong>Recomendación</strong><br>
+        Registre primero todas las metas del mes y luego genere las liquidaciones. Si no existe meta, el cálculo del cumplimiento no tendrá una base correcta.
+    </div>
+
+    <h2>6. Operación mensual</h2>
+
+    <h3>6.1. Emitir facturas</h3>
+    <p>Trabaje normalmente con facturas de cliente. La factura debe quedar <strong>publicada</strong>.</p>
+
+    <h3>6.2. Registrar cobros</h3>
+    <p>Registre pagos normalmente. El módulo toma cada conciliación parcial o total del periodo.</p>
+
+    <h3>6.3. Generar liquidaciones</h3>
+    <div class="path">Ventas &gt; Comisiones &gt; Operaciones &gt; Generar liquidaciones</div>
+
+    <p>Complete:</p>
+    <ul>
+        <li><strong>Plan</strong></li>
+        <li><strong>Año</strong></li>
+        <li><strong>Mes</strong></li>
+        <li><strong>Vendedores</strong> (uno o varios)</li>
+    </ul>
+
+    <p>Luego presione <strong>Generar</strong>.</p>
+
+    <h3>6.4. Revisar liquidaciones</h3>
+    <div class="path">Ventas &gt; Comisiones &gt; Operaciones &gt; Liquidaciones</div>
+
+    <p>En la liquidación revise:</p>
+    <ul>
+        <li><strong>Meta</strong></li>
+        <li><strong>Venta real sin IVA</strong></li>
+        <li><strong>% cumplimiento</strong></li>
+        <li><strong>Factor aplicado</strong></li>
+        <li><strong>Comisión bruta</strong></li>
+        <li><strong>Comisión final</strong></li>
+    </ul>
+
+    <p>En la pestaña <strong>Detalle</strong> verá la trazabilidad por línea:</p>
+    <ul>
+        <li>fecha de aplicación</li>
+        <li>factura</li>
+        <li>pago</li>
+        <li>cliente</li>
+        <li>bucket de antigüedad</li>
+        <li>monto aplicado sin IVA</li>
+        <li>comisión base</li>
+        <li>comisión final</li>
+    </ul>
+
+    <h3>6.5. Aprobar y cerrar</h3>
+    <p>Cuando la revisión esté completa:</p>
+    <ol>
+        <li>Presione <strong>Aprobar</strong>.</li>
+        <li>Cuando ya no se permitirán cambios, presione <strong>Cerrar</strong>.</li>
+    </ol>
+
+    <p>Una liquidación aprobada o cerrada ya no se recalcula.</p>
+
+    <h2>7. Qué significa "Requiere recálculo"</h2>
+    <p>Si aparece esta marca, significa que hubo cambios en las conciliaciones después de generar la liquidación.</p>
+    <p>En ese caso:</p>
+    <ol>
+        <li>Abra la liquidación.</li>
+        <li>Verifique que siga en estado <strong>Borrador</strong>.</li>
+        <li>Presione <strong>Generar</strong> nuevamente.</li>
+    </ol>
+
+    <h2>8. Fórmulas que usa el sistema</h2>
+
+    <h3>8.1. Antigüedad</h3>
+    <p>Se calcula con:</p>
+    <div class="path">fecha_aplicación_del_pago - fecha_vencimiento_de_la_factura</div>
+
+    <h3>8.2. Comisión base</h3>
+    <p>Se calcula con:</p>
+    <div class="path">monto_aplicado_sin_iva * %bucket / 100</div>
+
+    <h3>8.3. Cumplimiento</h3>
+    <p>Se calcula con:</p>
+    <div class="path">venta_real_sin_iva / meta * 100</div>
+
+    <h3>8.4. Comisión final</h3>
+    <p>Se calcula con:</p>
+    <div class="path">comisión_base * factor_de_cumplimiento</div>
+
+    <h2>9. Manejo de moneda</h2>
+    <p>Si la factura está en otra moneda:</p>
+    <ul>
+        <li>el sistema conserva el monto en moneda origen</li>
+        <li>convierte el monto base a moneda compañía en la fecha de aplicación del pago</li>
+    </ul>
+
+    <h2>10. Recomendaciones para el usuario</h2>
+    <ul>
+        <li>No deje planes activos con vigencias que se traslapen.</li>
+        <li>Registre metas antes de generar la liquidación.</li>
+        <li>Revise las conciliaciones del mes antes de aprobar.</li>
+        <li>No cierre liquidaciones si todavía faltan cobros por conciliar.</li>
+        <li>Use el detalle para validar diferencias por bucket.</li>
+    </ul>
+
+    <h2>11. Limitaciones de esta versión</h2>
+    <ul>
+        <li>No genera factura de proveedor.</li>
+        <li>No genera asiento contable automático.</li>
+        <li>No importa metas desde Excel.</li>
+        <li>El proceso de pago final al vendedor se controla fuera del módulo.</li>
+    </ul>
+
+    <p class="footer-note">Documento generado para uso interno del módulo SNG Sales Commission.</p>
+</body>
+</html>

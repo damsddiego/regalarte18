@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_card_settlement_wizard_form" model="ir.ui.view">
+        <field name="name">sng.card.settlement.wizard.form</field>
+        <field name="model">sng.card.settlement.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Generar liquidación diaria">
+                <sheet>
+                    <field name="currency_id" invisible="1"/>
+                    <field name="allowed_bank_journal_ids" invisible="1"/>
+                    <field name="allowed_deduction_account_ids" invisible="1"/>
+                    <field name="eligible_payment_ids" invisible="1"/>
+                    <group>
+                        <group>
+                            <field name="company_id"/>
+                            <field name="journal_id"/>
+                            <field name="transaction_date"/>
+                            <field name="settlement_date"/>
+                        </group>
+                        <group string="Totales">
+                            <field name="gross_amount" readonly="1"/>
+                            <field name="deduction_amount" readonly="1"/>
+                            <field name="net_amount" readonly="1"/>
+                        </group>
+                    </group>
+                    <separator string="Pagos propuestos"/>
+                    <field name="payment_ids">
+                        <list create="false" delete="false">
+                            <field name="date"/>
+                            <field name="name"/>
+                            <field name="partner_id"/>
+                            <field name="payment_method_line_id"/>
+                            <field name="amount" sum="Bruto"/>
+                        </list>
+                    </field>
+                    <separator string="Deducciones"/>
+                    <field name="deduction_ids">
+                        <list editable="bottom">
+                            <field name="allowed_deduction_account_ids" column_invisible="1"/>
+                            <field name="name"/>
+                            <field name="account_id"/>
+                            <field name="amount" sum="Deducciones"/>
+                        </list>
+                    </field>
+                </sheet>
+                <footer>
+                    <button name="action_generate_settlement"
+                            string="Generar"
+                            type="object"
+                            class="oe_highlight"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sng_card_settlement_wizard" model="ir.actions.act_window">
+        <field name="name">Generar liquidación diaria</field>
+        <field name="res_model">sng.card.settlement.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_sng_card_settlement_wizard_form"/>
+        <field name="target">new</field>
+    </record>
+</odoo>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Tipo de Cambio Personalizado - Facturas Proveedor</title>
+</head>
+<body>
+    <h1>Tipo de Cambio Personalizado - Facturas Proveedor</h1>
+    <p>
+        Este módulo permite establecer un tipo de cambio personalizado en las facturas de proveedor,
+        diferente al tipo de cambio oficial configurado en Odoo.
+    </p>
+    
+    <h2>Características:</h2>
+    <ul>
+        <li>✅ Tipo de cambio personalizado solo para facturas de proveedor</li>
+        <li>✅ No afecta otros flujos de Odoo (ventas, inventario, etc.)</li>
+        <li>✅ Solo visible para usuarios con permisos específicos</li>
+        <li>✅ Validaciones para evitar uso incorrecto</li>
+        <li>✅ Seguimiento de auditoría en los cambios</li>
+    </ul>
+    
+    <h2>Uso:</h2>
+    <ol>
+        <li>Asignar el grupo "Tipo de Cambio Personalizado en Facturas" al usuario</li>
+        <li>En la factura de proveedor, marcar "Usar Tipo de Cambio Personalizado"</li>
+        <li>Ingresar el tipo de cambio deseado</li>
+        <li>El sistema usará automáticamente ese tipo de cambio en los cálculos</li>
+    </ol>
+    
+    <h2>Notas:</h2>
+    <p>
+        - Solo aplica a facturas de proveedor (no clientes)<br>
+        - No modifica el tipo de cambio oficial del sistema<br>
+        - Los asientos contables reflejan el tipo de cambio personalizado
+    </p>
+</body>
+</html>

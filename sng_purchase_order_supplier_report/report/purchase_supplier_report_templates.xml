@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_purchase_supplier_document">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-set="o" t-value="doc"/>
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <style>
+                            .sng-purchase-report { font-size: 8px; }
+                            .sng-purchase-report h2 { color: #1F4E78; }
+                            .sng-purchase-report .meta td { padding: 2px 5px; }
+                            .sng-purchase-report table.data {
+                                width: 100%; border-collapse: collapse;
+                            }
+                            .sng-purchase-report table.data th,
+                            .sng-purchase-report table.data td {
+                                border: 1px solid #777; padding: 3px;
+                            }
+                            .sng-purchase-report table.data th {
+                                background-color: #1F4E78; color: white;
+                                text-align: center;
+                            }
+                            .sng-purchase-report .number { text-align: right; }
+                            .sng-purchase-report .supplier-total {
+                                background-color: #D9EAF7; font-weight: bold;
+                            }
+                            .sng-purchase-report .grand-total {
+                                background-color: #D9EAD3; font-weight: bold;
+                            }
+                            .sng-purchase-report .transit { color: #9C6500; }
+                        </style>
+                        <div class="sng-purchase-report">
+                            <h2 class="text-center">
+                                Resumen de órdenes de compra por proveedor
+                            </h2>
+                            <table class="meta mb-3">
+                                <tbody>
+                                    <tr>
+                                        <td><strong>Compañía:</strong></td>
+                                        <td><span t-field="doc.company_id"/></td>
+                                        <td><strong>Moneda:</strong></td>
+                                        <td><span t-field="doc.company_currency_id"/></td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Período:</strong></td>
+                                        <td>
+                                            <span t-field="doc.date_from"/> —
+                                            <span t-field="doc.date_to"/>
+                                        </td>
+                                        <td><strong>Estado:</strong></td>
+                                        <td>
+                                            <t t-if="doc.reception_filter == 'transit'">En tránsito</t>
+                                            <t t-else="">Todas</t>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Proveedores:</strong></td>
+                                        <td colspan="3">
+                                            <t t-esc="doc._get_filter_summary()['suppliers']"/>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <table class="data">
+                                <thead>
+                                    <tr>
+                                        <th>Proveedor</th>
+                                        <th>Código</th>
+                                        <th>Producto</th>
+                                        <th>UdM base</th>
+                                        <th>N.º OC</th>
+                                        <th>Ordenada</th>
+                                        <th>Recibida</th>
+                                        <th>Pendiente</th>
+                                        <th>Subtotal</th>
+                                        <th>Impuestos</th>
+                                        <th>Total</th>
+                                        <th>Total pendiente</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <t t-foreach="doc._get_summary_groups()" t-as="group">
+                                        <tr t-foreach="group['rows']" t-as="row">
+                                            <td><t t-esc="row['supplier'].display_name"/></td>
+                                            <td><t t-esc="row['product_code']"/></td>
+                                            <td><t t-esc="row['product'].display_name"/></td>
+                                            <td><t t-esc="row['base_uom'].display_name"/></td>
+                                            <td class="number"><t t-esc="row['order_count']"/></td>
+                                            <td class="number"><t t-esc="'{:,.2f}'.format(row['qty_ordered'])"/></td>
+                                            <td class="number"><t t-esc="'{:,.2f}'.format(row['qty_received'])"/></td>
+                                            <td class="number"><t t-esc="'{:,.2f}'.format(row['qty_pending'])"/></td>
+                                            <td class="number"><t t-esc="'{:,.2f}'.format(row['subtotal'])"/></td>
+                                            <td class="number"><t t-esc="'{:,.2f}'.format(row['tax'])"/></td>
+                                            <td class="number"><t t-esc="'{:,.2f}'.format(row['total'])"/></td>
+                                            <td class="number"><t t-esc="'{:,.2f}'.format(row['pending_total'])"/></td>
+                                        </tr>
+                                        <tr class="supplier-total">
+                                            <td colspan="8" class="number">
+                                                Subtotal proveedor:
+                                                <t t-esc="group['supplier'].display_name"/>
+                                            </td>
+                                            <td class="number"><t t-esc="'{:,.2f}'.format(group['subtotal'])"/></td>
+                                            <td class="number"><t t-esc="'{:,.2f}'.format(group['tax'])"/></td>
+                                            <td class="number"><t t-esc="'{:,.2f}'.format(group['total'])"/></td>
+                                            <td class="number"><t t-esc="'{:,.2f}'.format(group['pending_total'])"/></td>
+                                        </tr>
+                                    </t>
+                                </tbody>
+                                <tfoot>
+                                    <t t-set="totals" t-value="doc._get_grand_totals()"/>
+                                    <tr class="grand-total">
+                                        <td colspan="8" class="number">TOTAL GENERAL</td>
+                                        <td class="number"><t t-esc="'{:,.2f}'.format(totals['subtotal'])"/></td>
+                                        <td class="number"><t t-esc="'{:,.2f}'.format(totals['tax'])"/></td>
+                                        <td class="number"><t t-esc="'{:,.2f}'.format(totals['total'])"/></td>
+                                        <td class="number"><t t-esc="'{:,.2f}'.format(totals['pending_total'])"/></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="page">
+                        <div class="sng-purchase-report">
+                            <h2 class="text-center">Detalle por proveedor y producto</h2>
+                            <t t-foreach="doc._get_detail_groups()" t-as="supplier_group">
+                                <h4 class="mt-3">
+                                    Proveedor:
+                                    <t t-esc="supplier_group['supplier'].display_name"/>
+                                </h4>
+                                <t t-foreach="supplier_group['products']" t-as="product_group">
+                                    <h5>
+                                        <t t-esc="product_group['product_code']"/>
+                                        <t t-if="product_group['product_code']"> — </t>
+                                        <t t-esc="product_group['product'].display_name"/>
+                                    </h5>
+                                    <table class="data mb-2">
+                                        <thead>
+                                            <tr>
+                                                <th>Confirmación</th>
+                                                <th>Llegada prevista</th>
+                                                <th>OC</th>
+                                                <th>Ref. proveedor</th>
+                                                <th>Ordenada</th>
+                                                <th>Recibida</th>
+                                                <th>Pendiente</th>
+                                                <th>UdM</th>
+                                                <th>Precio unit.</th>
+                                                <th>Total OC</th>
+                                                <th>Pendiente OC</th>
+                                                <th>Moneda</th>
+                                                <th>Total compañía</th>
+                                                <th>Pendiente compañía</th>
+                                                <th>Estado</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-foreach="product_group['lines']" t-as="line">
+                                                <td><span t-field="line.confirmation_date"/></td>
+                                                <td><span t-field="line.planned_date"/></td>
+                                                <td><span t-field="line.order_id"/></td>
+                                                <td><span t-field="line.vendor_reference"/></td>
+                                                <td class="number"><span t-field="line.qty_ordered"/></td>
+                                                <td class="number"><span t-field="line.qty_received"/></td>
+                                                <td class="number"><span t-field="line.qty_pending"/></td>
+                                                <td><span t-field="line.uom_id"/></td>
+                                                <td class="number"><span t-field="line.price_unit"/></td>
+                                                <td class="number"><span t-field="line.total"/></td>
+                                                <td class="number"><span t-field="line.pending_total"/></td>
+                                                <td><span t-field="line.currency_id"/></td>
+                                                <td class="number"><span t-field="line.total_company"/></td>
+                                                <td class="number"><span t-field="line.pending_total_company"/></td>
+                                                <td t-attf-class="#{'transit' if line.reception_state == 'transit' else ''}">
+                                                    <t t-if="line.reception_state == 'transit'">En tránsito</t>
+                                                    <t t-else="">Recibida</t>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                        <tfoot>
+                                            <tr class="supplier-total">
+                                                <td colspan="4" class="number">Subtotal producto</td>
+                                                <td class="number"><t t-esc="'{:,.2f}'.format(product_group['qty_ordered'])"/></td>
+                                                <td class="number"><t t-esc="'{:,.2f}'.format(product_group['qty_received'])"/></td>
+                                                <td class="number"><t t-esc="'{:,.2f}'.format(product_group['qty_pending'])"/></td>
+                                                <td><t t-esc="product_group['base_uom'].display_name"/></td>
+                                                <td colspan="4"/>
+                                                <td class="number"><t t-esc="'{:,.2f}'.format(product_group['total'])"/></td>
+                                                <td class="number"><t t-esc="'{:,.2f}'.format(product_group['pending_total'])"/></td>
+                                                <td/>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </t>
+                                <table class="data mb-3">
+                                    <tr class="supplier-total">
+                                        <td class="number">SUBTOTAL PROVEEDOR</td>
+                                        <td class="number">
+                                            Total:
+                                            <t t-esc="'{:,.2f}'.format(supplier_group['total'])"/>
+                                        </td>
+                                        <td class="number">
+                                            En tránsito:
+                                            <t t-esc="'{:,.2f}'.format(supplier_group['pending_total'])"/>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </t>
+                            <t t-set="detail_totals" t-value="doc._get_grand_totals()"/>
+                            <table class="data">
+                                <tr class="grand-total">
+                                    <td class="number">TOTAL GENERAL</td>
+                                    <td class="number">
+                                        Total:
+                                        <t t-esc="'{:,.2f}'.format(detail_totals['total'])"/>
+                                    </td>
+                                    <td class="number">
+                                        En tránsito:
+                                        <t t-esc="'{:,.2f}'.format(detail_totals['pending_total'])"/>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

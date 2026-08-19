@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Formulario: statusbar de etapas debajo del header nativo -->
+    <record id="view_picking_form_inherit_stage" model="ir.ui.view">
+        <field name="name">stock.picking.form.stage</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="after">
+                <header>
+                    <field name="stage_id" widget="statusbar" options="{'clickable': '1'}"/>
+                </header>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Lista: columna Stage opcional junto al estado -->
+    <record id="view_picking_list_inherit_stage" model="ir.ui.view">
+        <field name="name">stock.picking.list.stage</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.vpicktree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list/field[@name='state']" position="after">
+                <field name="stage_id" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Búsqueda: agrupar por etapa -->
+    <record id="view_picking_search_inherit_stage" model="ir.ui.view">
+        <field name="name">stock.picking.search.stage</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_internal_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//group" position="inside">
+                <filter string="Stage" name="picking_stage"
+                        domain="[]" context="{'group_by': 'stage_id'}"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

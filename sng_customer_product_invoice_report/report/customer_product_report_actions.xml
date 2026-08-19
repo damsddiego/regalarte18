@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="paperformat_customer_product_report" model="report.paperformat">
+        <field name="name">Productos facturados por cliente - Horizontal</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="page_height">0</field>
+        <field name="page_width">0</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">12</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">5</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_customer_product_report_pdf" model="ir.actions.report">
+        <field name="name">Productos facturados por cliente PDF</field>
+        <field name="model">sng.customer.product.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sng_customer_product_invoice_report.report_customer_product_document</field>
+        <field name="report_file">sng_customer_product_invoice_report.report_customer_product_document</field>
+        <field name="paperformat_id" ref="paperformat_customer_product_report"/>
+        <field name="print_report_name">'Productos_Facturados_%s_%s_%s' % (object.partner_id.name, object.date_from, object.date_to)</field>
+        <field name="groups_id" eval="[(4, ref('account.group_account_invoice')), (4, ref('account.group_account_readonly'))]"/>
+    </record>
+
+    <record id="action_customer_product_report_xlsx" model="ir.actions.report">
+        <field name="name">Productos facturados por cliente XLSX</field>
+        <field name="model">sng.customer.product.report.wizard</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">sng_customer_product_invoice_report.product_xlsx</field>
+        <field name="report_file">sng_customer_product_invoice_report.product_xlsx</field>
+        <field name="print_report_name">'Productos_Facturados_%s_%s_%s' % (object.partner_id.name, object.date_from, object.date_to)</field>
+        <field name="groups_id" eval="[(4, ref('account.group_account_invoice')), (4, ref('account.group_account_readonly'))]"/>
+    </record>
+</odoo>

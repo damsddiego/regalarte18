@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- ================================================================
+         Wizard: formulario de filtros
+    ================================================================ -->
+    <record id="view_sng_reporte_cons_wizard_form" model="ir.ui.view">
+        <field name="name">sng.reporte.cons.wizard.form</field>
+        <field name="model">sng.reporte.cons.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Reporte Consignaciones" create="0">
+                <sheet>
+                    <group>
+                        <group string="General">
+                            <field name="company_id"
+                                   groups="base.group_multi_company"
+                                   options="{'no_create': True}"/>
+                        </group>
+                        <group string="Filtros opcionales">
+                            <field name="partner_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   placeholder="Todos los clientes con ubicación asignada"/>
+                            <field name="salesperson_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   placeholder="Todos los vendedores"/>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_generate"
+                            string="Generar Reporte"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Cerrar"
+                            class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- ================================================================
+         Líneas: vista lista (resultados)
+    ================================================================ -->
+    <record id="view_sng_reporte_cons_line_list" model="ir.ui.view">
+        <field name="name">sng.reporte.cons.line.list</field>
+        <field name="model">sng.reporte.cons.line</field>
+        <field name="arch" type="xml">
+            <list string="Reporte Consignaciones" create="0" edit="0" delete="0"
+                  default_order="partner_id">
+                <header>
+                    <button name="action_download_report"
+                            string="Descargar Excel"
+                            type="object"
+                            class="btn-primary"
+                            display="always"/>
+                    <button name="action_open_filters"
+                            string="Cambiar Filtros"
+                            type="object"
+                            class="btn-secondary"
+                            display="always"/>
+                </header>
+                <field name="wizard_id" column_invisible="1"/>
+                <field name="company_id" column_invisible="1"/>
+                <field name="company_currency_id" column_invisible="1"/>
+                <field name="partner_code" string="Código"/>
+                <field name="commercial_name" string="Nombre Comercial"/>
+                <field name="sales_route_id" string="Ruta"/>
+                <field name="salesperson_id" string="Vendedor"/>
+                <field name="location_id" string="Nombre"/>
+                <field name="last_entry_date" string="U Entrada"/>
+                <field name="last_sale_date" string="U Venta"/>
+                <field name="cxc_balance" string="Saldo CXC"/>
+                <field name="value_crc" string="Valor CRC" sum="Total CRC"/>
+                <field name="value_usd" string="Valor USD" sum="Total USD"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- ================================================================
+         Líneas: vista formulario
+    ================================================================ -->
+    <record id="view_sng_reporte_cons_line_form" model="ir.ui.view">
+        <field name="name">sng.reporte.cons.line.form</field>
+        <field name="model">sng.reporte.cons.line</field>
+        <field name="arch" type="xml">
+            <form string="Detalle Consignación" create="0" edit="0" delete="0">
+                <sheet>
+                    <group>
+                        <group string="Cliente">
+                            <field name="partner_id" readonly="1"/>
+                            <field name="partner_code" readonly="1"/>
+                            <field name="commercial_name" readonly="1"/>
+                            <field name="sales_route_id" readonly="1"/>
+                            <field name="salesperson_id" readonly="1"/>
+                        </group>
+                        <group string="Ubicación y Movimientos">
+                            <field name="location_id" readonly="1"/>
+                            <field name="last_entry_date" readonly="1"/>
+                            <field name="last_sale_date" readonly="1"/>
+                            <field name="company_currency_id" invisible="1"/>
+                            <field name="cxc_balance" readonly="1"/>
+                            <field name="value_crc" readonly="1"/>
+                            <field name="value_usd" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- ================================================================
+         Líneas: vista búsqueda
+    ================================================================ -->
+    <record id="view_sng_reporte_cons_line_search" model="ir.ui.view">
+        <field name="name">sng.reporte.cons.line.search</field>
+        <field name="model">sng.reporte.cons.line</field>
+        <field name="arch" type="xml">
+            <search string="Reporte Consignaciones">
+                <field name="partner_id"/>
+                <field name="partner_code"/>
+                <field name="commercial_name"/>
+                <field name="sales_route_id"/>
+                <field name="salesperson_id"/>
+                <field name="location_id"/>
+                <group expand="1" string="Agrupar por">
+                    <filter name="group_sales_route"
+                            string="Ruta"
+                            context="{'group_by': 'sales_route_id'}"/>
+                    <filter name="group_salesperson"
+                            string="Vendedor"
+                            context="{'group_by': 'salesperson_id'}"/>
+                    <filter name="group_location"
+                            string="Ubicación"
+                            context="{'group_by': 'location_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- ================================================================
+         Acciones y Menú
+    ================================================================ -->
+    <record id="action_sng_reporte_cons_wizard" model="ir.actions.act_window">
+        <field name="name">Reporte Consignaciones</field>
+        <field name="res_model">sng.reporte.cons.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_sng_reporte_cons_root"
+              name="Reporte Consignaciones"
+              parent="sale.menu_sale_report"
+              action="action_sng_reporte_cons_wizard"
+              sequence="105"/>
+
+</odoo>

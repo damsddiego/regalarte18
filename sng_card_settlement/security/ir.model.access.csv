@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sng_card_settlement_user,sng.card.settlement.user,model_sng_card_settlement,account.group_account_user,1,1,1,1
+access_sng_card_settlement_readonly,sng.card.settlement.readonly,model_sng_card_settlement,account.group_account_readonly,1,0,0,0
+access_sng_card_settlement_deduction_user,sng.card.settlement.deduction.user,model_sng_card_settlement_deduction,account.group_account_user,1,1,1,1
+access_sng_card_settlement_deduction_readonly,sng.card.settlement.deduction.readonly,model_sng_card_settlement_deduction,account.group_account_readonly,1,0,0,0
+access_sng_card_settlement_wizard_user,sng.card.settlement.wizard.user,model_sng_card_settlement_wizard,account.group_account_user,1,1,1,1
+access_sng_card_settlement_wizard_deduction_user,sng.card.settlement.wizard.deduction.user,model_sng_card_settlement_wizard_deduction,account.group_account_user,1,1,1,1

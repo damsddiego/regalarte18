@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_order_form_inherit_sng_custom_rate" model="ir.ui.view">
+        <field name="name">sale.order.form.inherit.sng.custom.rate</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[field[@name='pricelist_id']]" position="after">
+                <field name="sng_use_custom_rate" invisible="1"/>
+                <field name="sng_custom_exchange_rate"
+                       string="TC Fijo"
+                       digits="[16, 6]"
+                       readonly="1"
+                       invisible="not sng_use_custom_rate"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

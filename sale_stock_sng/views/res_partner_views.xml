@@ -33,6 +33,19 @@
           <field name="team_id"/>
         </field>
 
+        <xpath expr="//div[@name='button_box']" position="inside">
+          <button
+              name="action_open_current_stock_location_report"
+              type="object"
+              class="oe_stat_button"
+              icon="fa-cubes"
+              invisible="not sale_location_id">
+            <div class="o_stat_info">
+              <span class="o_stat_text">Existencias</span>
+            </div>
+          </button>
+        </xpath>
+
       </field>
     </record>
 

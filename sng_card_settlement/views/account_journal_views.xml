@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_account_journal_form_card_settlement" model="ir.ui.view">
+        <field name="name">account.journal.form.card.settlement</field>
+        <field name="model">account.journal</field>
+        <field name="inherit_id" ref="account.view_account_journal_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@id='inbound_payment_settings']//field[@name='name']" position="after">
+                <field name="is_card_settlement"/>
+            </xpath>
+            <xpath expr="//page[@id='outbound_payment_settings']//field[@name='name']" position="after">
+                <field name="is_card_settlement"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

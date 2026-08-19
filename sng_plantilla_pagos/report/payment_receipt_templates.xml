@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_payment_receipt_document_company_header" inherit_id="account.report_payment_receipt_document">
+        <xpath expr="//div[contains(@class, 'page')]/h3" position="before">
+            <t t-set="receipt_company" t-value="o.company_id.sudo()"/>
+            <div class="sng_payment_receipt_header row align-items-start mb-4 pb-3 border-bottom">
+                <div class="col-4">
+                    <img t-if="receipt_company.logo"
+                         t-att-src="image_data_uri(receipt_company.logo)"
+                         alt="Logo"
+                         style="max-height: 90px; max-width: 220px; object-fit: contain;"/>
+                </div>
+                <div class="col-8 text-end">
+                    <h4 class="mb-1">
+                        <strong>
+                            <span t-field="receipt_company.name">Company Name</span>
+                        </strong>
+                    </h4>
+                    <div t-if="receipt_company.partner_id.vat" class="mb-1">
+                        <span t-esc="receipt_company.country_id.vat_label or 'Tax ID'">Tax ID</span>:
+                        <span t-field="receipt_company.partner_id.vat">000000000</span>
+                    </div>
+                    <div class="mb-1">
+                        <span t-field="receipt_company.partner_id"
+                              t-options='{"widget": "contact", "fields": ["address"], "no_marker": true}'>
+                            Company address
+                        </span>
+                    </div>
+                    <div t-if="receipt_company.phone or receipt_company.email or receipt_company.website">
+                        <span t-if="receipt_company.phone">
+                            Tel: <span t-field="receipt_company.phone">0000-0000</span>
+                        </span>
+                        <span t-if="receipt_company.phone and (receipt_company.email or receipt_company.website)"> | </span>
+                        <span t-if="receipt_company.email">
+                            <span t-field="receipt_company.email">info@example.com</span>
+                        </span>
+                        <span t-if="receipt_company.email and receipt_company.website"> | </span>
+                        <span t-if="receipt_company.website">
+                            <span t-field="receipt_company.website">www.example.com</span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </xpath>
+    </template>
+</odoo>

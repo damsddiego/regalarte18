@@ -1,0 +1,125 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+# 	* sng_cycle_count
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-06-10 14:00:00+0000\n"
+"PO-Revision-Date: 2026-06-10 14:00:00+0000\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Language: es_CR\n"
+
+#. module: sng_cycle_count
+#: model:ir.model.fields.selection,name:sng_cycle_count.selection__sng_cycle_count_config__abc_classification__a
+msgid "A"
+msgstr "A"
+
+#. module: sng_cycle_count
+#: model:ir.model.fields.selection,name:sng_cycle_count.selection__sng_cycle_count_config__selection_method__abc
+msgid "ABC Classification"
+msgstr "Clasificación ABC"
+
+#. module: sng_cycle_count
+#: model:ir.model.fields.selection,name:sng_cycle_count.selection__sng_cycle_count_config__abc_classification__all
+msgid "All"
+msgstr "Todas"
+
+#. module: sng_cycle_count
+#: model:ir.model.fields.selection,name:sng_cycle_count.selection__sng_cycle_count_config__selection_method__random
+msgid "Random"
+msgstr "Aleatorio"
+
+#. module: sng_cycle_count
+#: model:ir.model.fields.selection,name:sng_cycle_count.selection__sng_cycle_count_config__selection_method__category
+msgid "Category Specific"
+msgstr "Categoría específica"
+
+#. module: sng_cycle_count
+#: model:ir.model.fields.selection,name:sng_cycle_count.selection__sng_cycle_count_config__selection_method__rotation
+msgid "Rotation (recent movements)"
+msgstr "Rotación (movimientos recientes)"
+
+#. module: sng_cycle_count
+#: model:ir.model.fields.selection,name:sng_cycle_count.selection__sng_cycle_count_config__selection_method__value
+msgid "Inventory Value"
+msgstr "Valor de inventario"
+
+#. module: sng_cycle_count
+#: model:ir.actions.act_window,name:sng_cycle_count.action_cycle_count
+msgid "Cycle Counts"
+msgstr "Conteos Cíclicos"
+
+#. module: sng_cycle_count
+#: model:ir.actions.act_window,name:sng_cycle_count.action_cycle_count_my_today
+msgid "My Today's Counts"
+msgstr "Mis Conteos de Hoy"
+
+#. module: sng_cycle_count
+#: model:ir.actions.act_window,name:sng_cycle_count.action_cycle_count_config
+msgid "Cycle Count Configurations"
+msgstr "Configuraciones de Conteo Cíclico"
+
+#. module: sng_cycle_count
+#: model:ir.model,name:sng_cycle_count.model_sng_cycle_count
+msgid "Cycle Count"
+msgstr "Conteo Cíclico"
+
+#. module: sng_cycle_count
+#: model:ir.model,name:sng_cycle_count.model_sng_cycle_count_config
+msgid "Cycle Count Configuration"
+msgstr "Configuración de Conteo Cíclico"
+
+#. module: sng_cycle_count
+#: model:ir.model,name:sng_cycle_count.model_sng_cycle_count_line
+msgid "Cycle Count Line"
+msgstr "Línea de Conteo Cíclico"
+
+#. module: sng_cycle_count
+#: model_terms:ir.ui.view,arch_db:sng_cycle_count.view_cycle_count_form
+msgid "Copy Theoretical"
+msgstr "Copiar Teórico"
+
+#. module: sng_cycle_count
+#: model_terms:ir.ui.view,arch_db:sng_cycle_count.view_cycle_count_form
+msgid "Validate Count"
+msgstr "Validar Conteo"
+
+#. module: sng_cycle_count
+#: model:ir.model.fields.selection,name:sng_cycle_count.selection__sng_cycle_count__state__cancelled
+msgid "Cancelled"
+msgstr "Cancelado"
+
+#. module: sng_cycle_count
+#: model:ir.model.fields.selection,name:sng_cycle_count.selection__sng_cycle_count__state__done
+msgid "Done"
+msgstr "Validado"
+
+#. module: sng_cycle_count
+#: model:ir.model.fields.selection,name:sng_cycle_count.selection__sng_cycle_count__state__draft
+msgid "Draft"
+msgstr "Borrador"
+
+#. module: sng_cycle_count
+#: model:ir.model.fields.selection,name:sng_cycle_count.selection__sng_cycle_count__state__in_progress
+msgid "In Progress"
+msgstr "En Progreso"
+
+#. module: sng_cycle_count
+#: model:ir.model.fields.selection,name:sng_cycle_count.selection__sng_cycle_count_line__state__pending
+msgid "Pending"
+msgstr "Pendiente"
+
+#. module: sng_cycle_count
+#: model:ir.model.fields.selection,name:sng_cycle_count.selection__sng_cycle_count_line__state__counted
+msgid "Counted"
+msgstr "Contado"
+
+#. module: sng_cycle_count
+#: model:ir.model.fields.selection,name:sng_cycle_count.selection__sng_cycle_count_line__state__adjusted
+msgid "Adjusted"
+msgstr "Ajustado"

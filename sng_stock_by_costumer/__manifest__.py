@@ -1,8 +1,8 @@
 {
     'name': 'Stock by Customer',
-    'version': '18.0.1.0.0',
+    'version': '18.0.1.1.0',
     'category': 'Inventory/Inventory',
-    'summary': 'Report showing inventory value by customer location',
+    'summary': 'Interactive stock analysis by customer location',
     'description': """
 Stock by Customer Report
 ========================
@@ -23,9 +23,12 @@ Features:
         'stock',
         'stock_account',
         'sale_stock_sng',  # Required for sale_location_id field
+        'sales_commission_omax',  # Required for assigned_salesperson_id / is_salesperson
+        'customer_sequence',  # Required for unique_id
     ],
     'data': [
         'security/ir.model.access.csv',
+        'views/res_partner_views.xml',
         'wizards/stock_by_customer_wizard_views.xml',
     ],
     'installable': True,

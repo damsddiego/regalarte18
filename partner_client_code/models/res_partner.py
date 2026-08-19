@@ -44,11 +44,25 @@ class ResPartner(models.Model):
     @api.model
     def name_search(self, name='', args=None, operator='ilike', limit=100):
         args = args or []
-        if name:
-            domain = ['|', ('client_code', operator, name), ('name', operator, name)]
-            partners = self.search(domain + args, limit=limit)
-            return partners.name_get()
-        return super().name_search(name=name, args=args, operator=operator, limit=limit)
+        if not name:
+            return super().name_search(name=name, args=args, operator=operator, limit=limit)
+
+        partners = self.search(
+            expression.AND([[('client_code', operator, name)], args]),
+            limit=limit,
+        )
+        result = partners.name_get()
+        remaining = limit - len(result) if limit else None
+        if remaining is not None and remaining <= 0:
+            return result
+
+        found_ids = set(partners.ids)
+        for partner_id, display_name in super().name_search(
+            name=name, args=args, operator=operator, limit=remaining
+        ):
+            if partner_id not in found_ids:
+                result.append((partner_id, display_name))
+        return result
 
 
     @api.model

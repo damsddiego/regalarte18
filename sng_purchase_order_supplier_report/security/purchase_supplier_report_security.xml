@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="purchase_supplier_report_wizard_own_company_rule" model="ir.rule">
+        <field name="name">Reporte de compras por proveedor: propios y compañías permitidas</field>
+        <field name="model_id" ref="model_sng_purchase_supplier_report_wizard"/>
+        <field name="domain_force">[('user_id', '=', user.id), ('company_id', 'in', company_ids)]</field>
+        <field name="global" eval="True"/>
+    </record>
+
+    <record id="purchase_supplier_report_line_own_company_rule" model="ir.rule">
+        <field name="name">Líneas reporte de compras: propias y compañías permitidas</field>
+        <field name="model_id" ref="model_sng_purchase_supplier_report_line"/>
+        <field name="domain_force">[('user_id', '=', user.id), ('company_id', 'in', company_ids)]</field>
+        <field name="global" eval="True"/>
+    </record>
+</odoo>

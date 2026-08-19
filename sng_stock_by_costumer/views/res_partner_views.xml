@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_partner_form_stock_by_customer_button" model="ir.ui.view">
+        <field name="name">res.partner.form.stock.by.customer.button</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_open_stock_by_customer_report"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-cubes"
+                        invisible="not sale_location_id">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Stock</span>
+                        <span class="o_stat_text">por Cliente</span>
+                    </div>
+                </button>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>

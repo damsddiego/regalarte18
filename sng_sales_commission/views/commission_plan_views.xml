@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_commission_plan_list" model="ir.ui.view">
+        <field name="name">sng.commission.plan.list</field>
+        <field name="model">sng.commission.plan</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="company_id"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="state"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_commission_plan_form" model="ir.ui.view">
+        <field name="name">sng.commission.plan.form</field>
+        <field name="model">sng.commission.plan</field>
+        <field name="arch" type="xml">
+            <form string="Plan de comisiones">
+                <header>
+                    <button name="action_set_draft" type="object" string="Borrador" invisible="state == 'draft'"/>
+                    <button name="action_activate" type="object" string="Activar" class="btn-primary" invisible="state == 'active'"/>
+                    <button name="action_archive" type="object" string="Archivar" invisible="state == 'archived'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,active,archived"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="company_id"/>
+                            <field name="currency_id"/>
+                        </group>
+                        <group>
+                            <field name="date_start"/>
+                            <field name="date_end" string="Fecha fin (opcional)"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Buckets de antigüedad">
+                            <field name="aging_rule_ids">
+                                <list editable="bottom">
+                                    <field name="sequence"/>
+                                    <field name="name"/>
+                                    <field name="bucket_type"/>
+                                    <field name="days_from" invisible="bucket_type == 'not_due'"/>
+                                    <field name="days_to" invisible="bucket_type == 'not_due'"/>
+                                    <field name="commission_percentage"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Cumplimiento">
+                            <field name="performance_rule_ids">
+                                <list editable="bottom">
+                                    <field name="sequence"/>
+                                    <field name="name"/>
+                                    <field name="percentage_from"/>
+                                    <field name="percentage_to"/>
+                                    <field name="payout_factor" string="Factor de pago (%)"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_sng_commission_plan_search" model="ir.ui.view">
+        <field name="name">sng.commission.plan.search</field>
+        <field name="model">sng.commission.plan</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="company_id"/>
+                <field name="state"/>
+                <filter name="filter_active" string="Activos" domain="[('state', '=', 'active')]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sng_commission_plan" model="ir.actions.act_window">
+        <field name="name">Planes de comisión</field>
+        <field name="res_model">sng.commission.plan</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

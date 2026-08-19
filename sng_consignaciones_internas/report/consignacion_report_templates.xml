@@ -1,79 +1,160 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
     <template id="report_consignacion_delivery">
-        <t t-call="web.html_container">
+        <t t-call="web.basic_layout">
             <t t-foreach="docs" t-as="o">
-                <t t-call="web.external_layout">
-                    <div class="page">
-                        <h2>Entrega de consignación</h2>
-                        <div class="row mt-2">
-                            <div class="col-6">
-                                <strong>Documento:</strong>
-                                <span t-esc="o.name"/>
-                            </div>
-                            <div class="col-6">
-                                <strong>Fecha:</strong>
-                                <span t-if="o.scheduled_date" t-field="o.scheduled_date" t-options="{'widget': 'date'}"/>
-                                <span t-elif="o.date_done" t-field="o.date_done" t-options="{'widget': 'date'}"/>
-                            </div>
+                <t t-set="company_display_name"
+                   t-value="o.company_id.commercial_name if 'commercial_name' in o.company_id._fields and o.company_id.commercial_name else o.company_id.name"/>
+                <t t-set="consignee_partner"
+                   t-value="o.partner_id or (o.move_ids and o.move_ids[0].partner_id) or False"/>
+                <t t-set="consignee_display_name"
+                   t-value="consignee_partner.commercial_name if consignee_partner and 'commercial_name' in consignee_partner._fields and consignee_partner.commercial_name else consignee_partner.name if consignee_partner and consignee_partner.name else consignee_partner.display_name if consignee_partner else ''"/>
+                <div class="page">
+                    <div class="row mb-4 align-items-center">
+                        <div class="col-4">
+                            <img t-if="o.company_id.logo"
+                                 t-att-src="image_data_uri(o.company_id.logo)"
+                                 alt="Logo"
+                                 style="max-height:75px; max-width:220px;"/>
                         </div>
-                        <div class="row mt-2">
-                            <div class="col-6">
-                                <strong>Cliente consignatario:</strong>
-                                <span t-esc="o.partner_id.display_name or ''"/>
+                        <div class="col-8 text-end">
+                            <div style="font-size:20px; font-weight:700;">
+                                <span t-esc="company_display_name"/>
                             </div>
-                            <div class="col-6">
-                                <strong>Origen / Destino:</strong>
-                                <span t-esc="o.location_id.display_name"/> → <span t-esc="o.location_dest_id.display_name"/>
-                            </div>
+                            <t t-if="company_display_name != o.company_id.name">
+                                <div>
+                                    <span t-esc="o.company_id.name"/>
+                                </div>
+                            </t>
+                            <t t-if="o.company_id.street">
+                                <div>
+                                    <span t-esc="o.company_id.street"/>
+                                </div>
+                            </t>
+                            <t t-if="o.company_id.phone">
+                                <div>
+                                    <span t-esc="o.company_id.phone"/>
+                                </div>
+                            </t>
+                            <t t-if="o.company_id.email">
+                                <div>
+                                    <span t-esc="o.company_id.email"/>
+                                </div>
+                            </t>
                         </div>
-                        <table class="table table-sm mt-3">
-                            <thead>
+                    </div>
+                    <h2>Entrega de consignación</h2>
+                    <div class="row mt-2">
+                        <div class="col-6">
+                            <strong>Documento:</strong>
+                            <span t-esc="o.name"/>
+                        </div>
+                        <div class="col-6">
+                            <strong>Fecha:</strong>
+                            <span t-if="o.scheduled_date" t-field="o.scheduled_date" t-options="{'widget': 'date'}"/>
+                            <span t-elif="o.date_done" t-field="o.date_done" t-options="{'widget': 'date'}"/>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-6">
+                            <strong>Cliente consignatario:</strong>
+                            <span t-esc="consignee_display_name"/>
+                            <t t-if="consignee_partner and consignee_display_name != (consignee_partner.name or consignee_partner.display_name)">
+                                <br/>
+                                <span t-esc="consignee_partner.name or consignee_partner.display_name"/>
+                            </t>
+                        </div>
+                        <div class="col-6">
+                            <strong>Origen / Destino:</strong>
+                            <span t-esc="o.location_id.display_name"/> → <span t-esc="o.location_dest_id.display_name"/>
+                        </div>
+                    </div>
+                    <t t-set="report_values" t-value="o._get_consignation_report_values()"/>
+                    <t t-set="report_lines" t-value="report_values['lines']"/>
+                    <t t-set="report_totals" t-value="report_values['totals']"/>
+                    <t t-set="report_currency" t-value="report_values['currency']"/>
+                    <table class="table table-sm mt-3">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th class="text-end">Cantidad</th>
+                                <th class="text-end">Precio unitario</th>
+                                <th class="text-end">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <t t-foreach="report_lines" t-as="line">
                                 <tr>
-                                    <th>Producto</th>
-                                    <th class="text-end">Cantidad</th>
-                                    <th class="text-end">Precio unitario</th>
-                                    <th class="text-end">Subtotal</th>
+                                    <td>
+                                        <span t-esc="line['code']"/>
+                                    </td>
+                                    <td>
+                                        <span t-esc="line['product']"/>
+                                        <div t-if="'print_line_notes' in o._fields and o.print_line_notes and line.get('sng_line_note')" class="text-muted small mt-1">
+                                            <strong>Nota:</strong>
+                                            <span t-esc="line['sng_line_note']"/>
+                                        </div>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="line['quantity']"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="line['price_unit']" t-options="{'widget': 'monetary', 'display_currency': report_currency}"/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-esc="line['subtotal']" t-options="{'widget': 'monetary', 'display_currency': report_currency}"/>
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                <t t-foreach="o.move_ids_without_package" t-as="m">
-                                    <tr>
-                                        <td>
-                                            <span t-esc="m.product_id.display_name"/>
-                                        </td>
-                                        <td class="text-end">
-                                            <span t-esc="m.product_uom_qty"/>
-                                        </td>
-                                        <td class="text-end">
-                                            <span t-field="m.price_unit" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
-                                        </td>
-                                        <td class="text-end">
-                                            <span t-field="m.subtotal" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
-                                        </td>
-                                    </tr>
-                                </t>
-                            </tbody>
-                        </table>
-                        <div class="row mt-2">
-                            <div class="col-6"></div>
-                            <div class="col-6 text-end">
+                            </t>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="2" class="text-end">
+                                    <strong>Total</strong>
+                                </td>
+                                <td class="text-end">
+                                    <strong>
+                                        <span t-esc="report_totals['quantity']"/>
+                                    </strong>
+                                </td>
+                                <td></td>
+                                <td class="text-end">
+                                    <strong>
+                                        <span t-esc="report_totals['subtotal']" t-options="{'widget': 'monetary', 'display_currency': report_currency}"/>
+                                    </strong>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                    <div class="row mt-2">
+                        <div class="col-6"></div>
+                        <div class="col-6 text-end">
+                            <div>
+                                <strong>Subtotal:</strong>
+                                <span t-esc="report_totals['subtotal']" t-options="{'widget': 'monetary', 'display_currency': report_currency}"/>
+                            </div>
+                            <div>
+                                <strong>Impuesto:</strong>
+                                <span t-esc="report_totals['tax']" t-options="{'widget': 'monetary', 'display_currency': report_currency}"/>
+                            </div>
+                            <div>
                                 <strong>Total:</strong>
-                                <span t-field="o.amount_total" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/>
-                            </div>
-                        </div>
-                        <div class="row mt-5">
-                            <div class="col-6">
-                                <div>______________________________</div>
-                                <div>Entregado por</div>
-                            </div>
-                            <div class="col-6">
-                                <div>______________________________</div>
-                                <div>Recibido por</div>
+                                <span t-esc="report_totals['total']" t-options="{'widget': 'monetary', 'display_currency': report_currency}"/>
                             </div>
                         </div>
                     </div>
-                </t>
+                    <div class="row mt-5">
+                        <div class="col-6">
+                            <div>______________________________</div>
+                            <div>Entregado por</div>
+                        </div>
+                        <div class="col-6">
+                            <div>______________________________</div>
+                            <div>Recibido por</div>
+                        </div>
+                    </div>
+                </div>
             </t>
         </t>
     </template>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="seq_sng_card_settlement" model="ir.sequence">
+        <field name="name">Liquidación de tarjeta</field>
+        <field name="code">sng.card.settlement</field>
+        <field name="prefix">LCT/%(year)s/</field>
+        <field name="padding">4</field>
+        <field name="company_id" eval="False"/>
+    </record>
+</odoo>

@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sng_unreconciled_report_wizard,sng.unreconciled.report.wizard user,model_sng_unreconciled_report_wizard,base.group_user,1,1,1,1
+access_sng_unreconciled_report_invoice_line,sng.unreconciled.report.invoice.line user,model_sng_unreconciled_report_invoice_line,base.group_user,1,1,1,1
+access_sng_unreconciled_report_payment_line,sng.unreconciled.report.payment.line user,model_sng_unreconciled_report_payment_line,base.group_user,1,1,1,1
+access_sng_reconcile_payment_wizard,sng.reconcile.payment.wizard user,model_sng_reconcile_payment_wizard,base.group_user,1,1,1,1
+access_sng_reconcile_invoice_line,sng.reconcile.invoice.line user,model_sng_reconcile_invoice_line,base.group_user,1,1,1,1

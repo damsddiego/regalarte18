@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_sng_reconcile_payment_wizard_form" model="ir.ui.view">
+        <field name="name">sng.reconcile.payment.wizard.form</field>
+        <field name="model">sng.reconcile.payment.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Conciliar Pago con Facturas">
+                <sheet>
+                    <group string="Pago a Aplicar">
+                        <group>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="payment_name" readonly="1" string="Número"/>
+                            <field name="date" readonly="1"/>
+                            <field name="journal_name" readonly="1" string="Diario"/>
+                        </group>
+                        <group>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="amount" readonly="1"/>
+                            <field name="amount_available" readonly="1"/>
+                        </group>
+                    </group>
+                    <separator string="Seleccione las facturas a las que aplicar este pago"/>
+                    <field name="invoice_line_ids" nolabel="1">
+                        <list string="Facturas Pendientes" create="0" delete="0" editable="top">
+                            <field name="apply"/>
+                            <field name="invoice_name" readonly="1"/>
+                            <field name="invoice_date" readonly="1"/>
+                            <field name="invoice_date_due" readonly="1"/>
+                            <field name="amount_total" readonly="1"/>
+                            <field name="amount_residual" readonly="1" sum="Total Pendiente"/>
+                            <field name="currency_name" readonly="1"/>
+                        </list>
+                    </field>
+                    <group>
+                        <group/>
+                        <group>
+                            <field name="amount_to_apply" readonly="1" string="Total Seleccionado"/>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_reconcile" string="Aplicar Conciliación" type="object" class="btn-primary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+</odoo>

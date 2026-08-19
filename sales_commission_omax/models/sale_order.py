@@ -8,14 +8,46 @@ class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
     commission_analysis_line = fields.One2many('sales.commission.analysis','sale_order_id','Sales Commission')
-    salesperson_id = fields.Many2one('res.partner', 'Salesperson', domain="[('is_salesperson', '=', True)]", help="Salesperson assigned to this order for commission purposes.")
+    salesperson_id = fields.Many2one(
+        'res.partner', 'Salesperson',
+        domain="[('is_salesperson', '=', True)]",
+        help="Salesperson assigned to this order for commission purposes.",
+        compute='_compute_salesperson_id',
+        store=True,
+        readonly=False,
+        precompute=True,
+    )
 
-    @api.onchange('partner_id')
-    def _onchange_partner_id_salesperson(self):
-        if self.partner_id and self.partner_id.assigned_salesperson_id:
-            self.salesperson_id = self.partner_id.assigned_salesperson_id
+    @api.depends('partner_id', 'partner_id.assigned_salesperson_id')
+    def _compute_salesperson_id(self):
+        for order in self:
+            if order.partner_id and order.partner_id.assigned_salesperson_id:
+                order.salesperson_id = order.partner_id.assigned_salesperson_id
+            elif not order.salesperson_id:
+                # Si no hay vendedor asignado al cliente, dejarlo vacío para que se asigne manualmente
+                # Solo se asignará automáticamente si el cliente tiene un vendedor configurado
+                order.salesperson_id = False
+
+    def _prepare_invoice(self):
+        """Extend to include salesperson_id in invoice"""
+        invoice_vals = super(SaleOrder, self)._prepare_invoice()
+        if self.salesperson_id:
+            invoice_vals['salesperson_id'] = self.salesperson_id.id
+        return invoice_vals
+
+    def _get_commission_salesperson(self):
+        self.ensure_one()
+        return self.salesperson_id or self.user_id.partner_id or self.env.user.partner_id
+
+    def _get_commission_analysis_date(self):
+        self.ensure_one()
+        return self.date_order.date() if self.date_order else fields.Date.context_today(self)
 
     def create_product_commission_analysis_line(self, commission, commission_line, order_lines):
+        salesperson = self._get_commission_salesperson()
+        if not salesperson:
+            return
+        analysis_date = self._get_commission_analysis_date()
         for line in order_lines:
             order_id = line.order_id
             #Fix Price
@@ -34,8 +66,8 @@ class SaleOrder(models.Model):
                     if commission_amount > 0:#
                         vals = {
                             'name':name,
-                            'date':fields.date.today(),
-                            'sales_person_id':self.salesperson_id.id,
+                            'date':analysis_date,
+                            'sales_person_id':salesperson.id,
                             'sale_order_id':self.id,
                             'commission_id':commission.id,
                             'commission_type':commission.commission_type,
@@ -69,8 +101,8 @@ class SaleOrder(models.Model):
                 if commission_amount > 0:#
                     vals = {
                         'name':name,
-                        'date':fields.date.today(),
-                        'sales_person_id':self.salesperson_id.id,
+                        'date':analysis_date,
+                        'sales_person_id':salesperson.id,
                         'sale_order_id':self.id,
                         'commission_id':commission.id,
                         'commission_type':commission.commission_type,
@@ -92,8 +124,8 @@ class SaleOrder(models.Model):
                 if commission_amount > 0:#
                     vals = {
                         'name':name,
-                        'date':fields.date.today(),
-                        'sales_person_id':self.salesperson_id.id,
+                        'date':analysis_date,
+                        'sales_person_id':salesperson.id,
                         'sale_order_id':self.id,
                         'commission_id':commission.id,
                         'commission_type':commission.commission_type,
@@ -103,6 +135,10 @@ class SaleOrder(models.Model):
                     self.env["sales.commission.analysis"].sudo().create(vals)
 
     def create_product_categ_commission_analysis_line(self, commission, commission_line, order_lines):
+        salesperson = self._get_commission_salesperson()
+        if not salesperson:
+            return
+        analysis_date = self._get_commission_analysis_date()
         for line in order_lines:
             order_id = line.order_id
             #Fix Price
@@ -122,8 +158,8 @@ class SaleOrder(models.Model):
                     if commission_amount > 0:#
                         vals = {
                             'name':name,
-                            'date':fields.date.today(),
-                            'sales_person_id':self.salesperson_id.id,
+                            'date':analysis_date,
+                            'sales_person_id':salesperson.id,
                             'sale_order_id':self.id,
                             'commission_id':commission.id,
                             'commission_type':commission.commission_type,
@@ -158,8 +194,8 @@ class SaleOrder(models.Model):
                 if commission_amount > 0:#
                     vals = {
                         'name':name,
-                        'date':fields.date.today(),
-                        'sales_person_id':self.salesperson_id.id,
+                        'date':analysis_date,
+                        'sales_person_id':salesperson.id,
                         'sale_order_id':self.id,
                         'commission_id':commission.id,
                         'commission_type':commission.commission_type,
@@ -182,8 +218,8 @@ class SaleOrder(models.Model):
                 if commission_amount > 0:#
                     vals = {
                         'name':name,
-                        'date':fields.date.today(),
-                        'sales_person_id':self.salesperson_id.id,
+                        'date':analysis_date,
+                        'sales_person_id':salesperson.id,
                         'sale_order_id':self.id,
                         'commission_id':commission.id,
                         'commission_type':commission.commission_type,
@@ -197,25 +233,38 @@ class SaleOrder(models.Model):
     def action_confirm(self):#def
         res = super(SaleOrder, self).action_confirm()
         for rec in self:
-            commission = self.env["sales.commission"].sudo().search([('company_id','=',self.env.company.id), ('salesperson_ids','in',rec.salesperson_id.id),('start_date','<=',rec.date_order.date()),('end_date','>=',rec.date_order.date()), ('commission_apply_on','=','sale')])
+            salesperson = rec.salesperson_id or rec.user_id.partner_id
+            if not salesperson:
+                continue
+            analysis_date = rec._get_commission_analysis_date()
+            commission = self.env["sales.commission"].sudo().search([('company_id','=',self.env.company.id), ('salesperson_ids','in',salesperson.id),('start_date','<=',rec.date_order.date()),('end_date','>=',rec.date_order.date()), ('commission_apply_on','=','sale')])
             if commission:
                 name = False
                 #Standard
                 if commission.commission_type == 'standard':
                     for line in rec.order_line.filtered(lambda l: l.display_type == False):
-                        name = "Standard Commission (" + str(commission.standard_commission) + " %) for " + str(line.product_id.name)
+                        # Si la comisión está basada en días, usar porcentaje estándar
+                        # (en órdenes de venta no hay fecha de vencimiento, se usa el % estándar)
+                        if commission.commission_by_days:
+                            # En orden de venta usamos el primer rango (0-30 días) como default
+                            commission_percentage = commission.days_0_30_commission
+                            name = "Standard Commission by Days (" + str(commission_percentage) + " %) for " + str(line.product_id.name)
+                        else:
+                            commission_percentage = commission.standard_commission
+                            name = "Standard Commission (" + str(commission_percentage) + " %) for " + str(line.product_id.name)
+
                         ####cur
                         if commission.currency_id != rec.currency_id:
                             price_subtotal = rec.currency_id._convert(line.price_subtotal, commission.currency_id, commission.company_id, rec.date_order)
                         else:
                             price_subtotal = line.price_subtotal
                         ####
-                        commission_amount = (price_subtotal * commission.standard_commission) / 100
+                        commission_amount = (price_subtotal * commission_percentage) / 100
                         if commission_amount > 0:#
                             vals = {
                                 'name':name,
-                                'date':fields.date.today(),
-                                'sales_person_id':rec.salesperson_id.id,
+                                'date':analysis_date,
+                                'sales_person_id':salesperson.id,
                                 'sale_order_id':rec.id,
                                 'commission_id':commission.id,
                                 'commission_type':commission.commission_type,
@@ -243,8 +292,8 @@ class SaleOrder(models.Model):
                         if commission_amount > 0:#
                             vals = {
                                 'name':name,
-                                'date':fields.date.today(),
-                                'sales_person_id':rec.salesperson_id.id,
+                                'date':analysis_date,
+                                'sales_person_id':salesperson.id,
                                 'sale_order_id':rec.id,
                                 'commission_id':commission.id,
                                 'commission_type':commission.commission_type,

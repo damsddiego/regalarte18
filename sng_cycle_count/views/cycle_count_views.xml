@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree -->
+    <record id="view_cycle_count_tree" model="ir.ui.view">
+        <field name="name">sng.cycle.count.tree</field>
+        <field name="model">sng.cycle.count</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="count_date" widget="date"/>
+                <field name="config_id"/>
+                <field name="user_id"/>
+                <field name="state" widget="badge" decoration-success="state == 'done'" decoration-warning="state == 'in_progress'" decoration-info="state == 'draft'" decoration-danger="state == 'cancelled'"/>
+                <field name="total_lines"/>
+                <field name="counted_lines"/>
+                <field name="discrepancy_lines"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form -->
+    <record id="view_cycle_count_form" model="ir.ui.view">
+        <field name="name">sng.cycle.count.form</field>
+        <field name="model">sng.cycle.count</field>
+        <field name="arch" type="xml">
+            <form string="Conteo Cíclico">
+                <header>
+                    <button name="action_start" string="Iniciar" type="object" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_copy_theoretical" string="Copiar Teórico" type="object" invisible="state not in ('draft', 'in_progress')" confirm="Esto copiará la cantidad teórica a todas las líneas pendientes. ¿Desea continuar?"/>
+                    <button name="action_validate" string="Validar Conteo" type="object" class="btn-primary" invisible="state not in ('draft', 'in_progress')"/>
+                    <button name="action_cancel" string="Cancelar" type="object" invisible="state not in ('draft', 'in_progress')" confirm="¿Está seguro de cancelar este conteo?"/>
+                    <button name="action_reopen" string="Reabrir" type="object" invisible="state != 'done'" groups="sng_cycle_count.group_cycle_count_supervisor"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,done,cancelled"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" readonly="1"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="count_date" widget="date"/>
+                            <field name="config_id" options="{'no_create': True}"/>
+                            <field name="user_id"/>
+                        </group>
+                        <group>
+                            <field name="total_lines"/>
+                            <field name="counted_lines"/>
+                            <field name="discrepancy_lines"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Líneas de Conteo">
+                            <field name="line_ids" readonly="state in ('done', 'cancelled')">
+                                <list editable="bottom" decoration-danger="difference_qty != 0" decoration-muted="state == 'cancelled'">
+                                    <field name="product_id" readonly="1"/>
+                                    <field name="location_id" readonly="1"/>
+                                    <field name="lot_id" readonly="1" optional="show"/>
+                                    <field name="package_id" readonly="1" optional="hide"/>
+                                    <field name="theoretical_qty" readonly="1"/>
+                                    <field name="counted_qty"/>
+                                    <field name="difference_qty" readonly="1"/>
+                                    <field name="state" readonly="1" widget="badge"/>
+                                    <field name="notes"/>
+                                    <button name="action_set_counted" string="Marcar Contado" type="object" icon="fa-check" invisible="state != 'pending'"/>
+                                    <button name="action_copy_theoretical" string="Copiar Teórico" type="object" icon="fa-copy" invisible="state != 'pending'"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- Kanban -->
+    <record id="view_cycle_count_kanban" model="ir.ui.view">
+        <field name="name">sng.cycle.count.kanban</field>
+        <field name="model">sng.cycle.count</field>
+        <field name="arch" type="xml">
+            <kanban default_group_by="state">
+                <field name="name"/>
+                <field name="count_date" widget="date"/>
+                <field name="state"/>
+                <field name="total_lines"/>
+                <field name="counted_lines"/>
+                <field name="discrepancy_lines"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_card">
+                            <div class="oe_kanban_content">
+                                <div class="o_kanban_record_top">
+                                    <div class="o_kanban_record_headings">
+                                        <strong class="o_kanban_record_title"><field name="name"/></strong>
+                                    </div>
+                                </div>
+                                <div class="o_kanban_record_body">
+                                    <div><field name="count_date" widget="date"/></div>
+                                    <div>Líneas: <field name="counted_lines"/> / <field name="total_lines"/></div>
+                                    <div>Discrepancias: <field name="discrepancy_lines"/></div>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Search -->
+    <record id="view_cycle_count_search" model="ir.ui.view">
+        <field name="name">sng.cycle.count.search</field>
+        <field name="model">sng.cycle.count</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="user_id"/>
+                <field name="config_id"/>
+                <filter string="Hoy" name="today" domain="[('count_date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                <filter string="Borrador" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="En Progreso" name="in_progress" domain="[('state', '=', 'in_progress')]"/>
+                <filter string="Validados" name="done" domain="[('state', '=', 'done')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Operador" name="group_user" context="{'group_by': 'user_id'}"/>
+                    <filter string="Fecha" name="group_date" context="{'group_by': 'count_date'}"/>
+                    <filter string="Configuración" name="group_config" context="{'group_by': 'config_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Actions -->
+    <record id="action_cycle_count" model="ir.actions.act_window">
+        <field name="name">Conteos Cíclicos</field>
+        <field name="res_model">sng.cycle.count</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="search_view_id" ref="view_cycle_count_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No hay conteos cíclicos registrados.
+            </p>
+            <p>
+                Los conteos se generan automáticamente cada día según las configuraciones activas.
+            </p>
+        </field>
+    </record>
+
+    <record id="action_cycle_count_my_today" model="ir.actions.act_window">
+        <field name="name">Mis Conteos de Hoy</field>
+        <field name="res_model">sng.cycle.count</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="domain">[('user_id', '=', uid), ('count_date', '=', context_today().strftime('%Y-%m-%d')), ('state', 'in', ('draft', 'in_progress'))]</field>
+        <field name="search_view_id" ref="view_cycle_count_search"/>
+    </record>
+
+    <!-- Menus -->
+    <menuitem id="menu_cycle_count_root" name="Conteos Cíclicos" parent="stock.menu_stock_warehouse_mgmt" sequence="50"/>
+    <menuitem id="menu_cycle_count_my" name="Mis Conteos de Hoy" parent="menu_cycle_count_root" action="action_cycle_count_my_today" sequence="10"/>
+    <menuitem id="menu_cycle_count_all" name="Todos los Conteos" parent="menu_cycle_count_root" action="action_cycle_count" sequence="20"/>
+    <menuitem id="menu_cycle_count_config" name="Configuraciones" parent="menu_cycle_count_root" action="action_cycle_count_config" sequence="30" groups="sng_cycle_count.group_cycle_count_supervisor"/>
+</odoo>

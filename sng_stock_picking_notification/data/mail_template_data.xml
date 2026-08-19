@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="email_template_stock_shortage" model="mail.template">
+            <field name="name">Entrega: Falta de stock</field>
+            <field name="model_id" ref="stock.model_stock_picking"/>
+            <field name="subject">Alerta: Falta de stock en entrega {{ object.name }}</field>
+            <field name="email_from">{{ (object.company_id.email_formatted or user.email_formatted) }}</field>
+            <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px;">
+    <p style="margin: 0px; padding: 0px; font-size: 13px;">
+        Estimado(a),<br/><br/>
+        Le informamos que la entrega <strong><t t-out="object.name"/></strong> no puede validarse debido a falta de stock en la ubicación origen.
+        <br/><br/>
+        <strong>Detalle de productos con stock insuficiente:</strong>
+        <ul>
+            <t t-foreach="ctx.get('insufficient_moves', [])" t-as="item">
+            <li>
+                <strong><t t-out="item['product'].display_name"/></strong> en <strong><t t-out="item['location'].display_name"/></strong><br/>
+                Requerido: <t t-out="'%.2f' % item['required']"/> | Disponible: <t t-out="'%.2f' % item['available']"/> | Faltante: <t t-out="'%.2f' % item['shortage']"/>
+            </li>
+            </t>
+        </ul>
+        <br/>
+        Puede revisar la entrega directamente en Odoo para tomar las acciones correspondientes.
+        <br/><br/>
+        Saludos cordiales,<br/>
+        <t t-out="object.company_id.name or ''"/>
+    </p>
+</div>
+            </field>
+            <field name="lang">{{ object.env.user.lang }}</field>
+            <field name="auto_delete" eval="True"/>
+        </record>
+    </data>
+</odoo>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <function
+        model="res.partner"
+        name="_migrate_expense_account_id_to_import_bill_expense_account_id"
+    />
+</odoo>

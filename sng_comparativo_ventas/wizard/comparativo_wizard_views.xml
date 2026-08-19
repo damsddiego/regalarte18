@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_sng_comparativo_wizard_form" model="ir.ui.view">
+        <field name="name">sng.comparativo.wizard.form</field>
+        <field name="model">sng.comparativo.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Comparativo de Ventas">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>Reporte Comparativo de Ventas</h1>
+                        <p class="text-muted">
+                            Analiza las ventas de los últimos 6 meses vs. el inventario actual por producto.
+                        </p>
+                    </div>
+                    <group string="Parámetros">
+                        <group>
+                            <field name="fecha_referencia"/>
+                            <field name="solo_con_ventas"/>
+                        </group>
+                        <group>
+                            <field name="warehouse_group_id" options="{'no_create': True}"/>
+                            <field name="warehouse_ids" widget="many2many_tags" readonly="warehouse_group_id"/>
+                            <field name="proveedor_ids" widget="many2many_tags"/>
+                        </group>
+                    </group>
+                    <div class="alert alert-info" role="alert">
+                        <strong>Nota:</strong>
+                        "Hace 1 mes" corresponde al mes de la fecha de referencia.
+                        Los colores en "Meses Inv." indican:
+                        <span class="badge" style="background:#c00;color:#fff">Rojo</span> sobrestock (&gt;12 meses),
+                        <span class="badge" style="background:#e07000;color:#fff">Naranja</span> sin ventas con inventario,
+                        <span class="badge" style="background:#2e7d32;color:#fff">Verde</span> stock bajo (≤3 meses).
+                    </div>
+                </sheet>
+                <footer>
+                    <button name="action_generar"
+                            string="Generar reporte"
+                            type="object"
+                            class="btn-primary"/>
+                    <button name="action_exportar_xls"
+                            string="Exportar Excel"
+                            type="object"
+                            class="btn-secondary"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sng_comparativo_wizard" model="ir.actions.act_window">
+        <field name="name">Comparativo de Ventas</field>
+        <field name="res_model">sng.comparativo.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+</odoo>

@@ -1,0 +1,7 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sng_cycle_count_config_operator,sng.cycle.count.config operator,sng_cycle_count.model_sng_cycle_count_config,sng_cycle_count.group_cycle_count_operator,1,0,0,0
+access_sng_cycle_count_config_supervisor,sng.cycle.count.config supervisor,sng_cycle_count.model_sng_cycle_count_config,sng_cycle_count.group_cycle_count_supervisor,1,1,1,1
+access_sng_cycle_count_operator,sng.cycle.count operator,sng_cycle_count.model_sng_cycle_count,sng_cycle_count.group_cycle_count_operator,1,1,1,0
+access_sng_cycle_count_supervisor,sng.cycle.count supervisor,sng_cycle_count.model_sng_cycle_count,sng_cycle_count.group_cycle_count_supervisor,1,1,1,1
+access_sng_cycle_count_line_operator,sng.cycle.count.line operator,sng_cycle_count.model_sng_cycle_count_line,sng_cycle_count.group_cycle_count_operator,1,1,1,0
+access_sng_cycle_count_line_supervisor,sng.cycle.count.line supervisor,sng_cycle_count.model_sng_cycle_count_line,sng_cycle_count.group_cycle_count_supervisor,1,1,1,1

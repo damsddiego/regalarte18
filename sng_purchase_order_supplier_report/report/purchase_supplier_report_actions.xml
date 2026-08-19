@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="paperformat_purchase_supplier_report" model="report.paperformat">
+        <field name="name">Órdenes de compra por proveedor - Horizontal</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="page_height">0</field>
+        <field name="page_width">0</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">10</field>
+        <field name="margin_bottom">10</field>
+        <field name="margin_left">6</field>
+        <field name="margin_right">6</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">4</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_purchase_supplier_report_pdf" model="ir.actions.report">
+        <field name="name">Órdenes de compra por proveedor PDF</field>
+        <field name="model">sng.purchase.supplier.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sng_purchase_order_supplier_report.report_purchase_supplier_document</field>
+        <field name="report_file">sng_purchase_order_supplier_report.report_purchase_supplier_document</field>
+        <field name="paperformat_id" ref="paperformat_purchase_supplier_report"/>
+        <field name="print_report_name">'Ordenes_Compra_Proveedor_%s_%s' % (object.date_from, object.date_to)</field>
+        <field name="groups_id" eval="[(4, ref('purchase.group_purchase_user')), (4, ref('purchase.group_purchase_manager'))]"/>
+    </record>
+
+    <record id="action_purchase_supplier_report_xlsx" model="ir.actions.report">
+        <field name="name">Órdenes de compra por proveedor XLSX</field>
+        <field name="model">sng.purchase.supplier.report.wizard</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">sng_po_supplier_report.xlsx</field>
+        <field name="report_file">sng_po_supplier_report.xlsx</field>
+        <field name="print_report_name">'Ordenes_Compra_Proveedor_%s_%s' % (object.date_from, object.date_to)</field>
+        <field name="groups_id" eval="[(4, ref('purchase.group_purchase_user')), (4, ref('purchase.group_purchase_manager'))]"/>
+    </record>
+</odoo>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="ir_cron_generate_cycle_counts" model="ir.cron">
+            <field name="name">Generar Conteos Cíclicos Diarios</field>
+            <field name="model_id" ref="model_sng_cycle_count_config"/>
+            <field name="state">code</field>
+            <field name="code">model.cron_generate_daily_counts()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">days</field>
+            <field name="active">False</field>
+            <field name="user_id" ref="base.user_root"/>
+        </record>
+    </data>
+</odoo>

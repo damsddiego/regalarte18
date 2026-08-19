@@ -2,7 +2,7 @@
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
 from odoo import api, fields, models, _
-from odoo.exceptions import UserError, ValidationError
+from odoo.exceptions import UserError
 
 
 class AccountPayment(models.Model):
@@ -89,7 +89,7 @@ class AccountPayment(models.Model):
 
                 # If a positive write-off is set, enforce strict equality.
                 total_payment_and_writeoff = payment_amount + writeoff_amount
-                if total_payment_and_writeoff != total_invoice_amount:
+                if self.currency_id.compare_amounts(total_payment_and_writeoff, total_invoice_amount) != 0:
                     return {
                         'warning': {
                             'title': "Warning!",
@@ -115,191 +115,125 @@ class AccountPayment(models.Model):
         if self.pay_moves:
             self._load_outstanding_moves()
 
-    #account/models/account_payment.py
+    def _get_selected_outstanding_moves(self):
+        self.ensure_one()
+        return self.outstanding_move_lines.filtered(lambda line: line.select_to_pay)
+
+    def _prepare_payment_writeoff_line_vals(self):
+        self.ensure_one()
+        if (
+            not self.pay_moves
+            or not self._get_selected_outstanding_moves()
+            or not self.writeoff_account_id
+            or self.currency_id.is_zero(self.writeoff_amt or 0.0)
+        ):
+            return []
+
+        amount_currency = abs(self.writeoff_amt)
+        if self.payment_type == 'outbound':
+            amount_currency = -amount_currency
+        balance = self.currency_id._convert(
+            amount_currency,
+            self.company_id.currency_id,
+            self.company_id,
+            self.date,
+        )
+        return [{
+            'name': 'Write-Off',
+            'account_id': self.writeoff_account_id.id,
+            'partner_id': self.partner_id.id,
+            'currency_id': self.currency_id.id,
+            'amount_currency': amount_currency,
+            'balance': balance,
+            'debit': balance if balance > 0.0 else 0.0,
+            'credit': -balance if balance < 0.0 else 0.0,
+            'writeoff_notes': self.writeoff_notes or '',
+        }]
+
+    def _prepare_move_line_default_vals(self, write_off_line_vals=None, force_balance=None):
+        if write_off_line_vals is None:
+            write_off_line_vals = self._prepare_payment_writeoff_line_vals()
+        return super()._prepare_move_line_default_vals(
+            write_off_line_vals=write_off_line_vals,
+            force_balance=force_balance,
+        )
+
+    def _validate_pay_moves_configuration(self):
+        for payment in self.filtered(lambda pay: pay.pay_moves):
+            selected_lines = payment._get_selected_outstanding_moves()
+            writeoff_amount = payment.writeoff_amt or 0.0
+            if writeoff_amount < 0:
+                raise UserError(_("The write-off amount cannot be negative."))
+            if payment.currency_id.is_zero(writeoff_amount):
+                continue
+            if not selected_lines:
+                raise UserError(_("Select at least one invoice/bill before using a write-off."))
+            if not payment.writeoff_account_id:
+                raise UserError(_("Select a write-off account before posting this payment."))
+
+            selected_total = sum(selected_lines.mapped('amount_residual'))
+            total_payment_and_writeoff = (payment.amount or 0.0) + writeoff_amount
+            if payment.currency_id.compare_amounts(total_payment_and_writeoff, selected_total) != 0:
+                doc_type = _('invoices') if payment.payment_type == 'inbound' else _('bills')
+                raise UserError(_(
+                    "Payment mismatch!\n\n"
+                    "The total of the selected %(doc_type)s is %(selected_total).2f, but "
+                    "payment amount %(payment_amount).2f + write-off amount %(writeoff_amount).2f "
+                    "is %(total).2f."
+                ) % {
+                    'doc_type': doc_type,
+                    'selected_total': selected_total,
+                    'payment_amount': payment.amount,
+                    'writeoff_amount': writeoff_amount,
+                    'total': total_payment_and_writeoff,
+                })
+
     def action_validate(self):
-        if self.pay_moves:
-            outstanding_move_ids = self.outstanding_move_lines.filtered(lambda pl: pl.select_to_pay)
-            total_invoice_amount = 0
-            if outstanding_move_ids:
-                total_invoice_amount = sum(outstanding_move_ids.mapped('amount_residual'))#amount_total 
-                # Only enforce strict equality when a write-off account is configured.
-                if self.writeoff_amt and self.writeoff_account_id:
-                    total_payment_and_writeoff = self.amount + self.writeoff_amt
-                    if total_payment_and_writeoff != total_invoice_amount:
-                        doc_type = 'Invoices' if self.payment_type == 'inbound' else 'Bills'
-                        raise UserError(
-                                "Payment mismatch!\n\n"
-                                "The total of the selected invoices is {:.2f}, but the sum of payment amount {:.2f} and write-off amount {:.2f} is {:.2f}.\n\n"
-                                "Please make sure that the Payment Amount + Write-Off Amount equals the total due on the selected {}."
-                                .format(total_invoice_amount, self.amount, self.writeoff_amt, total_payment_and_writeoff, doc_type)
-                            )
-            payment_amount = self.amount
-            discount_amount = self.writeoff_amt
-            writeoff_account_id = self.writeoff_account_id
-            for outstanding_move_id in outstanding_move_ids:
-                move = outstanding_move_id.account_move_id
-                paid_amount = outstanding_move_id.amount_residual
-                
-                sign = 1 if move.is_outbound() else -1
-                if self.pay_moves:
-                    if move.invoice_outstanding_credits_debits_widget == False and self.payment_type == 'inbound':
-                        raise UserError(_(
-                            "Warning:\n"
-                            "The payment's Journal Entry was not created.\n\n"
-                            "Reason:\n"
-                            "No Outstanding Account found for the payment. As a result, "
-                            "It cannot create the Payment's Journal Entry.\n\n"
-                            "Configuration Path:\n"
-                            "Accounting -> Configuration -> Journals -> Incoming Payments Tab \n"
-                            "-> Set the Outstanding Receipts Account against the Payment Method"
-                        ))
-                    if move.invoice_outstanding_credits_debits_widget == False and self.payment_type == 'outbound':
-                        raise UserError(_(
-                            "Warning:\n"
-                            "The payment's Journal Entry was not created.\n\n"
-                            "Reason:\n"
-                            "No Outstanding Account found for the payment. As a result, "
-                            "It cannot create the Payment's Journal Entry.\n\n"
-                            "Configuration Path:\n"
-                            "Accounting -> Configuration -> Journals -> Outgoing Payments Tab \n"
-                            "-> Set the Outstanding Payments Account against the Payment Method"
-                        ))
-                #if paid_amount
-                for line in move.invoice_outstanding_credits_debits_widget.get('content'):
-                    if line.get('account_payment_id') == self.id and self.is_reconciled == False and paid_amount:
-                        opp_reconcile_id = line.get('id')
-                        ln = self.env["account.move.line"].browse(opp_reconcile_id)
-                        
-                        discount_apply = False
-                        ###discount
-                        # Apply discount (write-off) only if a write-off account is configured.
-                        if abs(ln.amount_residual_currency) < paid_amount and discount_amount > 0 and writeoff_account_id:
-                            if move.move_type == 'in_invoice':##for vendor bill and Credit note
-                                discount_amount = -1 * discount_amount
-                            
-                            #when inv then get ln.amount_residual_currency is negative
-                            apply_discount_amount = abs(ln.amount_residual_currency) - paid_amount
-                            
-                            if abs(apply_discount_amount) > discount_amount:
-                                apply_discount_amount = discount_amount
-                            if move.move_type == 'in_invoice':#Bill
-                                discount_amount -= apply_discount_amount
-                            else:#INV
-                                discount_amount -= abs(apply_discount_amount)
+        for payment in self.filtered(lambda pay: pay.pay_moves):
+            selected_lines = payment._get_selected_outstanding_moves()
+            if not selected_lines:
+                continue
 
-                            #update destination_account_line(receivable) to add dscount amount
-                            #update payment -> move -> destination_account_line 
-                            lines_to_reconcile = self.move_id.line_ids
-                            move_receivable_line = lines_to_reconcile.filtered(lambda l: l.account_id == self.destination_account_id)
-                            
-                            if move.move_type == 'in_invoice':#Bill
-                                update_balance = abs(apply_discount_amount) + move_receivable_line.balance
-                                credit_balance = update_balance
-                                update_balance = sign * update_balance#set + or - in balance, amount_currency and amount_residual_currency
-                            else:#INV
-                                #update_balance = apply_discount_amount + abs(move_receivable_line.balance)
-                                update_balance = apply_discount_amount + move_receivable_line.balance
-                                credit_balance = sign * update_balance
-                                #update_balance = sign * update_balance#set + or - in balance, amount_currency and amount_residual_currency
-                            self.env.cr.execute("""
-                                UPDATE account_move_line
-                                SET balance = %s,
-                                    debit = %s,
-                                    credit = %s,
-                                    amount_currency = %s,
-                                    amount_residual_currency = %s
-                                WHERE id = %s
-                            """, (
-                                update_balance,
-                                0,
-                                credit_balance,
-                                update_balance,
-                                update_balance,
-                                move_receivable_line.id
-                            ))
-                            #self.env.cr.commit()
-                            
-                            ##Add new Write-Off line
-                            converted_balance = self.currency_id._convert(
-                                apply_discount_amount,
-                                self.env.company.currency_id,
-                                self.company_id,
-                                self.date
-                            )
-                            if move.move_type == 'out_invoice':#INV
-                                apply_discount_amount = abs(apply_discount_amount)
-                                converted_balance = abs(converted_balance)
+            counterpart_line = payment.move_id.line_ids.filtered(
+                lambda line: line.account_id == payment.destination_account_id and not line.reconciled
+            )
+            if len(counterpart_line) != 1:
+                raise UserError(_(
+                    "The payment %(payment)s does not have a single open receivable/payable line to reconcile."
+                ) % {'payment': payment.display_name})
 
-                            self.env.cr.execute("""
-                                INSERT INTO account_move_line
-                                (name, account_id, partner_id, move_id, currency_id, amount_currency, balance, debit, company_id, date, create_uid, create_date, write_uid, write_date, display_type, parent_state, company_currency_id, amount_residual_currency, writeoff_notes)
-                                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW(), %s, NOW(), %s, %s, %s, %s, %s)
-                                RETURNING id
-                            """, (
-                                'Write-Off',
-                                writeoff_account_id.id,
-                                self.move_id.partner_id.id if self.move_id.partner_id else None,
-                                self.move_id.id,
-                                self.move_id.currency_id.id if self.move_id.currency_id else None,
-                                apply_discount_amount,
-                                apply_discount_amount,
-                                converted_balance,
-                                self.company_id.id,
-                                self.date,
-                                self.env.uid,
-                                self.env.uid,
-                                'product',
-                                self.move_id.state,
-                                self.move_id.company_currency_id.id,
-                                0,
-                                self.writeoff_notes if self.writeoff_notes else '',
-                                
-                            ))
-
-                            # Fetch the newly created ID
-                            new_line_id = self.env.cr.fetchone()[0]
-                            self.env.cr.commit()
-                            new_line_rec = self.env['account.move.line'].browse(new_line_id)#.with_context(check_move_validity=False)
-                            new_line_rec.reconcile()
-                            move.js_assign_outstanding_line(new_line_id)
-                            discount_apply = True
-
-                            #call default compute to manage and updated value in amount_residual_currency field in receivable line
-                            move_receivable_line._compute_amount_residual()
-                        ###finish discount
-
-                        ###normal without discount
-                        if abs(ln.amount_residual_currency) > paid_amount:
-                            amount_residual_currency = sign * paid_amount
-                        else:
-                            amount_residual_currency = ln.amount_residual_currency
-                        
-                        if abs(ln.amount_residual) > paid_amount:
-                            amount_residual = sign * paid_amount
-                        else:
-                            amount_residual = ln.amount_residual
-                        ln.amount_residual_currency = amount_residual_currency
-                        if ln.currency_id != move.currency_id:
-                                ln.amount_residual = amount_residual
-                        else:
-                            if ln.currency_id.id != self.env.company.currency_id.id:
-                                amount_residual = ln.currency_id._convert(amount_residual, self.env.company.currency_id, self.company_id, self.date)
-                                ln.amount_residual = amount_residual
-                        move.js_assign_outstanding_line(opp_reconcile_id)
-                        paid_amount -= abs(amount_residual)
-
-        self.state = 'paid'
+            for outstanding_line in selected_lines:
+                if counterpart_line.reconciled:
+                    break
+                invoice = outstanding_line.account_move_id
+                invoice_lines = invoice.line_ids.filtered(
+                    lambda line: line.account_id == counterpart_line.account_id and not line.reconciled
+                )
+                if not invoice_lines:
+                    continue
+                invoice.js_assign_outstanding_line(counterpart_line.id)
+                counterpart_line.invalidate_recordset([
+                    'amount_residual',
+                    'amount_residual_currency',
+                    'reconciled',
+                    'matched_debit_ids',
+                    'matched_credit_ids',
+                ])
+        return super().action_validate()
 
     def action_draft(self):
         res = super().action_draft()
-        if self.move_id and self.pay_moves:
-            self.move_id.unlink()
+        for payment in self.filtered(lambda pay: pay.move_id and pay.pay_moves):
+            payment.move_id.unlink()
         return res 
 
     def action_post(self):
+        self._validate_pay_moves_configuration()
         res = super().action_post()
-        if self.pay_moves:
-            self.action_validate()
+        payments_to_validate = self.filtered(lambda pay: pay.pay_moves)
+        if payments_to_validate:
+            payments_to_validate.action_validate()
+        return res
 
     def unlink(self):
         for rec in self:

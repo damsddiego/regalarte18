@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_cycle_count_config_tree" model="ir.ui.view">
+        <field name="name">sng.cycle.count.config.tree</field>
+        <field name="model">sng.cycle.count.config</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="selection_method"/>
+                <field name="daily_product_count"/>
+                <field name="priority"/>
+                <field name="user_id"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_cycle_count_config_form" model="ir.ui.view">
+        <field name="name">sng.cycle.count.config.form</field>
+        <field name="model">sng.cycle.count.config</field>
+        <field name="arch" type="xml">
+            <form string="Configuración de Conteo Cíclico">
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name" placeholder="Ej. Alta Rotación"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Criterios de Selección">
+                            <field name="selection_method"/>
+                            <field name="abc_classification" invisible="selection_method != 'abc'"/>
+                            <field name="rotation_days" invisible="selection_method != 'rotation'"/>
+                            <field name="min_stock_value"/>
+                            <field name="daily_product_count"/>
+                            <field name="min_days_between_counts"/>
+                            <field name="include_negative"/>
+                        </group>
+                        <group string="Asignación y Filtros">
+                            <field name="user_id"/>
+                            <field name="priority"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="active" widget="boolean_toggle"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Ubicaciones">
+                            <field name="location_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                        </page>
+                        <page string="Categorías">
+                            <field name="categ_ids" widget="many2many_tags" options="{'no_create': True}"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_cycle_count_config" model="ir.actions.act_window">
+        <field name="name">Configuraciones de Conteo Cíclico</field>
+        <field name="res_model">sng.cycle.count.config</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

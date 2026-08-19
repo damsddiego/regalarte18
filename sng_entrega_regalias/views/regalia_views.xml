@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_regalia_list" model="ir.ui.view">
+        <field name="name">sng.regalia.list</field>
+        <field name="model">sng.regalia</field>
+        <field name="arch" type="xml">
+            <list decoration-info="state == 'draft'" decoration-muted="state == 'cancel'">
+                <field name="name"/>
+                <field name="date"/>
+                <field name="partner_id"/>
+                <field name="warehouse_id"/>
+                <field name="amount_total" groups="sng_entrega_regalias.group_regalia_manager" optional="show"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'done'"
+                       decoration-info="state == 'draft'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_regalia_form" model="ir.ui.view">
+        <field name="name">sng.regalia.form</field>
+        <field name="model">sng.regalia</field>
+        <field name="arch" type="xml">
+            <form string="Entrega de Regalía">
+                <header>
+                    <button name="action_validate" type="object" string="Validar"
+                            class="btn-primary" invisible="state != 'draft'"
+                            groups="sng_entrega_regalias.group_regalia_manager"
+                            confirm="Se rebajará el inventario y se generará el asiento contable. ¿Deseas continuar?"/>
+                    <button name="action_cancel" type="object" string="Cancelar"
+                            invisible="state != 'draft'"/>
+                    <button name="action_draft" type="object" string="Volver a borrador"
+                            invisible="state != 'cancel'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,done"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_picking" type="object" class="oe_stat_button"
+                                icon="fa-truck" invisible="not picking_id">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Transferencia</span>
+                            </div>
+                        </button>
+                        <button name="action_open_move" type="object" class="oe_stat_button"
+                                icon="fa-file-text-o" invisible="not move_id"
+                                groups="sng_entrega_regalias.group_regalia_manager">
+                            <div class="o_stat_info">
+                                <span class="o_stat_text">Asiento</span>
+                            </div>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="partner_id" readonly="state != 'draft'"/>
+                            <field name="warehouse_id" readonly="state != 'draft'"/>
+                        </group>
+                        <group>
+                            <field name="date" readonly="state != 'draft'"/>
+                            <field name="user_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Productos" name="lines">
+                            <field name="line_ids" readonly="state != 'draft'">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="quantity"/>
+                                    <field name="product_uom_id"/>
+                                    <field name="cost_unit" groups="sng_entrega_regalias.group_regalia_manager"/>
+                                    <field name="subtotal" groups="sng_entrega_regalias.group_regalia_manager"/>
+                                    <field name="currency_id" column_invisible="1"/>
+                                    <field name="company_id" column_invisible="1"/>
+                                </list>
+                            </field>
+                            <group class="oe_subtotal_footer"
+                                   groups="sng_entrega_regalias.group_regalia_manager">
+                                <field name="amount_total"/>
+                            </group>
+                        </page>
+                        <page string="Notas" name="notes">
+                            <field name="notes" placeholder="Notas internas o motivo de la regalía..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_sng_regalia_search" model="ir.ui.view">
+        <field name="name">sng.regalia.search</field>
+        <field name="model">sng.regalia</field>
+        <field name="arch" type="xml">
+            <search string="Regalías">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="line_ids" string="Producto"
+                       filter_domain="[('line_ids.product_id', 'ilike', self)]"/>
+                <filter string="Borrador" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Entregado" name="done" domain="[('state', '=', 'done')]"/>
+                <filter string="Cancelado" name="cancel" domain="[('state', '=', 'cancel')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Almacén" name="group_warehouse" context="{'group_by': 'warehouse_id'}"/>
+                    <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Fecha" name="group_date" context="{'group_by': 'date'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sng_regalia" model="ir.actions.act_window">
+        <field name="name">Entregas de Regalías</field>
+        <field name="res_model">sng.regalia</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crea la primera entrega de regalía
+            </p>
+            <p>
+                Registra la entrega de productos de obsequio a un cliente:
+                rebaja el inventario y genera el asiento contable con las cuentas configuradas.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_regalias_root"
+              name="Regalías"
+              sequence="86"
+              web_icon="sng_entrega_regalias,static/description/icon.png"
+              groups="sng_entrega_regalias.group_regalia_user"/>
+    <menuitem id="menu_regalias_entregas"
+              name="Entregas de Regalías"
+              parent="menu_regalias_root"
+              action="action_sng_regalia"
+              sequence="10"/>
+</odoo>

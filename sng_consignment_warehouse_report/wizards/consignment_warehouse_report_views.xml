@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_consignment_warehouse_report_wizard_form" model="ir.ui.view">
+        <field name="name">sng.consignment.warehouse.report.wizard.form</field>
+        <field name="model">sng.consignment.warehouse.report.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Bodegas Consignación" create="0" edit="1">
+                <sheet>
+                    <group>
+                        <group string="General">
+                            <field name="company_id" groups="base.group_multi_company" options="{'no_create': True}"/>
+                            <field name="date_report"/>
+                            <field name="include_zero_stock"/>
+                        </group>
+                        <group string="Filtros">
+                            <field name="partner_ids" widget="many2many_tags" options="{'no_create': True}" placeholder="Todos los clientes con bodega asignada"/>
+                            <field name="location_ids" widget="many2many_tags" options="{'no_create': True}" placeholder="Todas las bodegas"/>
+                            <field name="product_ids" widget="many2many_tags" options="{'no_create': True}" placeholder="Todos los productos"/>
+                        </group>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_generate_report" string="Generar Reporte" type="object" class="btn-primary"/>
+                    <button string="Cerrar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_sng_consignment_warehouse_report_line_list" model="ir.ui.view">
+        <field name="name">sng.consignment.warehouse.report.line.list</field>
+        <field name="model">sng.consignment.warehouse.report.line</field>
+        <field name="arch" type="xml">
+            <list string="Bodegas Consignación" create="0" edit="0" delete="0" default_order="currency_id, partner_id, root_location_id, product_description">
+                <header>
+                    <button name="action_download_report" string="Descargar Excel" type="object" class="btn-primary" display="always"/>
+                    <button name="action_download_pdf_report" string="Descargar PDF" type="object" class="btn-secondary" display="always"/>
+                    <button name="action_open_filters" string="Cambiar Filtros" type="object" class="btn-secondary" display="always"/>
+                </header>
+                <field name="wizard_id" column_invisible="1"/>
+                <field name="company_id" column_invisible="1"/>
+                <field name="date_report" optional="show"/>
+                <field name="partner_id"/>
+                <field name="root_location_id"/>
+                <field name="location_id" optional="show"/>
+                <field name="product_code"/>
+                <field name="product_description"/>
+                <field name="quantity" sum="Cantidad Total"/>
+                <field name="currency_id"/>
+                <field name="unit_price"/>
+                <field name="total_amount" sum="Total por moneda"/>
+                <field name="is_zero_stock_line" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_consignment_warehouse_report_line_form" model="ir.ui.view">
+        <field name="name">sng.consignment.warehouse.report.line.form</field>
+        <field name="model">sng.consignment.warehouse.report.line</field>
+        <field name="arch" type="xml">
+            <form string="Detalle Bodega Consignación" create="0" edit="0" delete="0">
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="date_report" readonly="1"/>
+                            <field name="partner_id" readonly="1"/>
+                            <field name="root_location_id" readonly="1"/>
+                            <field name="location_id" readonly="1"/>
+                            <field name="currency_id" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="product_id" readonly="1"/>
+                            <field name="product_code" readonly="1"/>
+                            <field name="product_description" readonly="1"/>
+                            <field name="quantity" readonly="1"/>
+                            <field name="unit_price" readonly="1"/>
+                            <field name="total_amount" readonly="1"/>
+                            <field name="is_zero_stock_line" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_sng_consignment_warehouse_report_line_search" model="ir.ui.view">
+        <field name="name">sng.consignment.warehouse.report.line.search</field>
+        <field name="model">sng.consignment.warehouse.report.line</field>
+        <field name="arch" type="xml">
+            <search string="Bodegas Consignación">
+                <field name="partner_id"/>
+                <field name="root_location_id"/>
+                <field name="location_id"/>
+                <field name="product_id"/>
+                <field name="product_code"/>
+                <field name="product_description"/>
+                <field name="currency_id"/>
+                <filter name="filter_with_stock" string="Con Stock" domain="[('quantity', '&gt;', 0)]"/>
+                <filter name="filter_zero_stock" string="Sin Stock" domain="[('is_zero_stock_line', '=', True)]"/>
+                <separator/>
+                <group expand="1" string="Agrupar por">
+                    <filter name="group_currency" string="Moneda" context="{'group_by': 'currency_id'}"/>
+                    <filter name="group_partner" string="Cliente" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_root_location" string="Bodega Consignación" context="{'group_by': 'root_location_id'}"/>
+                    <filter name="group_location" string="Ubicación" context="{'group_by': 'location_id'}"/>
+                    <filter name="group_product" string="Producto" context="{'group_by': 'product_id'}"/>
+                    <filter name="group_date" string="Fecha" context="{'group_by': 'date_report'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_sng_consignment_warehouse_report_line_pivot" model="ir.ui.view">
+        <field name="name">sng.consignment.warehouse.report.line.pivot</field>
+        <field name="model">sng.consignment.warehouse.report.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Bodegas Consignación" disable_linking="True">
+                <field name="currency_id" type="row"/>
+                <field name="partner_id" type="row"/>
+                <field name="product_id" type="row"/>
+                <field name="quantity" type="measure"/>
+                <field name="total_amount" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_sng_consignment_warehouse_report_wizard" model="ir.actions.act_window">
+        <field name="name">Bodegas Consignación</field>
+        <field name="res_model">sng.consignment.warehouse.report.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="groups_id" eval="[(4, ref('stock.group_stock_user'))]"/>
+    </record>
+
+    <menuitem id="menu_sng_consignment_warehouse_report_root"
+              name="Reportes Consignación"
+              parent="stock.menu_stock_warehouse_mgmt"
+              sequence="110"
+              groups="stock.group_stock_user"/>
+
+    <menuitem id="menu_sng_consignment_warehouse_report"
+              name="Bodegas Consignación"
+              parent="menu_sng_consignment_warehouse_report_root"
+              action="action_sng_consignment_warehouse_report_wizard"
+              sequence="10"
+              groups="stock.group_stock_user"/>
+</odoo>

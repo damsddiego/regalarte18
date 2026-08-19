@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Grupos -->
+    <record id="group_cycle_count_operator" model="res.groups">
+        <field name="name">Operador de Conteos Cíclicos</field>
+        <field name="category_id" ref="base.module_category_inventory"/>
+        <field name="implied_ids" eval="[(4, ref('stock.group_stock_user'))]"/>
+    </record>
+
+    <record id="group_cycle_count_supervisor" model="res.groups">
+        <field name="name">Supervisor de Conteos Cíclicos</field>
+        <field name="category_id" ref="base.module_category_inventory"/>
+        <field name="implied_ids" eval="[(4, ref('sng_cycle_count.group_cycle_count_operator'))]"/>
+    </record>
+
+    <!-- Reglas de registro -->
+    <record id="rule_cycle_count_operator_own" model="ir.rule">
+        <field name="name">Conteo Cíclico: Operador solo ve sus conteos</field>
+        <field name="model_id" ref="model_sng_cycle_count"/>
+        <field name="groups" eval="[(4, ref('sng_cycle_count.group_cycle_count_operator'))]"/>
+        <field name="domain_force">['|', ('user_id', '=', user.id), ('user_id', '=', False)]</field>
+    </record>
+
+    <record id="rule_cycle_count_supervisor_all" model="ir.rule">
+        <field name="name">Conteo Cíclico: Supervisor ve todos los conteos</field>
+        <field name="model_id" ref="model_sng_cycle_count"/>
+        <field name="groups" eval="[(4, ref('sng_cycle_count.group_cycle_count_supervisor'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_cycle_count_line_operator_own" model="ir.rule">
+        <field name="name">Línea de Conteo: Operador solo ve sus líneas</field>
+        <field name="model_id" ref="model_sng_cycle_count_line"/>
+        <field name="groups" eval="[(4, ref('sng_cycle_count.group_cycle_count_operator'))]"/>
+        <field name="domain_force">['|', ('cycle_count_id.user_id', '=', user.id), ('cycle_count_id.user_id', '=', False)]</field>
+    </record>
+
+    <record id="rule_cycle_count_line_supervisor_all" model="ir.rule">
+        <field name="name">Línea de Conteo: Supervisor ve todas las líneas</field>
+        <field name="model_id" ref="model_sng_cycle_count_line"/>
+        <field name="groups" eval="[(4, ref('sng_cycle_count.group_cycle_count_supervisor'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
+
+    <record id="rule_cycle_count_config_multi_company" model="ir.rule">
+        <field name="name">Configuración de Conteo: Multi-company</field>
+        <field name="model_id" ref="model_sng_cycle_count_config"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+
+    <record id="rule_cycle_count_multi_company" model="ir.rule">
+        <field name="name">Conteo Cíclico: Multi-company</field>
+        <field name="model_id" ref="model_sng_cycle_count"/>
+        <field name="global" eval="True"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+
+    <record id="rule_cycle_count_line_multi_company" model="ir.rule">
+        <field name="name">Línea de Conteo: Multi-company</field>
+        <field name="model_id" ref="model_sng_cycle_count_line"/>
+        <field name="global" eval="True"/>
+        <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

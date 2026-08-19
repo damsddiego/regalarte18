@@ -7,24 +7,32 @@
         <field name="arch" type="xml">
             <xpath expr="//sheet" position="inside">
                 <field name="is_consignation_delivery" invisible="1"/>
+                <field name="is_consignation_usd" invisible="1"/>
+                <field name="use_transfer_prices" invisible="1"/>
             </xpath>
             <xpath expr="//field[@name='picking_type_id']" position="after">
                 <field name="partner_id" string="Cliente consignatario"
                        invisible="not is_consignation_delivery"
                        required="is_consignation_delivery"/>
+                <field name="print_line_notes"/>
             </xpath>
             <xpath expr="//sheet" position="inside">
-                <group invisible="not is_consignation_delivery">
+                <group invisible="not use_transfer_prices">
                     <field name="currency_id" invisible="1"/>
                     <field name="amount_total" readonly="1"/>
                 </group>
             </xpath>
             <xpath expr="//field[@name='move_ids_without_package']/list" position="inside">
                 <field name="currency_id" invisible="1"/>
+                <field name="currency_usd_id" invisible="1"/>
                 <field name="price_unit" readonly="1"
-                       invisible="not picking_id.is_consignation_delivery"/>
+                       invisible="not picking_id.use_transfer_prices"/>
                 <field name="subtotal" readonly="1"
-                       invisible="not picking_id.is_consignation_delivery"/>
+                       invisible="not picking_id.use_transfer_prices"/>
+                <field name="price_unit_usd" readonly="1"
+                       invisible="not picking_id.is_consignation_usd"/>
+                <field name="subtotal_usd" readonly="1"
+                       invisible="not picking_id.is_consignation_usd"/>
             </xpath>
         </field>
     </record>
