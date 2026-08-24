@@ -13,6 +13,13 @@
         <field name="implied_ids" eval="[(4, ref('sng_cycle_count.group_cycle_count_operator'))]"/>
     </record>
 
+    <record id="group_cycle_count_management" model="res.groups">
+        <field name="name">Gerencia de Conteos Cíclicos</field>
+        <field name="category_id" ref="base.module_category_inventory"/>
+        <field name="implied_ids" eval="[(4, ref('sng_cycle_count.group_cycle_count_supervisor'))]"/>
+        <field name="comment">Puede devolver, aprobar y aplicar los ajustes de los conteos cíclicos.</field>
+    </record>
+
     <!-- Reglas de registro -->
     <record id="rule_cycle_count_operator_own" model="ir.rule">
         <field name="name">Conteo Cíclico: Operador solo ve sus conteos</field>

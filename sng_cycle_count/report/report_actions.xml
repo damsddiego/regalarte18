@@ -23,4 +23,28 @@
         <field name="binding_model_id" ref="model_sng_cycle_count"/>
         <field name="binding_type">report</field>
     </record>
+
+    <record id="action_report_cycle_count_valuation" model="ir.actions.report">
+        <field name="name">Conteo Valorizado (PDF)</field>
+        <field name="model">sng.cycle.count</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sng_cycle_count.report_cycle_count_valuation</field>
+        <field name="report_file">sng_cycle_count.report_cycle_count_valuation</field>
+        <field name="print_report_name">'Conteo_Valorizado_%s' % (object.name)</field>
+        <field name="binding_model_id" ref="model_sng_cycle_count"/>
+        <field name="binding_type">report</field>
+        <field name="groups_id" eval="[(4, ref('sng_cycle_count.group_cycle_count_supervisor'))]"/>
+    </record>
+
+    <record id="action_report_cycle_count_valuation_xlsx" model="ir.actions.report">
+        <field name="name">Conteo Valorizado (Excel)</field>
+        <field name="model">sng.cycle.count</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">sng_cycle_count.cycle_count_valuation_xlsx</field>
+        <field name="report_file">sng_cycle_count.cycle_count_valuation_xlsx</field>
+        <field name="print_report_name">'Conteo_Valorizado_%s' % (object.name)</field>
+        <field name="binding_model_id" ref="model_sng_cycle_count"/>
+        <field name="binding_type">report</field>
+        <field name="groups_id" eval="[(4, ref('sng_cycle_count.group_cycle_count_supervisor'))]"/>
+    </record>
 </odoo>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_cycle_count_return_wizard_form" model="ir.ui.view">
+        <field name="name">sng.cycle.count.return.wizard.form</field>
+        <field name="model">sng.cycle.count.return.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Devolver para reconteo">
+                <group>
+                    <field name="cycle_count_id"/>
+                    <field name="reason" placeholder="Explique qué debe revisar o volver a contar el operador..."/>
+                </group>
+                <footer>
+                    <button name="action_confirm" string="Devolver" type="object" class="btn-primary"/>
+                    <button string="Cancelar" special="cancel" class="btn-secondary"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

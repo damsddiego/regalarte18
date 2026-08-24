@@ -57,4 +57,68 @@
             </t>
         </t>
     </template>
+
+    <template id="report_cycle_count_valuation">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="doc">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Reporte Valorizado - Conteo Cíclico</h2>
+                        <div class="row">
+                            <div class="col-6">
+                                <strong>Referencia:</strong> <span t-field="doc.name"/><br/>
+                                <strong>Fecha:</strong> <span t-field="doc.count_date"/><br/>
+                                <strong>Operador:</strong> <span t-field="doc.user_id.name"/><br/>
+                                <strong>Configuración:</strong> <span t-field="doc.config_id.name"/>
+                            </div>
+                            <div class="col-6 text-right">
+                                <strong>Valor teórico:</strong> <span t-field="doc.total_theoretical_value"/><br/>
+                                <strong>Valor contado:</strong> <span t-field="doc.total_counted_value"/><br/>
+                                <strong>Sobrantes:</strong> <span t-field="doc.total_gain_value"/><br/>
+                                <strong>Faltantes:</strong> <span t-field="doc.total_shortage_value"/><br/>
+                                <strong>Diferencia neta:</strong> <span t-field="doc.total_difference_value"/>
+                            </div>
+                        </div>
+                        <br/>
+                        <table class="table table-sm table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th>Ubicación</th>
+                                    <th class="text-right">Teórico</th>
+                                    <th class="text-right">Contado</th>
+                                    <th class="text-right">Diferencia</th>
+                                    <th class="text-right">Costo</th>
+                                    <th class="text-right">Valor teórico</th>
+                                    <th class="text-right">Valor contado</th>
+                                    <th class="text-right">Diferencia valor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-set="report_lines" t-value="doc.line_ids"/>
+                                <t t-if="not report_lines">
+                                    <tr>
+                                        <td colspan="9" class="text-center">El conteo no contiene líneas.</td>
+                                    </tr>
+                                </t>
+                                <t t-foreach="report_lines" t-as="line">
+                                    <tr>
+                                        <td><span t-field="line.product_id.display_name"/></td>
+                                        <td><span t-field="line.location_id.display_name"/></td>
+                                        <td class="text-right"><span t-field="line.theoretical_qty"/></td>
+                                        <td class="text-right"><span t-field="line.counted_qty"/></td>
+                                        <td class="text-right"><span t-field="line.difference_qty"/></td>
+                                        <td class="text-right"><span t-field="line.unit_cost"/></td>
+                                        <td class="text-right"><span t-field="line.theoretical_value"/></td>
+                                        <td class="text-right"><span t-field="line.counted_value"/></td>
+                                        <td class="text-right"><span t-field="line.difference_value"/></td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
 </odoo>

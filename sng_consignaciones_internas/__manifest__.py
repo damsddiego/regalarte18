@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Entrega de consignaciones internas",
-    "version": "18.0.1.0.0",
+    "version": "18.0.1.1.0",
     "author": "SNG Cloud",
     "website": "https://sngcloud.com",
     "category": "Inventory",
     "summary": "Traslados internos con precios para entregas en consignación",
-    "depends": ["account", "stock"],
+    "depends": ["account", "stock", "stock_account"],
     "data": [
         "security/groups.xml",
         "security/ir.model.access.csv",

@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Formulario account.payment: bloque con los datos del recibo de la app -->
+    <record id="view_account_payment_form_inherit_sng_ruteros" model="ir.ui.view">
+        <field name="name">account.payment.form.sng.ruteros</field>
+        <field name="model">account.payment</field>
+        <field name="inherit_id" ref="account.view_account_payment_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_sng_aplicar_a_facturas"
+                        type="object"
+                        string="Aplicar a facturas"
+                        class="btn-primary"
+                        invisible="not sng_from_app or state not in ('in_process', 'paid') or not invoice_ids or is_reconciled or ((sng_monto_atipico or sng_dup_estado in ('sospecha', 'probable')) and not sng_verificado)"/>
+                <button name="action_sng_ia_matching"
+                        type="object"
+                        string="Buscar facturas con IA"
+                        invisible="not sng_from_app or (not sng_ia_estado and invoice_ids)"/>
+            </xpath>
+            <xpath expr="//sheet" position="inside">
+                <group string="Recibo de app SNG"
+                       invisible="not sng_from_app" col="4">
+                    <field name="sng_from_app" invisible="1"/>
+                    <field name="is_reconciled" invisible="1"/>
+                    <field name="sng_puede_verificar" invisible="1"/>
+                    <field name="sng_origen" readonly="1"/>
+                    <field name="sng_verificado" widget="boolean_toggle"
+                           readonly="not sng_puede_verificar"/>
+                    <field name="sng_numero_recibo"/>
+                    <field name="sng_metodo_pago"/>
+                    <field name="sng_referencia"/>
+                    <field name="sng_vendedor_id"
+                           invisible="sng_origen == 'escritorio'"/>
+                    <field name="sng_saldo_anterior"/>
+                    <field name="sng_saldo_proyectado"/>
+                    <field name="sng_observaciones" colspan="4"/>
+                    <field name="sng_ia_estado" readonly="1"
+                           invisible="not sng_ia_estado"/>
+                    <field name="sng_ia_numeros_pendientes" readonly="1"
+                           invisible="not sng_ia_numeros_pendientes"/>
+                    <field name="sng_vendedor_app_id" readonly="1"
+                           invisible="not sng_vendedor_app_id"/>
+                    <field name="sng_monto_atipico" readonly="1"
+                           invisible="not sng_monto_atipico"/>
+                    <field name="sng_dup_estado" readonly="1"
+                           invisible="not sng_dup_estado"/>
+                    <field name="sng_dup_pago_ids" readonly="1" colspan="4"
+                           widget="many2many_tags"
+                           invisible="not sng_dup_pago_ids"/>
+                    <field name="invoice_ids" colspan="4"
+                           string="Facturas a pagar"
+                           domain="[('move_type', '=', 'out_invoice'),
+                                    ('partner_id', 'child_of', partner_id),
+                                    ('state', '=', 'posted'),
+                                    ('payment_state', 'in', ('not_paid', 'partial'))]">
+                        <list>
+                            <field name="name" string="Factura"/>
+                            <field name="invoice_date" optional="show"/>
+                            <field name="partner_id" string="Empresa"/>
+                            <field name="amount_total" string="Monto" sum="Total"/>
+                            <field name="amount_residual" string="Pendiente" sum="Total pendiente"/>
+                            <field name="payment_state" string="Estado de pago"
+                                   widget="badge"
+                                   decoration-danger="payment_state == 'not_paid'"
+                                   decoration-warning="payment_state == 'partial'"
+                                   decoration-success="payment_state in ('paid', 'in_payment')"/>
+                            <field name="currency_id" column_invisible="1"/>
+                        </list>
+                    </field>
+                </group>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Lista propia de recibos de ruteros -->
+    <record id="view_ruteros_recibo_list" model="ir.ui.view">
+        <field name="name">account.payment.ruteros.list</field>
+        <field name="model">account.payment</field>
+        <field name="arch" type="xml">
+            <list string="Recibos Ruteros"
+                  decoration-danger="sng_dup_estado == 'probable'"
+                  decoration-muted="state == 'draft' and sng_dup_estado != 'probable'"
+                  decoration-success="state == 'in_process' and sng_dup_estado != 'probable'">
+                <header>
+                    <button name="action_sng_marcar_verificado"
+                            type="object"
+                            string="Marcar verificado"
+                            groups="account.group_account_manager"/>
+                    <button name="action_sng_desmarcar_verificado"
+                            type="object"
+                            string="Quitar verificado"
+                            groups="account.group_account_manager"/>
+                    <button name="action_sng_restablecer_borrador"
+                            type="object"
+                            string="No Aplicar"
+                            confirm="Los pagos seleccionados volverán a borrador. Si alguno está aplicado a facturas, su conciliación se deshará y las facturas volverán a quedar pendientes. ¿Continuar?"/>
+                </header>
+                <field name="date"/>
+                <field name="name"/>
+                <field name="sng_numero_recibo" optional="show"/>
+                <field name="sng_origen" optional="hide" widget="badge"
+                       decoration-info="sng_origen == 'escritorio'"/>
+                <field name="partner_id"/>
+                <field name="partner_unique_id" optional="show"/>
+                <field name="sng_vendedor_id"/>
+                <field name="sng_metodo_pago"/>
+                <field name="sng_referencia"/>
+                <field name="amount" sum="Total"/>
+                <field name="journal_id"/>
+                <field name="sng_ia_estado" optional="show" widget="badge"
+                       decoration-warning="sng_ia_estado == 'pendiente'"
+                       decoration-info="sng_ia_estado == 'sugerido'"
+                       decoration-danger="sng_ia_estado in ('sin_match', 'error')"/>
+                <field name="sng_dup_estado" optional="show" widget="badge"
+                       decoration-warning="sng_dup_estado == 'sospecha'"
+                       decoration-danger="sng_dup_estado == 'probable'"
+                       decoration-success="sng_dup_estado == 'descartado'"/>
+                <field name="sng_monto_atipico" optional="show"
+                       widget="boolean_toggle" readonly="1"/>
+                <field name="sng_puede_verificar" column_invisible="1"/>
+                <field name="sng_verificado" optional="show"
+                       widget="boolean_toggle"
+                       readonly="not sng_puede_verificar"/>
+                <field name="state"
+                       decoration-muted="state == 'draft'"
+                       decoration-info="state == 'in_process'"
+                       decoration-success="state == 'paid'"
+                       decoration-danger="state in ('canceled', 'rejected')"
+                       widget="badge"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Búsqueda con filtros por estado y agrupaciones -->
+    <record id="view_ruteros_recibo_search" model="ir.ui.view">
+        <field name="name">account.payment.ruteros.search</field>
+        <field name="model">account.payment</field>
+        <field name="arch" type="xml">
+            <search string="Recibos Ruteros">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="partner_unique_id" string="Código cliente"
+                       filter_domain="[('partner_unique_id', 'ilike', self)]"/>
+                <field name="sng_vendedor_id"/>
+                <field name="sng_referencia"/>
+                <field name="sng_numero_recibo" string="N° recibo app"/>
+                <filter name="solo_ruteros" string="Solo ruteros"
+                        domain="[('sng_origen', '!=', 'escritorio')]"/>
+                <filter name="solo_escritorio" string="Solo escritorio"
+                        domain="[('sng_origen', '=', 'escritorio')]"/>
+                <separator/>
+                <filter name="borrador" string="Borrador"
+                        domain="[('state', '=', 'draft')]"/>
+                <filter name="confirmado" string="Confirmado"
+                        domain="[('state', 'in', ('in_process', 'paid'))]"/>
+                <separator/>
+                <filter name="hoy" string="Hoy"
+                        domain="[('date', '=', context_today().strftime('%Y-%m-%d'))]"/>
+                <separator/>
+                <filter name="ia_pendiente" string="Matching IA pendiente"
+                        domain="[('sng_ia_estado', '=', 'pendiente')]"/>
+                <filter name="ia_sugerido" string="Sugerencia IA lista"
+                        domain="[('sng_ia_estado', '=', 'sugerido')]"/>
+                <filter name="ia_revisar" string="IA sin coincidencia / error"
+                        domain="[('sng_ia_estado', 'in', ('sin_match', 'error'))]"/>
+                <separator/>
+                <filter name="dup_probable" string="Probable duplicado"
+                        domain="[('sng_dup_estado', '=', 'probable')]"/>
+                <filter name="dup_revisar" string="Sospecha de duplicado"
+                        domain="[('sng_dup_estado', '=', 'sospecha')]"/>
+                <filter name="monto_atipico" string="Monto atípico"
+                        domain="[('sng_monto_atipico', '=', True)]"/>
+                <separator/>
+                <filter name="verificado" string="Verificado"
+                        domain="[('sng_verificado', '=', True)]"/>
+                <filter name="no_verificado" string="Sin verificar"
+                        domain="[('sng_verificado', '=', False)]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_origen" string="Origen"
+                            context="{'group_by': 'sng_origen'}"/>
+                    <filter name="group_verificado" string="Verificado"
+                            context="{'group_by': 'sng_verificado'}"/>
+                    <filter name="group_state" string="Estado"
+                            context="{'group_by': 'state'}"/>
+                    <filter name="group_vendedor" string="Vendedor"
+                            context="{'group_by': 'sng_vendedor_id'}"/>
+                    <filter name="group_partner" string="Cliente"
+                            context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_journal" string="Diario"
+                            context="{'group_by': 'journal_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Acción: solo pagos creados por la app -->
+    <record id="action_ruteros_recibos" model="ir.actions.act_window">
+        <field name="name">Recibos Ruteros</field>
+        <field name="res_model">account.payment</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('sng_from_app', '=', True)]</field>
+        <!-- Por defecto solo ruteros (comportamiento histórico del menú); el
+             filtro se puede quitar para ver también los pagos de oficina. -->
+        <field name="context">{'search_default_solo_ruteros': 1}</field>
+        <field name="search_view_id" ref="view_ruteros_recibo_search"/>
+        <field name="view_id" ref="view_ruteros_recibo_list"/>
+    </record>
+
+    <!-- Menú propio -->
+    <menuitem id="menu_ruteros_root"
+              name="Ruteros"
+              web_icon="sng_ruteros_pagos,static/description/icon_odoo18.png"
+              sequence="90"
+              groups="account.group_account_invoice"/>
+    <menuitem id="menu_ruteros_recibos"
+              name="Recibos"
+              parent="menu_ruteros_root"
+              action="action_ruteros_recibos"
+              sequence="10"/>
+
+</odoo>

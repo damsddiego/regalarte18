@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <record id="mail_activity_cycle_count_approval" model="mail.activity.type">
+            <field name="name">Aprobación de conteo cíclico</field>
+            <field name="icon">fa-check-square-o</field>
+            <field name="res_model">sng.cycle.count</field>
+        </record>
+
+        <record id="mail_activity_cycle_count_recount" model="mail.activity.type">
+            <field name="name">Reconteo cíclico</field>
+            <field name="icon">fa-repeat</field>
+            <field name="res_model">sng.cycle.count</field>
+        </record>
+
+        <record id="email_template_cycle_count_pending_approval" model="mail.template">
+            <field name="name">Conteo cíclico: pendiente de aprobación</field>
+            <field name="model_id" ref="model_sng_cycle_count"/>
+            <field name="subject">Conteo {{ object.name }} pendiente de aprobación</field>
+            <field name="email_from">{{ (object.company_id.email or user.email or '').split(';')[0].strip() }}</field>
+            <field name="body_html" type="html">
+<div style="margin: 0; padding: 0; font-size: 13px;">
+    <p>El conteo cíclico <strong><t t-out="object.name"/></strong> fue finalizado y requiere revisión de Gerencia.</p>
+    <ul>
+        <li>Operador: <t t-out="object.user_id.name or '-'"/></li>
+        <li>Fecha: <t t-out="object.count_date"/></li>
+        <li>Líneas: <t t-out="object.total_lines"/></li>
+        <li>Discrepancias: <t t-out="object.discrepancy_lines"/></li>
+        <li>Valor teórico: <t t-out="format_amount(object.total_theoretical_value, object.currency_id)"/></li>
+        <li>Valor contado: <t t-out="format_amount(object.total_counted_value, object.currency_id)"/></li>
+        <li>Sobrantes: <t t-out="format_amount(object.total_gain_value, object.currency_id)"/></li>
+        <li>Faltantes: <t t-out="format_amount(object.total_shortage_value, object.currency_id)"/></li>
+        <li>Diferencia neta: <strong><t t-out="format_amount(object.total_difference_value, object.currency_id)"/></strong></li>
+    </ul>
+    <p>
+        <a t-att-href="'/odoo/sng.cycle.count/%s' % object.id"
+           style="background-color: #714B67; padding: 8px 16px; text-decoration: none; color: #fff; border-radius: 4px;">
+            Revisar conteo
+        </a>
+    </p>
+</div>
+            </field>
+            <field name="auto_delete" eval="True"/>
+        </record>
+    </data>
+</odoo>

@@ -148,3 +148,29 @@ class StockMove(models.Model):
             if blocked:
                 raise UserError(_("No tiene permisos para modificar precios en traslados."))
         return super().write(vals)
+
+    def _get_price_unit(self):
+        """El precio de transferencia de consignación es informativo (se muestra en el
+        picking y en los reportes); la valoración de inventario debe usar el costo del
+        producto. Sin esto, las entradas sin compra (retornos RETC, recepciones de
+        consignatarios, rellenos) se valoran al precio de venta e inflan el costo
+        promedio (caso Peluche Perezoso Roxy 113003040, 2026-08)."""
+        self.ensure_one()
+        if (
+            self._uses_transfer_prices()
+            and not getattr(self, "purchase_line_id", False)
+            and not self.origin_returned_move_id
+            and self.price_unit
+        ):
+            if self.product_id.lot_valuated:
+                return {
+                    lot: lot.standard_price
+                    or self.product_id.with_company(self.company_id).standard_price
+                    for lot in self.lot_ids
+                }
+            return {
+                self.env["stock.lot"]: self.product_id.with_company(
+                    self.company_id
+                ).standard_price
+            }
+        return super()._get_price_unit()
