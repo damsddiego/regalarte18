@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_envio_mercaderia_list" model="ir.ui.view">
+        <field name="name">sng.envio.mercaderia.list</field>
+        <field name="model">sng.envio.mercaderia</field>
+        <field name="arch" type="xml">
+            <list decoration-info="state == 'draft'"
+                  decoration-muted="state == 'cancel'"
+                  decoration-warning="delivery_method_changed">
+                <field name="name"/>
+                <field name="document_date"/>
+                <field name="sale_order_id"/>
+                <field name="picking_id" optional="show"/>
+                <field name="partner_id"/>
+                <field name="boxes_label" string="Cajas"/>
+                <field name="customer_delivery_method" string="Método del cliente" optional="show"/>
+                <field name="delivery_method" string="Método utilizado"/>
+                <field name="delivery_method_status" widget="badge"
+                       decoration-success="delivery_method_status == 'usual'"
+                       decoration-info="delivery_method_status == 'assigned'"
+                       decoration-warning="delivery_method_status == 'changed'"/>
+                <field name="picker_partner_id"/>
+                <field name="print_count" optional="hide"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'confirmed'"
+                       decoration-info="state == 'draft'"
+                       decoration-muted="state == 'cancel'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_envio_mercaderia_form" model="ir.ui.view">
+        <field name="name">sng.envio.mercaderia.form</field>
+        <field name="model">sng.envio.mercaderia</field>
+        <field name="arch" type="xml">
+            <form string="Auditoría de envío">
+                <header>
+                    <button name="action_confirm" type="object" string="Confirmar"
+                            class="btn-primary" invisible="state != 'draft'"
+                            confirm="Después de confirmar, los datos auditados quedarán bloqueados. ¿Deseas continuar?"/>
+                    <button name="action_cancel" type="object" string="Cancelar"
+                            invisible="state == 'cancel'"/>
+                    <button name="action_set_draft" type="object" string="Volver a borrador"
+                            invisible="state != 'cancel'"
+                            groups="sng_envio_mercaderia.group_envio_audit_manager"/>
+                    <button name="action_set_customer_default" type="object"
+                            string="Guardar método en cliente"
+                            invisible="state == 'cancel' or not delivery_type_id or customer_method_updated or delivery_method_status == 'usual'"
+                            confirm="Se reemplazará el método habitual del contacto de entrega. ¿Deseas continuar?"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,cancel"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box"/>
+
+                    <div class="oe_title">
+                        <h1><field name="name"/></h1>
+                    </div>
+
+                    <group>
+                        <group string="Origen">
+                            <field name="sale_order_id" readonly="state != 'draft'" options="{'no_create': True}"/>
+                            <field name="picking_id" readonly="state != 'draft'" options="{'no_create': True}"/>
+                            <field name="source_reference"/>
+                            <field name="document_date" readonly="state != 'draft'"/>
+                            <field name="company_id" readonly="state != 'draft'" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Auditoría">
+                            <field name="picker_partner_id" readonly="state != 'draft'" options="{'no_create': True}"/>
+                            <field name="picked_at" readonly="state != 'draft'"/>
+                            <field name="box_number" readonly="state != 'draft'"/>
+                            <field name="box_total" readonly="state != 'draft'"/>
+                            <field name="boxes_label"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Cliente y entrega" name="delivery">
+                            <group>
+                                <group string="Cliente">
+                                    <field name="partner_id" readonly="state != 'draft'" options="{'no_create': True}"/>
+                                    <field name="delivery_partner_id" readonly="state != 'draft'" options="{'no_create': True}"/>
+                                    <field name="customer_name" readonly="state != 'draft'"/>
+                                    <field name="delivery_address" readonly="state != 'draft'"/>
+                                    <field name="contact_name" readonly="state != 'draft'"/>
+                                    <field name="contact_phone" readonly="state != 'draft'"/>
+                                </group>
+                                <group string="Método de entrega">
+                                    <field name="customer_delivery_type_id"/>
+                                    <field name="customer_delivery_method"/>
+                                    <field name="delivery_type_id" readonly="state != 'draft'"
+                                           domain="[('active', '=', True), '|', ('company_id', '=', False), ('company_id', '=', company_id)]"
+                                           options="{'no_create': True}"/>
+                                    <field name="delivery_method"/>
+                                    <field name="delivery_method_status" widget="badge"
+                                           decoration-success="delivery_method_status == 'usual'"
+                                           decoration-info="delivery_method_status == 'assigned'"
+                                           decoration-warning="delivery_method_status == 'changed'"/>
+                                    <field name="delivery_method_changed"/>
+                                    <field name="customer_method_updated"/>
+                                    <field name="customer_method_updated_at" invisible="not customer_method_updated"/>
+                                    <field name="customer_method_updated_by_id" invisible="not customer_method_updated"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Datos impresos" name="printed_snapshot">
+                            <group>
+                                <group string="Empresa">
+                                    <field name="company_name" readonly="state != 'draft'"/>
+                                    <field name="company_address" readonly="state != 'draft'"/>
+                                    <field name="company_phone" readonly="state != 'draft'"/>
+                                </group>
+                                <group string="Confirmación e impresión">
+                                    <field name="confirmed_at"/>
+                                    <field name="confirmed_by_id"/>
+                                    <field name="print_count"/>
+                                    <field name="last_printed_at"/>
+                                    <field name="last_printed_by_id"/>
+                                    <field name="mobile_request_key" groups="sng_envio_mercaderia.group_envio_audit_manager"/>
+                                </group>
+                            </group>
+                        </page>
+
+                        <page string="Observaciones" name="notes">
+                            <field name="notes" readonly="state != 'draft'"
+                                   placeholder="Observaciones del envío..."/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_envio_mercaderia_search" model="ir.ui.view">
+        <field name="name">sng.envio.mercaderia.search</field>
+        <field name="model">sng.envio.mercaderia</field>
+        <field name="arch" type="xml">
+            <search string="Auditorías de envío">
+                <field name="name"/>
+                <field name="sale_order_id"/>
+                <field name="picking_id"/>
+                <field name="partner_id"/>
+                <field name="picker_partner_id"/>
+                <field name="delivery_type_id"/>
+                <filter string="Borrador" name="draft" domain="[('state', '=', 'draft')]"/>
+                <filter string="Confirmado" name="confirmed" domain="[('state', '=', 'confirmed')]"/>
+                <filter string="Método cambiado" name="method_changed" domain="[('delivery_method_changed', '=', True)]"/>
+                <filter string="Cliente actualizado" name="customer_updated" domain="[('customer_method_updated', '=', True)]"/>
+                <separator/>
+                <filter string="Fecha" name="document_date" date="document_date"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Cliente" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Alistado por" name="group_picker" context="{'group_by': 'picker_partner_id'}"/>
+                    <filter string="Método utilizado" name="group_method" context="{'group_by': 'delivery_type_id'}"/>
+                    <filter string="Resultado" name="group_method_status" context="{'group_by': 'delivery_method_status'}"/>
+                    <filter string="Estado" name="group_state" context="{'group_by': 'state'}"/>
+                    <filter string="Fecha" name="group_date" context="{'group_by': 'document_date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_envio_mercaderia" model="ir.actions.act_window">
+        <field name="name">Auditorías de envío</field>
+        <field name="res_model">sng.envio.mercaderia</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_envio_mercaderia_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Crea la primera auditoría de envío
+            </p>
+            <p>
+                Conserva la orden, las cajas, el método de entrega realmente utilizado
+                y la persona que alistó el pedido.
+            </p>
+        </field>
+    </record>
+
+    <menuitem id="menu_envio_audit_root"
+              name="Auditoría de envíos"
+              parent="stock.menu_stock_root"
+              sequence="87"
+              groups="sng_envio_mercaderia.group_envio_audit_user"/>
+    <menuitem id="menu_envio_audit_documents"
+              name="Documentos de envío"
+              parent="menu_envio_audit_root"
+              action="action_envio_mercaderia"
+              sequence="10"/>
+</odoo>

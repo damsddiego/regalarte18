@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="paperformat_envio_mercaderia" model="report.paperformat">
+        <field name="name">Envío de mercadería - Carta horizontal</field>
+        <field name="default" eval="False"/>
+        <field name="format">Letter</field>
+        <field name="page_height">0</field>
+        <field name="page_width">0</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">6</field>
+        <field name="margin_bottom">6</field>
+        <field name="margin_left">6</field>
+        <field name="margin_right">6</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_report_envio_mercaderia" model="ir.actions.report">
+        <field name="name">Envío de Mercadería</field>
+        <field name="model">sng.envio.mercaderia</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sng_envio_mercaderia.report_envio_mercaderia</field>
+        <field name="report_file">sng_envio_mercaderia.report_envio_mercaderia</field>
+        <field name="print_report_name">'Envío de Mercadería - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="model_sng_envio_mercaderia"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="paperformat_envio_mercaderia"/>
+        <field name="groups_id" eval="[(4, ref('sng_envio_mercaderia.group_envio_audit_user'))]"/>
+    </record>
+</odoo>
+

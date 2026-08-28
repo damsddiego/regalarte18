@@ -1,0 +1,4 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_envio_audit_user,sng.envio.mercaderia.user,model_sng_envio_mercaderia,sng_envio_mercaderia.group_envio_audit_user,1,1,1,0
+access_envio_audit_manager,sng.envio.mercaderia.manager,model_sng_envio_mercaderia,sng_envio_mercaderia.group_envio_audit_manager,1,1,1,1
+

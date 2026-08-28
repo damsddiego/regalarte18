@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_picking_form_envio_audit" model="ir.ui.view">
+        <field name="name">stock.picking.form.envio.audit</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_envio_audits" type="object"
+                        class="oe_stat_button" icon="fa-clipboard"
+                        groups="sng_envio_mercaderia.group_envio_audit_user">
+                    <field name="envio_audit_count" widget="statinfo" string="Auditorías"/>
+                </button>
+            </xpath>
+        </field>
+    </record>
+</odoo>
+
