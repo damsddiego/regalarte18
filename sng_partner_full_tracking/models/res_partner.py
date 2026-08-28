@@ -52,12 +52,18 @@ class ResPartner(models.Model):
     _inherit = 'res.partner'
 
     def _track_get_fields(self):
-        """Devuelve los campos almacenados soportados como trackeables."""
+        """Devuelve los campos almacenados soportados como trackeables.
+
+        Se excluyen los campos con ``groups``: el tracking los lee con los
+        permisos del usuario que edita y dispara AccessError (p. ej.
+        ``signup_type`` de auth_signup).
+        """
         tracked = super()._track_get_fields()
         stored_fields = {
             name
             for name, field in self._fields.items()
             if field.store
+            and not field.groups
             and name not in _EXCLUDED_TRACKING_FIELDS
             and field.type in _SUPPORTED_TRACKING_FIELD_TYPES
         }

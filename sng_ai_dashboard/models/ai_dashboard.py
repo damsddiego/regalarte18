@@ -73,6 +73,31 @@ class SngAiDashboard(models.AbstractModel):
     # ------------------------------------------------------------------
 
     VALID_PERIODS = (1, 3, 6, 12)
+    VALID_AI_SCOPES = ('general', 'customers', 'cxc', 'inventory')
+    AI_SCOPE_INSTRUCTIONS = {
+        'general': (
+            "Analiza EXCLUSIVAMENTE las ventas incluidas en el JSON. No hagas "
+            "recomendaciones de cuentas por cobrar ni de inventario. Enfócate en "
+            "tendencias, vendedores, concentración y acciones comerciales."
+        ),
+        'customers': (
+            "Analiza EXCLUSIVAMENTE la cartera comercial de clientes. No hagas "
+            "recomendaciones de inventario ni un análisis general de ventas. "
+            "Identifica mejores clientes con pago sano, clientes que dejaron "
+            "de comprar, clientes recuperables, clientes con caída de compra y "
+            "clientes activos cuyo atraso pone en riesgo la relación comercial."
+        ),
+        'cxc': (
+            "Analiza EXCLUSIVAMENTE cuentas por cobrar y cobranza. No hagas "
+            "recomendaciones de ventas ni de inventario. Prioriza liquidez, "
+            "clientes a gestionar, antigüedad, DSO y recuperación."
+        ),
+        'inventory': (
+            "Analiza EXCLUSIVAMENTE inventario. No hagas recomendaciones de "
+            "ventas generales ni de cuentas por cobrar. Prioriza cobertura, "
+            "faltantes, sobre-stock, margen y productos sin movimiento."
+        ),
+    }
 
     def _company_ids(self):
         return tuple(self.env.companies.ids)
@@ -95,6 +120,7 @@ class SngAiDashboard(models.AbstractModel):
             'collections': self._get_collections_data(months),
             'receivables': self._get_receivables_data(),
             'cxc': self._get_cxc_management_data(months),
+            'customers': self._get_customer_data(months),
             'inventory': self._get_inventory_data(),
             'inventory_wh': self._get_wh_inventory_data(months),
             'ai': self._get_ai_panel_data(),
@@ -256,11 +282,11 @@ class SngAiDashboard(models.AbstractModel):
             return 0.0
         return round(ar_total / (net_sales / days), 1)
 
-    def _partner_display_sql(self):
+    def _partner_display_sql(self, alias='rp'):
         """Usa el nombre comercial si el campo existe en esta BD."""
         if 'commercial_name' in self.env['res.partner']._fields:
-            return "COALESCE(NULLIF(rp.commercial_name, ''), rp.name)"
-        return "rp.name"
+            return "COALESCE(NULLIF({0}.commercial_name, ''), {0}.name)".format(alias)
+        return "%s.name" % alias
 
     def _get_receivables_data(self):
         cids = self._company_ids()
@@ -492,6 +518,164 @@ class SngAiDashboard(models.AbstractModel):
             'top_overdue_invoices': top_overdue_invoices,
         }
 
+    # ------------------------------------------------------------------
+    # Análisis de cartera comercial (pestaña Clientes)
+    # ------------------------------------------------------------------
+
+    def _get_customer_data(self, months=3):
+        """Segmenta clientes por compra reciente y salud de pago.
+
+        El período activo es el seleccionado en el dashboard. Como referencia
+        histórica se usan los 12 meses inmediatamente anteriores. Una cuenta
+        se considera crítica si conserva saldo vencido con más de 90 días.
+        """
+        cids = self._company_ids()
+        today = fields.Date.context_today(self)
+        current_start = self._period_start(months)
+        history_start = current_start - relativedelta(months=12)
+        partner_name = self._partner_display_sql('rp')
+
+        self.env.cr.execute("""
+            WITH sales AS (
+                SELECT COALESCE(ip.commercial_partner_id, ip.id) AS partner_id,
+                       COALESCE(SUM(am.amount_untaxed_signed) FILTER (
+                           WHERE am.invoice_date >= %(current_start)s), 0) AS current_sales,
+                       COUNT(*) FILTER (
+                           WHERE am.invoice_date >= %(current_start)s
+                             AND am.move_type = 'out_invoice') AS current_invoices,
+                       COALESCE(SUM(am.amount_untaxed_signed) FILTER (
+                           WHERE am.invoice_date < %(current_start)s), 0) AS previous_sales,
+                       COUNT(*) FILTER (
+                           WHERE am.invoice_date < %(current_start)s
+                             AND am.move_type = 'out_invoice') AS previous_invoices,
+                       MAX(am.invoice_date) FILTER (
+                           WHERE am.move_type = 'out_invoice') AS last_purchase
+                FROM account_move am
+                JOIN res_partner ip ON ip.id = am.partner_id
+                WHERE am.move_type IN ('out_invoice', 'out_refund')
+                  AND am.state = 'posted'
+                  AND am.company_id IN %(cids)s
+                  AND am.invoice_date >= %(history_start)s
+                  AND am.invoice_date <= %(today)s
+                GROUP BY 1
+            ), receivables AS (
+                SELECT COALESCE(lp.commercial_partner_id, lp.id) AS partner_id,
+                       COALESCE(SUM(aml.amount_residual), 0) AS total_open,
+                       COALESCE(SUM(CASE
+                           WHEN COALESCE(aml.date_maturity, aml.date) < %(today)s
+                           THEN aml.amount_residual ELSE 0 END), 0) AS overdue,
+                       COALESCE(SUM(CASE
+                           WHEN %(today)s::date - COALESCE(aml.date_maturity, aml.date) > 90
+                           THEN aml.amount_residual ELSE 0 END), 0) AS d90_plus,
+                       COALESCE(MAX(CASE
+                           WHEN COALESCE(aml.date_maturity, aml.date) < %(today)s
+                           THEN %(today)s::date - COALESCE(aml.date_maturity, aml.date)
+                           ELSE 0 END), 0) AS max_overdue_days
+                FROM account_move_line aml
+                JOIN account_account aa ON aa.id = aml.account_id
+                JOIN account_move am ON am.id = aml.move_id
+                JOIN res_partner lp ON lp.id = aml.partner_id
+                WHERE aa.account_type = 'asset_receivable'
+                  AND am.state = 'posted'
+                  AND aml.reconciled = FALSE
+                  AND aml.company_id IN %(cids)s
+                GROUP BY 1
+            )
+            SELECT s.partner_id,
+                   {partner_name} AS partner,
+                   s.current_sales,
+                   s.current_invoices,
+                   s.previous_sales,
+                   s.previous_invoices,
+                   s.last_purchase,
+                   COALESCE(ar.total_open, 0),
+                   COALESCE(ar.overdue, 0),
+                   COALESCE(ar.d90_plus, 0),
+                   COALESCE(ar.max_overdue_days, 0)
+            FROM sales s
+            JOIN res_partner rp ON rp.id = s.partner_id
+            LEFT JOIN receivables ar ON ar.partner_id = s.partner_id
+            WHERE s.current_sales > 0 OR s.previous_sales > 0
+        """.format(partner_name=partner_name), {
+            'cids': cids,
+            'current_start': current_start,
+            'history_start': history_start,
+            'today': today,
+        })
+
+        customers = []
+        for row in self.env.cr.fetchall():
+            current_sales = float(row[2] or 0.0)
+            previous_sales = float(row[4] or 0.0)
+            overdue = float(row[8] or 0.0)
+            d90_plus = float(row[9] or 0.0)
+            max_days = int(row[10] or 0)
+            critical = overdue > 0 and (d90_plus > 0 or max_days > 90)
+            current_monthly = current_sales / months
+            previous_monthly = previous_sales / 12.0
+            change_pct = None
+            if previous_monthly > 0:
+                change_pct = round(
+                    (current_monthly - previous_monthly) / previous_monthly * 100, 1)
+            last_purchase = row[6]
+            customers.append({
+                'partner_id': row[0],
+                'name': row[1],
+                'current_sales': current_sales,
+                'current_invoices': int(row[3] or 0),
+                'previous_sales': previous_sales,
+                'previous_invoices': int(row[5] or 0),
+                'last_purchase': fields.Date.to_string(last_purchase)
+                    if last_purchase else None,
+                'days_inactive': (today - last_purchase).days if last_purchase else None,
+                'total_open': float(row[7] or 0.0),
+                'overdue': overdue,
+                'd90_plus': d90_plus,
+                'max_overdue_days': max_days,
+                'critical_payment': critical,
+                'change_pct': change_pct,
+            })
+
+        active = [customer for customer in customers if customer['current_sales'] > 0]
+        best = sorted(
+            [customer for customer in active if not customer['critical_payment']],
+            key=lambda customer: -customer['current_sales'])[:15]
+        at_risk = sorted(
+            [customer for customer in active if customer['critical_payment']],
+            key=lambda customer: -customer['overdue'])[:15]
+        all_inactive = [
+            customer for customer in customers
+            if customer['current_sales'] <= 0 and customer['previous_sales'] > 0
+        ]
+        inactive = sorted(
+            all_inactive,
+            key=lambda customer: -customer['previous_sales'])[:15]
+        recoverable = [
+            customer for customer in all_inactive if not customer['critical_payment']
+        ]
+        declining = sorted(
+            [customer for customer in active
+             if not customer['critical_payment']
+             and customer['change_pct'] is not None
+             and customer['change_pct'] <= -50],
+            key=lambda customer: customer['change_pct'])[:15]
+
+        return {
+            'period_months': months,
+            'history_months': 12,
+            'active_count': len(active),
+            'healthy_active_count': len([
+                customer for customer in active if not customer['critical_payment']]),
+            'at_risk_count': len([
+                customer for customer in active if customer['critical_payment']]),
+            'inactive_count': len(all_inactive),
+            'recoverable_count': len(recoverable),
+            'best_customers': best,
+            'at_risk_customers': at_risk,
+            'inactive_customers': inactive,
+            'declining_customers': declining,
+        }
+
     def _get_inventory_data(self):
         if 'stock.valuation.layer' not in self.env:
             return {'total': 0.0, 'by_category': [], 'available': False}
@@ -670,13 +854,25 @@ class SngAiDashboard(models.AbstractModel):
         }
 
     def _get_ai_panel_data(self):
-        """Último análisis + gasto IA del mes."""
+        """Último análisis por pestaña + gasto IA del mes."""
         Analysis = self.env['sng.ai.dashboard.analysis']
-        latest = Analysis.search(
-            [('company_id', 'in', self.env.companies.ids)], limit=1)
+        company_domain = [('company_id', 'in', self.env.companies.ids)]
+        latest_by_scope = {}
+        for scope in self.VALID_AI_SCOPES:
+            latest = Analysis.search(company_domain + [('scope', '=', scope)], limit=1)
+            latest_by_scope[scope] = latest and {
+                'id': latest.id,
+                'name': latest.name,
+                'content': latest.content or '',
+                'model_used': latest.model_used or '',
+                'cost_usd': latest.cost_usd,
+                'period_months': latest.period_months,
+            } or False
         first_of_month = fields.Date.context_today(self).replace(day=1)
         spend = Analysis.read_group(
-            [('create_date', '>=', fields.Datetime.to_string(first_of_month))],
+            company_domain + [
+                ('create_date', '>=', fields.Datetime.to_string(first_of_month)),
+            ],
             ['cost_usd:sum'], [])
         icp = self.env['ir.config_parameter'].sudo()
         provider = icp.get_param('sng_ai_dashboard.provider') or 'deepseek'
@@ -684,14 +880,7 @@ class SngAiDashboard(models.AbstractModel):
                          if provider == 'anthropic'
                          else 'sng_ai_dashboard.deepseek_api_key')
         return {
-            'latest': latest and {
-                'id': latest.id,
-                'name': latest.name,
-                'content': latest.content or '',
-                'model_used': latest.model_used or '',
-                'cost_usd': latest.cost_usd,
-                'period_months': latest.period_months,
-            } or False,
+            'by_scope': latest_by_scope,
             'month_spend_usd': (spend and spend[0].get('cost_usd') or 0.0),
             'configured': bool(icp.get_param(api_key_param)),
         }
@@ -700,26 +889,41 @@ class SngAiDashboard(models.AbstractModel):
     # Generación del análisis con el proveedor configurado
     # ------------------------------------------------------------------
 
-    def _collect_payload(self, months=3):
+    def _clean_ai_scope(self, scope):
+        if scope not in self.VALID_AI_SCOPES:
+            raise UserError(_("La pestaña de análisis indicada no es válida."))
+        return scope
+
+    def _collect_payload(self, months=3, scope='general'):
+        scope = self._clean_ai_scope(scope)
         today = fields.Date.context_today(self)
-        cxc = self._get_cxc_management_data(months)
-        # Sin datos de contacto: la IA no necesita teléfonos ni correos
-        cxc = dict(cxc, call_list=[
-            {k: v for k, v in c.items()
-             if k not in ('phone', 'email', 'partner_id', 'score')}
-            for c in cxc['call_list']
-        ])
-        return {
+        payload = {
             'fecha_corte': fields.Date.to_string(today),
             'periodo_meses': months,
             'moneda': self.env.company.currency_id.name,
-            'ventas': self._get_sales_data(months),
-            'cobranza': self._get_collections_data(months),
-            'cuentas_por_cobrar': self._get_receivables_data(),
-            'gestion_cobranza': cxc,
-            'inventario_valoracion_global': self._get_inventory_data(),
-            'inventario_almacen_principal': self._get_wh_inventory_data(months),
         }
+        if scope == 'general':
+            payload['ventas'] = self._get_sales_data(months)
+        elif scope == 'customers':
+            payload['clientes'] = self._get_customer_data(months)
+        elif scope == 'cxc':
+            cxc = self._get_cxc_management_data(months)
+            # Sin datos de contacto: la IA no necesita teléfonos ni correos.
+            payload.update({
+                'cobranza': self._get_collections_data(months),
+                'cuentas_por_cobrar': self._get_receivables_data(),
+                'gestion_cobranza': dict(cxc, call_list=[
+                    {k: v for k, v in customer.items()
+                     if k not in ('phone', 'email', 'partner_id', 'score')}
+                    for customer in cxc['call_list']
+                ]),
+            })
+        else:
+            payload.update({
+                'inventario_valoracion_global': self._get_inventory_data(),
+                'inventario_almacen_principal': self._get_wh_inventory_data(months),
+            })
+        return payload
 
     def _get_ai_config(self):
         icp = self.env['ir.config_parameter'].sudo()
@@ -739,7 +943,7 @@ class SngAiDashboard(models.AbstractModel):
             'model': icp.get_param('sng_ai_dashboard.model') or 'claude-opus-4-8',
         }
 
-    def _generate_with_anthropic(self, config, user_message):
+    def _generate_with_anthropic(self, config, user_message, system_prompt):
         try:
             import anthropic
         except ImportError:
@@ -752,7 +956,7 @@ class SngAiDashboard(models.AbstractModel):
         params = {
             'model': config['model'],
             'max_tokens': 8000,
-            'system': SYSTEM_PROMPT,
+            'system': system_prompt,
             'messages': [{'role': 'user', 'content': user_message}],
         }
         if not config['model'].startswith('claude-haiku'):
@@ -784,7 +988,7 @@ class SngAiDashboard(models.AbstractModel):
             'output_tokens': response.usage.output_tokens,
         }
 
-    def _generate_with_deepseek(self, config, user_message):
+    def _generate_with_deepseek(self, config, user_message, system_prompt):
         try:
             response = requests.post(
                 '%s/chat/completions' % config['base_url'],
@@ -799,7 +1003,7 @@ class SngAiDashboard(models.AbstractModel):
                     # y puede consumir todos los tokens sin producir respuesta final.
                     'thinking': {'type': 'disabled'},
                     'messages': [
-                        {'role': 'system', 'content': SYSTEM_PROMPT},
+                        {'role': 'system', 'content': system_prompt},
                         {'role': 'user', 'content': user_message},
                     ],
                 },
@@ -836,26 +1040,30 @@ class SngAiDashboard(models.AbstractModel):
         }
 
     @api.model
-    def action_generate_analysis(self, origin='manual', months=3):
+    def action_generate_analysis(self, origin='manual', months=3, scope='general'):
         months = self._clean_months(months)
+        scope = self._clean_ai_scope(scope)
         config = self._get_ai_config()
         if not config['api_key']:
             raise UserError(_(
                 "No hay API key configurada. Vaya a Ajustes > Dashboard IA y "
                 "configure la clave del proveedor seleccionado."))
 
-        payload = self._collect_payload(months)
+        payload = self._collect_payload(months, scope=scope)
+        system_prompt = "%s\n\nALCANCE OBLIGATORIO:\n%s" % (
+            SYSTEM_PROMPT, self.AI_SCOPE_INSTRUCTIONS[scope])
         user_message = (
-            "Indicadores del negocio al %s (período de análisis: %s meses):\n\n"
+            "Indicadores de la pestaña %s al %s "
+            "(período de análisis: %s meses):\n\n"
             "```json\n%s\n```"
-            % (payload['fecha_corte'], months,
+            % (scope, payload['fecha_corte'], months,
                json.dumps(payload, ensure_ascii=False, default=str))
         )
 
         generator = (self._generate_with_deepseek
                      if config['provider'] == 'deepseek'
                      else self._generate_with_anthropic)
-        result = generator(config, user_message)
+        result = generator(config, user_message, system_prompt)
         text = result['content']
         if not text.strip():
             raise UserError(_("La API devolvió una respuesta vacía. Intente de nuevo."))
@@ -866,6 +1074,7 @@ class SngAiDashboard(models.AbstractModel):
 
         self.env['sng.ai.dashboard.analysis'].create({
             'content': text,
+            'scope': scope,
             'provider_used': config['provider'],
             'model_used': result['model'],
             'input_tokens': result['input_tokens'],
@@ -875,8 +1084,9 @@ class SngAiDashboard(models.AbstractModel):
             'period_months': months,
         })
         _logger.info(
-            "Análisis IA generado con %s (%s): %s tokens entrada, %s salida, $%.4f",
-            config['provider'], result['model'], result['input_tokens'],
+            "Análisis IA %s generado con %s (%s): %s tokens entrada, "
+            "%s salida, $%.4f",
+            scope, config['provider'], result['model'], result['input_tokens'],
             result['output_tokens'], cost)
         return self._get_ai_panel_data()
 
@@ -886,7 +1096,11 @@ class SngAiDashboard(models.AbstractModel):
         if not self._get_ai_config()['api_key']:
             _logger.info("Dashboard IA: cron omitido, sin API key configurada.")
             return
-        try:
-            self.action_generate_analysis(origin='cron', months=3)
-        except Exception:
-            _logger.exception("Dashboard IA: error generando el análisis programado.")
+        for scope in self.VALID_AI_SCOPES:
+            try:
+                self.action_generate_analysis(
+                    origin='cron', months=3, scope=scope)
+            except Exception:
+                _logger.exception(
+                    "Dashboard IA: error generando el análisis programado %s.",
+                    scope)

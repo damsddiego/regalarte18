@@ -34,6 +34,10 @@
                            t-on-click.prevent="() => this.setTab('general')">General</a>
                     </li>
                     <li class="nav-item">
+                        <a href="#" t-att-class="'nav-link' + (state.tab === 'customers' ? ' active' : '')"
+                           t-on-click.prevent="() => this.setTab('customers')">Clientes</a>
+                    </li>
+                    <li class="nav-item">
                         <a href="#" t-att-class="'nav-link' + (state.tab === 'cxc' ? ' active' : '')"
                            t-on-click.prevent="() => this.setTab('cxc')">Cuentas por cobrar</a>
                     </li>
@@ -42,6 +46,180 @@
                            t-on-click.prevent="() => this.setTab('inventario')">Inventario</a>
                     </li>
                 </ul>
+
+                <t t-if="state.tab === 'customers'">
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="o_sng_tile">
+                                <div class="o_sng_tile_label">Clientes activos</div>
+                                <div class="o_sng_tile_value" t-esc="state.data.customers.active_count"/>
+                                <div class="small text-muted">compraron en los últimos <t t-esc="state.months"/> meses</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="o_sng_tile">
+                                <div class="o_sng_tile_label">Activos con pago sano</div>
+                                <div class="o_sng_tile_value o_sng_delta_up"
+                                     t-esc="state.data.customers.healthy_active_count"/>
+                                <div class="small text-muted">sin deuda crítica de más de 90 días</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="o_sng_tile">
+                                <div class="o_sng_tile_label">Dejaron de comprar</div>
+                                <div class="o_sng_tile_value" t-esc="state.data.customers.inactive_count"/>
+                                <div class="small text-muted">
+                                    <t t-esc="state.data.customers.recoverable_count"/> recuperables por pago sano
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-3">
+                            <div class="o_sng_tile">
+                                <div class="o_sng_tile_label">Activos con pago crítico</div>
+                                <div class="o_sng_tile_value o_sng_value_danger"
+                                     t-esc="state.data.customers.at_risk_count"/>
+                                <div class="small text-muted">compran, pero tienen mora mayor a 90 días</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <div class="o_sng_card">
+                                <h5>Mejores clientes con pago sano</h5>
+                                <div class="small text-muted mb-2">
+                                    Ordenados por compra neta del período; excluye clientes con deuda crítica mayor a 90 días.
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Cliente</th>
+                                                <th class="text-end">Compras</th>
+                                                <th class="text-end">Facturas</th>
+                                                <th class="text-end">Última compra</th>
+                                                <th class="text-end">Saldo vencido</th>
+                                                <th>Pago</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-foreach="state.data.customers.best_customers" t-as="c" t-key="c.partner_id">
+                                                <td t-esc="c.name"/>
+                                                <td class="text-end fw-bold" t-esc="fmtFull(c.current_sales)"/>
+                                                <td class="text-end" t-esc="c.current_invoices"/>
+                                                <td class="text-end" t-esc="fmtDate(c.last_purchase)"/>
+                                                <td class="text-end" t-esc="fmtFull(c.overdue)"/>
+                                                <td><span class="o_sng_badge o_sng_badge_low">Sano</span></td>
+                                            </tr>
+                                            <tr t-if="!state.data.customers.best_customers.length">
+                                                <td colspan="6" class="text-muted">No hay clientes que cumplan el criterio.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-xl-7">
+                            <div class="o_sng_card">
+                                <h5>Clientes que dejaron de comprar</h5>
+                                <div class="small text-muted mb-2">
+                                    Compraron durante los 12 meses anteriores, pero no en el período seleccionado.
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Cliente</th>
+                                                <th class="text-end">Compra anterior</th>
+                                                <th class="text-end">Última compra</th>
+                                                <th class="text-end">Días inactivo</th>
+                                                <th>Oportunidad</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-foreach="state.data.customers.inactive_customers" t-as="c" t-key="c.partner_id">
+                                                <td t-esc="c.name"/>
+                                                <td class="text-end fw-bold" t-esc="fmtFull(c.previous_sales)"/>
+                                                <td class="text-end" t-esc="fmtDate(c.last_purchase)"/>
+                                                <td class="text-end" t-esc="c.days_inactive"/>
+                                                <td>
+                                                    <span t-if="!c.critical_payment" class="o_sng_badge o_sng_badge_low">Recuperar</span>
+                                                    <span t-else="" class="o_sng_badge o_sng_badge_critical">Revisar mora</span>
+                                                </td>
+                                            </tr>
+                                            <tr t-if="!state.data.customers.inactive_customers.length">
+                                                <td colspan="5" class="text-muted">No se detectaron clientes inactivos.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-xl-5">
+                            <div class="o_sng_card">
+                                <h5>Clientes con caída mayor al 50%</h5>
+                                <div class="small text-muted mb-2">Promedio mensual actual contra los 12 meses anteriores.</div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Cliente</th>
+                                                <th class="text-end">Compra actual</th>
+                                                <th class="text-end">Cambio</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-foreach="state.data.customers.declining_customers" t-as="c" t-key="c.partner_id">
+                                                <td t-esc="c.name"/>
+                                                <td class="text-end" t-esc="fmtFull(c.current_sales)"/>
+                                                <td class="text-end o_sng_delta_down" t-esc="c.change_pct + '%'"/>
+                                            </tr>
+                                            <tr t-if="!state.data.customers.declining_customers.length">
+                                                <td colspan="3" class="text-muted">No hay caídas significativas.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="o_sng_card">
+                                <h5>Clientes activos con riesgo de pago</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Cliente</th>
+                                                <th class="text-end">Compras</th>
+                                                <th class="text-end">Saldo vencido</th>
+                                                <th class="text-end">Mora +90</th>
+                                                <th class="text-end">Máx. días</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-foreach="state.data.customers.at_risk_customers" t-as="c" t-key="c.partner_id">
+                                                <td t-esc="c.name"/>
+                                                <td class="text-end" t-esc="fmtFull(c.current_sales)"/>
+                                                <td class="text-end fw-bold o_sng_delta_down" t-esc="fmtFull(c.overdue)"/>
+                                                <td class="text-end" t-esc="fmtFull(c.d90_plus)"/>
+                                                <td class="text-end" t-esc="c.max_overdue_days"/>
+                                            </tr>
+                                            <tr t-if="!state.data.customers.at_risk_customers.length">
+                                                <td colspan="5" class="text-muted">No hay clientes activos con mora crítica. 🎉</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
 
                 <t t-if="state.tab === 'cxc'">
                     <!-- KPIs de cobranza -->
@@ -473,23 +651,23 @@
 
                 </t>
 
-                <!-- Panel de análisis IA (visible en ambas pestañas) -->
+                <!-- Panel independiente para la pestaña activa -->
                 <div class="row g-3 mt-0">
                     <div class="col-12">
                         <div class="o_sng_card o_sng_ai_panel">
                             <div class="d-flex align-items-baseline flex-wrap gap-2">
                                 <h5 class="me-auto mb-2">
-                                    <i class="fa fa-magic me-2 text-primary" role="img" aria-label="IA"/>Análisis y recomendaciones
+                                    <i class="fa fa-magic me-2 text-primary" role="img" aria-label="IA"/><t t-esc="aiTitle"/>
                                 </h5>
-                                <span t-if="state.data.ai.latest" class="text-muted small">
-                                    <t t-esc="state.data.ai.latest.name"/> ·
-                                    período <t t-esc="state.data.ai.latest.period_months || 3"/> meses
+                                <span t-if="currentAi" class="text-muted small">
+                                    <t t-esc="currentAi.name"/> ·
+                                    período <t t-esc="currentAi.period_months || 3"/> meses
                                 </span>
                             </div>
-                            <div t-if="state.data.ai.latest" class="o_sng_ai_content" t-out="aiContent"/>
+                            <div t-if="currentAi" class="o_sng_ai_content" t-out="aiContent"/>
                             <div t-else="" class="text-muted">
-                                Todavía no hay análisis generados.
-                                <t t-if="state.data.ai.configured">El análisis se genera automáticamente dos veces al día (6:30 a.m. y 6:30 p.m.).</t>
+                                Todavía no hay un análisis generado para esta pestaña.
+                                <t t-if="state.data.ai.configured"> Se genera automáticamente dos veces al día.</t>
                             </div>
                         </div>
                     </div>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Partner Full Tracking",
-    "version": "18.0.1.0.0",
+    "version": "18.0.1.0.1",
     "category": "Hidden",
     "summary": "Audita todos los cambios en la ficha de contacto",
     "author": "SNG",

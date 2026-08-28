@@ -179,9 +179,26 @@ export class AiDashboard extends Component {
         return { label: "Recordatorio", cls: "o_sng_badge_low" };
     }
 
-    get aiContent() {
+    get currentAi() {
         const ai = this.state.data && this.state.data.ai;
-        return ai && ai.latest ? markup(ai.latest.content) : "";
+        if (!ai || !ai.by_scope) {
+            return false;
+        }
+        const scope = this.state.tab === "inventario" ? "inventory" : this.state.tab;
+        return ai.by_scope[scope] || false;
+    }
+
+    get aiContent() {
+        return this.currentAi ? markup(this.currentAi.content) : "";
+    }
+
+    get aiTitle() {
+        return {
+            general: "Análisis de ventas",
+            customers: "Análisis de clientes",
+            cxc: "Análisis de cuentas por cobrar",
+            inventario: "Análisis de inventario",
+        }[this.state.tab];
     }
 
     // ------------------------------------------------------------------

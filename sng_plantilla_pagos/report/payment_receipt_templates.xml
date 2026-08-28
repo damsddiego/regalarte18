@@ -76,6 +76,15 @@
         <field name="paperformat_id" ref="paperformat_payment_receipt_option2"/>
     </record>
 
+    <!-- Adjuntar el Formato 2 por defecto en la plantilla de correo
+         "Enviar recibo por correo" en lugar del recibo estándar. -->
+    <!-- Se usa <function> porque la plantilla de account es noupdate="1" y un
+         <record> con su xmlid se ignora al actualizar el módulo. -->
+    <function model="mail.template" name="write">
+        <value eval="[ref('account.mail_template_data_payment_receipt')]"/>
+        <value eval="{'report_template_ids': [(6, 0, [ref('sng_plantilla_pagos.action_report_payment_receipt_option2')])]}"/>
+    </function>
+
     <template id="report_payment_receipt_option2_document">
         <t t-set="o" t-value="o.with_context(lang=lang)"/>
         <t t-set="company" t-value="o.company_id.sudo()"/>

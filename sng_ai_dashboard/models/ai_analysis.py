@@ -9,6 +9,18 @@ class SngAiDashboardAnalysis(models.Model):
 
     name = fields.Char(string="Referencia", compute='_compute_name', store=True)
     content = fields.Html(string="Análisis", sanitize=True)
+    scope = fields.Selection(
+        [
+            ('general', 'General / Ventas'),
+            ('customers', 'Clientes'),
+            ('cxc', 'Cuentas por cobrar'),
+            ('inventory', 'Inventario'),
+        ],
+        string="Pestaña",
+        default='general',
+        required=True,
+        index=True,
+    )
     provider_used = fields.Selection(
         [('anthropic', 'Anthropic'), ('deepseek', 'DeepSeek')],
         string="Proveedor IA",

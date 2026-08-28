@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'SNG AI Dashboard',
-    'version': '18.0.1.8.0',
+    'version': '18.0.1.10.0',
     'category': 'Reporting',
     'summary': 'Dashboard ejecutivo con KPIs y recomendaciones generadas por IA',
     'description': """
         Dashboard para la toma de decisiones con:
         - Ventas del mes (vs mes anterior y mismo mes del año pasado)
         - Ventas por vendedor asignado
+        - Segmentación de clientes por compra y salud de pago
         - Morosidad / antigüedad de cuentas por cobrar
         - Valor del inventario por categoría
         - Análisis y recomendaciones generadas con DeepSeek por defecto

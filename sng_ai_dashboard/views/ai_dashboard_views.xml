@@ -16,6 +16,7 @@
                 <field name="create_date"/>
                 <field name="origin"/>
                 <field name="period_months"/>
+                <field name="scope"/>
                 <field name="provider_used" optional="show"/>
                 <field name="model_used"/>
                 <field name="input_tokens" optional="hide"/>
@@ -37,6 +38,7 @@
                             <field name="create_date"/>
                             <field name="origin"/>
                             <field name="period_months"/>
+                            <field name="scope"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                         </group>
                         <group>
