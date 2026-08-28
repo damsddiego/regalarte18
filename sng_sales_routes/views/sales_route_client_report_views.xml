@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_sales_route_client_report_list" model="ir.ui.view">
+        <field name="name">sng.sales.route.client.report.list</field>
+        <field name="model">sng.sales.route.client.report</field>
+        <field name="arch" type="xml">
+            <list string="Ventas por Cliente" create="false" edit="false" delete="false"
+                  default_order="amount_total desc">
+                <field name="partner_code" string="codigo"/>
+                <field name="partner_name" string="Cliente"/>
+                <field name="amount_total" sum="Total" widget="monetary"/>
+                <field name="amount_untaxed" sum="Total" widget="monetary"/>
+                <field name="route_code" string="cod Ruta"/>
+                <field name="route_name" string="Ruta"/>
+                <field name="salesperson_code" string="Cod Vend"/>
+                <field name="salesperson_name" string="Vendedor"/>
+                <field name="invoice_count" sum="Documentos" optional="show"/>
+                <button name="action_view_moves" type="object"
+                        string="Ver documentos" icon="fa-search"
+                        title="Ver las facturas y notas de crédito de este cliente"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_sales_route_client_report_search" model="ir.ui.view">
+        <field name="name">sng.sales.route.client.report.search</field>
+        <field name="model">sng.sales.route.client.report</field>
+        <field name="arch" type="xml">
+            <search string="Ventas por Cliente">
+                <field name="partner_name" string="Cliente"/>
+                <field name="partner_code" string="Código"/>
+                <field name="sales_route_id"/>
+                <field name="salesperson_id"/>
+                <filter string="Sin ruta" name="without_route" domain="[('sales_route_id', '=', False)]"/>
+                <filter string="Sin vendedor" name="without_salesperson" domain="[('salesperson_id', '=', False)]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter string="Ruta" name="group_route" context="{'group_by': 'sales_route_id'}"/>
+                    <filter string="Vendedor" name="group_salesperson" context="{'group_by': 'salesperson_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sng_sales_route_client_report" model="ir.actions.act_window">
+        <field name="name">Ventas por Cliente</field>
+        <field name="res_model">sng.sales.route.client.report</field>
+        <field name="view_mode">list</field>
+        <field name="search_view_id" ref="view_sng_sales_route_client_report_search"/>
+    </record>
+</odoo>

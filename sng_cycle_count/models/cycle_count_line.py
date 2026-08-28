@@ -65,6 +65,22 @@ class CycleCountLine(models.Model):
         digits="Product Unit of Measure",
         default=0.0,
     )
+    previous_theoretical_qty = fields.Float(
+        string="Teórico Anterior",
+        digits="Product Unit of Measure",
+        readonly=True,
+        copy=False,
+        help="Cantidad teórica que tenía la línea antes de que Gerencia devolviera el conteo. "
+        "Solo informativo: no interviene en la diferencia, la valorización ni el ajuste.",
+    )
+    previous_counted_qty = fields.Float(
+        string="Contado Anterior",
+        digits="Product Unit of Measure",
+        readonly=True,
+        copy=False,
+        help="Cantidad contada antes de que Gerencia devolviera el conteo. "
+        "Solo informativo: el ajuste usa únicamente la Cantidad Contada.",
+    )
     difference_qty = fields.Float(
         string="Diferencia",
         digits="Product Unit of Measure",
@@ -83,6 +99,12 @@ class CycleCountLine(models.Model):
         default="pending",
     )
     notes = fields.Text(string="Observaciones")
+    is_manual = fields.Boolean(
+        string="Agregado manualmente",
+        default=False,
+        readonly=True,
+        help="Línea agregada por el operador durante el conteo (no seleccionada por la configuración).",
+    )
     count_date = fields.Datetime(string="Fecha de Conteo")
     company_id = fields.Many2one(
         "res.company",

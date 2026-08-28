@@ -5,17 +5,13 @@ import logging
 import re
 from datetime import timedelta
 
+import requests
 import xlsxwriter  # dependencia estándar de Odoo
 
 from markupsafe import Markup, escape
 
 from odoo import _, api, models, fields
 from odoo.exceptions import UserError
-
-try:
-    import anthropic
-except ImportError:
-    anthropic = None
 
 _logger = logging.getLogger(__name__)
 
@@ -28,6 +24,91 @@ SNG_FACTURA_SIMPLE_RE = re.compile(
 
 # Valor centinela del parámetro de sistema mientras no se configure la API key.
 SNG_IA_KEY_SIN_CONFIGURAR = 'PENDIENTE_CONFIGURAR'
+
+
+class _SngDeepSeekTextBlock:
+    type = 'text'
+
+    def __init__(self, text):
+        self.text = text
+
+
+class _SngDeepSeekResponse:
+    def __init__(self, text, stop_reason):
+        self.stop_reason = stop_reason
+        self.content = [_SngDeepSeekTextBlock(text)] if text else []
+
+
+class _SngDeepSeekMessages:
+    def __init__(self, client):
+        self._client = client
+
+    def create(self, model, max_tokens, system, messages,
+               output_config=None):
+        schema = ((output_config or {}).get('format') or {}).get('schema')
+        system_prompt = system
+        if schema:
+            system_prompt += (
+                '\nResponde únicamente con JSON válido que cumpla exactamente '
+                'este JSON Schema:\n%s' % json.dumps(
+                    schema, ensure_ascii=False))
+        payload = {
+            'model': model,
+            'max_tokens': max_tokens,
+            'thinking': {'type': 'disabled'},
+            'response_format': {'type': 'json_object'},
+            'messages': [
+                {'role': 'system', 'content': system_prompt},
+                *messages,
+            ],
+        }
+        try:
+            response = requests.post(
+                '%s/chat/completions' % self._client.base_url,
+                headers={
+                    'Authorization': 'Bearer %s' % self._client.api_key,
+                    'Content-Type': 'application/json',
+                },
+                json=payload,
+                timeout=self._client.timeout,
+            )
+        except requests.exceptions.RequestException as error:
+            raise UserError(_(
+                'No se pudo conectar con la API de DeepSeek: %s') % error)
+        if response.status_code == 401:
+            raise UserError(_('API key de DeepSeek inválida o revocada.'))
+        if response.status_code == 429:
+            raise UserError(_(
+                'Límite de peticiones alcanzado en DeepSeek. Intente de nuevo '
+                'en unos minutos.'))
+        if not response.ok:
+            try:
+                detail = response.json().get('error', {}).get('message')
+            except (ValueError, AttributeError):
+                detail = response.text[:500]
+            raise UserError(_(
+                'Error de la API de DeepSeek (%(status)s): %(detail)s',
+                status=response.status_code,
+                detail=detail or response.reason))
+        try:
+            data = response.json()
+            choice = data['choices'][0]
+            text = choice['message']['content']
+            finish_reason = choice.get('finish_reason')
+        except (ValueError, KeyError, IndexError, TypeError):
+            raise UserError(_(
+                'DeepSeek devolvió una respuesta con formato inválido.'))
+        stop_reason = (
+            'refusal' if finish_reason == 'content_filter' else finish_reason)
+        return _SngDeepSeekResponse(text, stop_reason)
+
+
+class _SngDeepSeekClient:
+    def __init__(self, api_key, base_url, timeout=90):
+        self.api_key = api_key
+        self.base_url = base_url.rstrip('/')
+        self.timeout = timeout
+        self.messages = _SngDeepSeekMessages(self)
 
 # Filtro de "solo cobros de ruta", para reportes y crons que son exclusivos de
 # ruteros. Se usa '!=' escritorio (y no '=' ruteros) a propósito: los recibos
@@ -922,7 +1003,7 @@ class AccountPayment(models.Model):
         }
 
     # ------------------------------------------------------------------
-    # Matching IA de facturas (Claude API)
+    # Matching IA de facturas (DeepSeek API)
     # ------------------------------------------------------------------
 
     def action_sng_ia_matching(self):
@@ -966,29 +1047,34 @@ class AccountPayment(models.Model):
         payments._sng_ia_matching_facturas()
 
     def _sng_ia_get_client(self, raise_errors=False):
-        """Devuelve (cliente Anthropic, modelo) o (None, None) si falta configurar."""
+        """Devuelve (cliente DeepSeek, modelo) o (None, None) sin API key."""
         def _fail(msg):
             if raise_errors:
                 raise UserError(msg)
             _logger.warning('Matching IA Ruteros: %s', msg)
             return None, None
 
-        if anthropic is None:
-            return _fail(_(
-                'Falta la librería Python "anthropic" en el entorno de Odoo '
-                '(pip install anthropic).'))
         icp = self.env['ir.config_parameter'].sudo()
-        api_key = (icp.get_param('sng_ruteros_pagos.anthropic_api_key') or '').strip()
+        own_key = (icp.get_param(
+            'sng_ruteros_pagos.deepseek_api_key') or '').strip()
+        api_key = own_key
+        if not api_key or api_key == SNG_IA_KEY_SIN_CONFIGURAR:
+            api_key = (icp.get_param(
+                'sng_ai_dashboard.deepseek_api_key') or '').strip()
         if not api_key or api_key == SNG_IA_KEY_SIN_CONFIGURAR:
             return _fail(_(
-                'Configure la API key en Ajustes → Técnico → Parámetros del '
-                'sistema, clave "sng_ruteros_pagos.anthropic_api_key".'))
-        model = (icp.get_param('sng_ruteros_pagos.anthropic_model')
-                 or 'claude-opus-4-8').strip()
-        return anthropic.Anthropic(api_key=api_key, timeout=90.0, max_retries=1), model
+                'Configure la API key de DeepSeek en Dashboard IA o en el '
+                'parámetro "sng_ruteros_pagos.deepseek_api_key".'))
+        model = (icp.get_param('sng_ruteros_pagos.deepseek_model')
+                 or icp.get_param('sng_ai_dashboard.deepseek_model')
+                 or 'deepseek-v4-flash').strip()
+        base_url = (icp.get_param('sng_ruteros_pagos.deepseek_base_url')
+                    or icp.get_param('sng_ai_dashboard.deepseek_base_url')
+                    or 'https://api.deepseek.com').strip()
+        return _SngDeepSeekClient(api_key, base_url), model
 
     def _sng_ia_matching_facturas(self, raise_errors=False):
-        """Pide a Claude emparejar los números no ligados con facturas abiertas.
+        """Pide a DeepSeek emparejar números no ligados con facturas abiertas.
 
         La IA solo sugiere: liga las facturas de confianza alta en invoice_ids
         (sin conciliar — eso sigue requiriendo el botón "Aplicar a facturas" o

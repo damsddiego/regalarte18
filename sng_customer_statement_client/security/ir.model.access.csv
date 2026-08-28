@@ -1,0 +1,2 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_customer_statement_client_wizard_user,customer.statement.client.wizard.user,model_sng_customer_statement_client_wizard,sng_customer_statement.group_customer_statement_user,1,1,1,1

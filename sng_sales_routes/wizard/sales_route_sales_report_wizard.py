@@ -29,6 +29,24 @@ class SngSalesRouteSalesReportWizard(models.TransientModel):
         help="Muestra también las rutas y vendedores que no facturaron en el periodo.",
     )
 
+    include_detail = fields.Boolean(
+        string="Incluir auxiliar por cliente",
+        default=True,
+        help="Agrega el auxiliar con una línea por cliente: una hoja aparte en el "
+             "Excel y una sección al final del PDF.",
+    )
+    weight_base = fields.Selection(
+        [
+            ("total", "Ventas Netas IVAI (con impuestos)"),
+            ("untaxed", "Ventas Brutas A.I (sin impuestos)"),
+        ],
+        string="Base del Peso %",
+        required=True,
+        default="total",
+        help="Monto sobre el que se reparte el 100%. El reporte de gerencia usa "
+             "las ventas con impuestos incluidos.",
+    )
+
     @api.constrains("date_from", "date_to")
     def _check_dates(self):
         for wizard in self:
@@ -40,7 +58,9 @@ class SngSalesRouteSalesReportWizard(models.TransientModel):
     def _rebuild(self):
         self.ensure_one()
         report_model = self.env["sng.sales.route.sales.report"]
-        report_model._rebuild_snapshot(self.date_from, self.date_to, self.include_zero)
+        report_model._rebuild_snapshot(
+            self.date_from, self.date_to, self.include_zero, self.weight_base
+        )
         return report_model
 
     def action_open_report(self):
@@ -62,8 +82,30 @@ class SngSalesRouteSalesReportWizard(models.TransientModel):
             },
         }
 
+    def action_open_clients(self):
+        self._rebuild()
+        client_model = self.env["sng.sales.route.client.report"]
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Ventas por Cliente"),
+            "res_model": client_model._name,
+            "view_mode": "list",
+            "domain": client_model._get_snapshot_domain(),
+            "context": {"create": False, "edit": False, "delete": False},
+        }
+
+    def action_print_pdf(self):
+        self._rebuild()
+        return self.env.ref(
+            "sng_sales_routes.action_report_sales_route_sales"
+        ).report_action(self)
+
     def action_export_xlsx(self):
         report_model = self._rebuild()
         return report_model._get_xlsx_action(
-            self.date_from, self.date_to, self.include_zero
+            self.date_from,
+            self.date_to,
+            self.include_zero,
+            self.include_detail,
+            self.weight_base,
         )

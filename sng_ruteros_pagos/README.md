@@ -76,9 +76,9 @@ Si un pago se confirmó **sin** facturas, o hay que agregarle más:
 
 ---
 
-## Matching IA de facturas (Claude)
+## Matching IA de facturas (DeepSeek)
 
-Cuando el puente no logra ligar algún número de factura del texto de la app (typos, ceros faltantes, números incompletos), el pago queda marcado como **Matching IA: Pendiente** y un cron (cada 10 minutos) consulta la API de Claude (Anthropic) para emparejar esos números contra las **facturas abiertas reales del cliente**.
+Cuando el puente no logra ligar algún número de factura del texto de la app (typos, ceros faltantes, números incompletos), el pago queda marcado como **Matching IA: Pendiente** y un cron (cada 10 minutos) consulta la API de DeepSeek para emparejar esos números contra las **facturas abiertas reales del cliente**.
 
 - La IA **solo sugiere**: las coincidencias de confianza **alta** se agregan a *Facturas a pagar* pero **no se concilian** — la conciliación sigue requiriendo el botón **Aplicar a facturas** (o confirmar el pago). El detalle completo (número capturado → factura, confianza y razón) queda en el chatter.
 - En Python se re-validan los IDs devueltos: la IA no puede ligar una factura que no esté en la lista de candidatas abiertas del cliente.
@@ -143,9 +143,9 @@ Cada mañana (05:00 CR) se publica en el canal de Discuss **“Liquidación Rute
 
 ### Configuración
 
-1. Instalar la librería en el venv de Odoo: `pip install anthropic` (ya declarada como dependencia externa del módulo).
-2. En **Ajustes → Técnico → Parámetros del sistema**, editar `sng_ruteros_pagos.anthropic_api_key` y reemplazar `PENDIENTE_CONFIGURAR` por la API key de [platform.claude.com](https://platform.claude.com). Mientras no se configure, el cron no hace nada (solo deja un aviso en el log).
-3. Opcional: `sng_ruteros_pagos.anthropic_model` define el modelo (por defecto `claude-opus-4-8`).
+1. El módulo reutiliza automáticamente `sng_ai_dashboard.deepseek_api_key` si el Dashboard IA ya está configurado.
+2. Opcionalmente puede definir una clave exclusiva en `sng_ruteros_pagos.deepseek_api_key` desde **Ajustes → Técnico → Parámetros del sistema**.
+3. `sng_ruteros_pagos.deepseek_model` define el modelo (por defecto `deepseek-v4-flash`) y `sng_ruteros_pagos.deepseek_base_url` el endpoint (por defecto `https://api.deepseek.com`).
 
 ---
 

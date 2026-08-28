@@ -12,6 +12,8 @@
                     </group>
                     <group>
                         <field name="include_zero"/>
+                        <field name="include_detail"/>
+                        <field name="weight_base"/>
                     </group>
                 </group>
                 <div class="text-muted">
@@ -19,7 +21,9 @@
                 </div>
                 <footer>
                     <button name="action_open_report" string="Ver reporte" type="object" class="btn-primary"/>
+                    <button name="action_open_clients" string="Ver por cliente" type="object" class="btn-secondary"/>
                     <button name="action_export_xlsx" string="Exportar Excel" type="object" class="btn-secondary"/>
+                    <button name="action_print_pdf" string="Imprimir PDF" type="object" class="btn-secondary"/>
                     <button string="Cancelar" class="btn-secondary" special="cancel"/>
                 </footer>
             </form>

@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_replenishment_alert_list" model="ir.ui.view">
+        <field name="name">sng.biweekly.replenishment.alert.list</field>
+        <field name="model">sng.biweekly.replenishment.alert</field>
+        <field name="arch" type="xml">
+            <list string="Alertas de punto de reorden" create="0" edit="0" delete="0"
+                  decoration-danger="state == 'open'"
+                  decoration-muted="state == 'recovered'">
+                <field name="product_code"/>
+                <field name="product_id"/>
+                <field name="config_id"/>
+                <field name="main_warehouse_id"/>
+                <field name="demand_qty"/>
+                <field name="daily_demand"/>
+                <field name="free_qty"/>
+                <field name="reorder_point"/>
+                <field name="open_count"/>
+                <field name="last_checked_at"/>
+                <field name="state" widget="badge"
+                       decoration-danger="state == 'open'"
+                       decoration-success="state == 'recovered'"/>
+                <button name="action_open_product" string="Producto" type="object"
+                        icon="fa-external-link" class="btn-link"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_replenishment_alert_form" model="ir.ui.view">
+        <field name="name">sng.biweekly.replenishment.alert.form</field>
+        <field name="model">sng.biweekly.replenishment.alert</field>
+        <field name="arch" type="xml">
+            <form string="Alerta de punto de reorden" create="0" edit="0" delete="0">
+                <header>
+                    <field name="state" widget="statusbar" statusbar_visible="open,recovered"/>
+                </header>
+                <sheet>
+                    <div class="oe_title"><h1><field name="product_id"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="product_code"/>
+                            <field name="config_id"/>
+                            <field name="main_warehouse_id"/>
+                            <field name="uom_id"/>
+                        </group>
+                        <group>
+                            <field name="demand_qty"/>
+                            <field name="daily_demand"/>
+                            <field name="free_qty"/>
+                            <field name="reorder_point"/>
+                        </group>
+                    </group>
+                    <group string="Historial del estado">
+                        <field name="first_detected_at"/>
+                        <field name="last_opened_at"/>
+                        <field name="last_checked_at"/>
+                        <field name="recovered_at"/>
+                        <field name="open_count"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_replenishment_alert_search" model="ir.ui.view">
+        <field name="name">sng.biweekly.replenishment.alert.search</field>
+        <field name="model">sng.biweekly.replenishment.alert</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="product_id"/>
+                <field name="product_code"/>
+                <field name="config_id"/>
+                <field name="main_warehouse_id"/>
+                <filter name="open" string="Abiertas" domain="[('state', '=', 'open')]"/>
+                <filter name="recovered" string="Recuperadas" domain="[('state', '=', 'recovered')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
+                    <filter name="group_config" string="Configuración" context="{'group_by': 'config_id'}"/>
+                    <filter name="group_product" string="Producto" context="{'group_by': 'product_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_replenishment_alert" model="ir.actions.act_window">
+        <field name="name">Alertas de reorden</field>
+        <field name="res_model">sng.biweekly.replenishment.alert</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_replenishment_alert_search"/>
+        <field name="context">{'search_default_open': 1}</field>
+        <field name="groups_id" eval="[(4, ref('group_replenishment_planner'))]"/>
+    </record>
+</odoo>
+

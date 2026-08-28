@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Keep the original report definition and template, but hide its action
+         from the account.payment Print menu. -->
+    <record id="account.action_report_payment_receipt" model="ir.actions.report">
+        <field name="binding_model_id" eval="False"/>
+    </record>
+
     <template id="report_payment_receipt_document_company_header" inherit_id="account.report_payment_receipt_document">
         <xpath expr="//div[contains(@class, 'page')]/h3" position="before">
             <t t-set="receipt_company" t-value="o.company_id.sudo()"/>
@@ -42,5 +48,237 @@
                 </div>
             </div>
         </xpath>
+    </template>
+
+    <record id="paperformat_payment_receipt_option2" model="report.paperformat">
+        <field name="name">Recibo de pago - Formato 2</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">7</field>
+        <field name="margin_bottom">7</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_report_payment_receipt_option2" model="ir.actions.report">
+        <field name="name">Recibo de pago</field>
+        <field name="model">account.payment</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sng_plantilla_pagos.report_payment_receipt_option2</field>
+        <field name="report_file">sng_plantilla_pagos.report_payment_receipt_option2</field>
+        <field name="print_report_name">'Recibo de pago - %s' % (object.name or '')</field>
+        <field name="binding_model_id" ref="account.model_account_payment"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="paperformat_payment_receipt_option2"/>
+    </record>
+
+    <template id="report_payment_receipt_option2_document">
+        <t t-set="o" t-value="o.with_context(lang=lang)"/>
+        <t t-set="company" t-value="o.company_id.sudo()"/>
+        <t t-set="partner" t-value="o.partner_id.sudo()"/>
+        <t t-set="invoices" t-value="(o.reconciled_invoice_ids or o.invoice_ids).filtered(lambda inv: inv.move_type != 'entry')"/>
+        <t t-set="invoice_currency" t-value="invoices[:1].currency_id or o.currency_id"/>
+
+        <div class="article"
+             t-att-data-oe-model="o and o._name"
+             t-att-data-oe-id="o and o.id"
+             t-att-data-oe-lang="o and o.env.context.get('lang')">
+        <div class="page" style="font-family: Arial, sans-serif; font-size: 10px; color: #000;">
+            <table style="width: 100%; border-collapse: collapse; border-bottom: 2px solid #000; margin-bottom: 14px;">
+                <tr>
+                    <td style="width: 32%; padding: 0 0 8px 6px; vertical-align: middle;">
+                        <img t-if="company.logo"
+                             t-att-src="image_data_uri(company.logo)"
+                             alt="Logo"
+                             style="max-height: 75px; max-width: 230px; object-fit: contain;"/>
+                    </td>
+                    <td style="width: 68%; padding: 0 0 8px 0; text-align: right; vertical-align: top; line-height: 1.35;">
+                        <div style="font-size: 16px; font-weight: bold; text-transform: uppercase;">
+                            <span t-field="company.name">Compañía</span>
+                        </div>
+                        <div t-if="company.partner_id.vat">
+                            Identificación: <span t-field="company.partner_id.vat">000000000</span>
+                        </div>
+                        <div t-if="company.partner_id.street or company.partner_id.city or company.partner_id.country_id">
+                            Ubicación:
+                            <span t-field="company.partner_id"
+                                  t-options='{"widget": "contact", "fields": ["address"], "no_marker": true}'/>
+                        </div>
+                        <div t-if="company.phone or company.email">
+                            <span t-if="company.phone">Tel: <span t-field="company.phone">0000-0000</span></span>
+                            <span t-if="company.phone and company.email"> / </span>
+                            <span t-if="company.email" t-field="company.email">correo@empresa.com</span>
+                        </div>
+                    </td>
+                </tr>
+            </table>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px;">
+                <tr>
+                    <td style="width: 64%; border-bottom: 1px solid #b8c5d6; padding: 3px 0; font-size: 17px; font-weight: bold;">
+                        Recibo de pago: <span t-field="o.name">PBNK/2026/00001</span>
+                    </td>
+                    <td style="width: 10%; border-bottom: 1px solid #b8c5d6; padding: 3px 4px; font-weight: bold;">
+                        Fecha de pago:
+                    </td>
+                    <td style="width: 26%; border-bottom: 1px solid #b8c5d6; padding: 3px 4px; text-align: center;">
+                        <span t-field="o.date">01/01/2026</span>
+                    </td>
+                </tr>
+            </table>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; line-height: 1.35;">
+                <tr>
+                    <td style="width: 12%; padding: 2px 3px 2px 0; font-weight: bold;">Cliente:</td>
+                    <td style="width: 38%; padding: 2px 4px;">
+                        <span t-field="partner.name">Cliente</span>
+                    </td>
+                    <td style="width: 14%; padding: 2px 4px; font-weight: bold;">Código cliente:</td>
+                    <td style="width: 36%; padding: 2px 4px;">
+                        <span t-field="partner.unique_id">00001</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 2px 3px 2px 0; font-weight: bold;">Identificación:</td>
+                    <td style="padding: 2px 4px; text-align: center;">
+                        <span t-field="partner.vat">000000000</span>
+                    </td>
+                    <td style="padding: 2px 4px; font-weight: bold;">Vendedor:</td>
+                    <td style="padding: 2px 4px;">
+                        <span t-if="o.salesperson_id" t-field="o.salesperson_id.name">Vendedor</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 2px 3px 2px 0; font-weight: bold;">Nombre comercial:</td>
+                    <td style="padding: 2px 4px; text-align: center;">
+                        <span t-field="partner.commercial_name">Nombre comercial</span>
+                    </td>
+                    <td style="padding: 2px 4px; font-weight: bold;">Ruta:</td>
+                    <td style="padding: 2px 4px;">
+                        <span t-if="o.sales_route_id" t-field="o.sales_route_id.display_name">Ruta</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 2px 3px 2px 0; font-weight: bold;">Tel:</td>
+                    <td style="padding: 2px 4px; text-align: center;">
+                        <span t-field="partner.phone">0000-0000</span>
+                    </td>
+                    <td style="padding: 2px 4px; font-weight: bold;">Correo:</td>
+                    <td style="padding: 2px 4px;">
+                        <span t-field="partner.email">cliente@correo.com</span>
+                    </td>
+                </tr>
+            </table>
+
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 14px; line-height: 1.35;">
+                <tr>
+                    <td style="width: 18%; padding: 2px 3px 2px 0; font-weight: bold;">Importe del pago:</td>
+                    <td style="width: 32%; padding: 2px 4px; text-align: right; font-weight: bold;">
+                        <span t-field="o.amount" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}">0.00</span>
+                    </td>
+                    <td style="width: 50%; padding: 2px 4px;"/>
+                </tr>
+                <tr>
+                    <td style="padding: 2px 3px 2px 0; font-weight: bold;">Método de pago:</td>
+                    <td colspan="2" style="padding: 2px 4px; text-align: center;">
+                        <span t-field="o.journal_id.name">Diario</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding: 2px 3px 2px 0; font-weight: bold;">Memo:</td>
+                    <td colspan="2" style="padding: 2px 4px;">
+                        <span t-field="o.memo">Referencia del pago</span>
+                    </td>
+                </tr>
+            </table>
+
+            <table style="width: 100%; border-collapse: collapse; table-layout: fixed;">
+                <thead>
+                    <tr style="background-color: #00658b; color: #fff;">
+                        <th style="width: 14%; padding: 4px; border-right: 1px solid #fff; text-align: center;">Fecha factura</th>
+                        <th style="width: 24%; padding: 4px; border-right: 1px solid #fff; text-align: center;">Número de factura</th>
+                        <th style="width: 38%; padding: 4px; border-right: 1px solid #fff; text-align: center;">Referencia / Concepto</th>
+                        <th style="width: 24%; padding: 4px; text-align: center;">Importe</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <t t-if="invoices">
+                        <t t-foreach="invoices" t-as="inv">
+                            <tr>
+                                <td style="padding: 4px; border-bottom: 1px solid #c7d0dc; text-align: center;">
+                                    <span t-field="inv.invoice_date">01/01/2026</span>
+                                </td>
+                                <td style="padding: 4px; border-bottom: 1px solid #c7d0dc; text-align: center;">
+                                    <span t-field="inv.name">INV/2026/00001</span>
+                                </td>
+                                <td style="padding: 4px; border-bottom: 1px solid #c7d0dc;">
+                                    <span t-field="inv.ref">Referencia de factura</span>
+                                </td>
+                                <td style="padding: 4px; border-bottom: 1px solid #c7d0dc; text-align: right;">
+                                    <span t-field="inv.amount_total" t-options="{'widget': 'monetary', 'display_currency': inv.currency_id}">0.00</span>
+                                </td>
+                            </tr>
+                            <t t-foreach="inv._get_reconciled_invoices_partials()[0]" t-as="par">
+                                <t t-set="counterpart_line" t-value="par[2]"/>
+                                <tr t-if="counterpart_line.payment_id == o or counterpart_line.move_id == o.move_id">
+                                    <td style="padding: 4px; border-bottom: 1px solid #c7d0dc; text-align: center;">
+                                        <span t-field="o.date">01/01/2026</span>
+                                    </td>
+                                    <td style="padding: 4px; border-bottom: 1px solid #c7d0dc; text-align: center;">
+                                        <span t-field="o.name">PBNK/2026/00001</span>
+                                    </td>
+                                    <td style="padding: 4px; border-bottom: 1px solid #c7d0dc; text-align: center;">
+                                        <span t-field="o.memo">Referencia del pago</span>
+                                    </td>
+                                    <td style="padding: 4px; border-bottom: 1px solid #c7d0dc; text-align: right;">
+                                        <span t-out="-par[1]" t-options="{'widget': 'monetary', 'display_currency': inv.currency_id}">0.00</span>
+                                    </td>
+                                </tr>
+                            </t>
+                            <tr>
+                                <td/>
+                                <td/>
+                                <td style="padding: 3px 5px; text-align: right; font-weight: bold;">
+                                    Saldo de factura <span t-field="inv.name">INV/2026/00001</span>
+                                </td>
+                                <td style="padding: 3px 5px; border-bottom: 1px solid #00658b; text-align: right; font-weight: bold; color: #00658b;">
+                                    <span t-field="inv.amount_residual" t-options="{'widget': 'monetary', 'display_currency': inv.currency_id}">0.00</span>
+                                </td>
+                            </tr>
+                        </t>
+                        <tr>
+                            <td/>
+                            <td/>
+                            <td style="padding: 5px; text-align: right; font-weight: bold; font-size: 11px;">
+                                SALDO TOTAL POR COBRAR PENDIENTE
+                            </td>
+                            <td style="padding: 5px; border-top: 1px solid #000; border-bottom: 1px solid #000; text-align: right; font-weight: bold; font-size: 11px;">
+                                <span t-out="sum(invoices.mapped('amount_residual'))"
+                                      t-options="{'widget': 'monetary', 'display_currency': invoice_currency}">0.00</span>
+                            </td>
+                        </tr>
+                    </t>
+                    <tr t-else="">
+                        <td colspan="4" style="padding: 8px; text-align: center; border-bottom: 1px solid #c7d0dc;">
+                            Este pago no tiene facturas conciliadas.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        </div>
+    </template>
+
+    <template id="report_payment_receipt_option2">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-set="lang" t-value="o.partner_id.lang or o.company_id.partner_id.lang"/>
+                <t t-call="sng_plantilla_pagos.report_payment_receipt_option2_document" t-lang="lang"/>
+            </t>
+        </t>
     </template>
 </odoo>

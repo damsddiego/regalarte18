@@ -1,0 +1,8 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_fec_batch_user,sng.ai.fec.batch.user,model_sng_ai_fec_batch,group_fec_digitizer_user,1,1,1,0
+access_fec_batch_manager,sng.ai.fec.batch.manager,model_sng_ai_fec_batch,group_fec_digitizer_manager,1,1,1,1
+access_fec_proposal_user,sng.ai.fec.proposal.user,model_sng_ai_fec_proposal,group_fec_digitizer_user,1,1,1,0
+access_fec_proposal_manager,sng.ai.fec.proposal.manager,model_sng_ai_fec_proposal,group_fec_digitizer_manager,1,1,1,1
+access_fec_proposal_line_user,sng.ai.fec.proposal.line.user,model_sng_ai_fec_proposal_line,group_fec_digitizer_user,1,1,1,0
+access_fec_proposal_line_manager,sng.ai.fec.proposal.line.manager,model_sng_ai_fec_proposal_line,group_fec_digitizer_manager,1,1,1,1
+

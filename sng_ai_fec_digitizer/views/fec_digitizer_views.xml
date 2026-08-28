@@ -1,0 +1,214 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_fec_batch_list" model="ir.ui.view">
+        <field name="name">sng.ai.fec.batch.list</field>
+        <field name="model">sng.ai.fec.batch</field>
+        <field name="arch" type="xml">
+            <list decoration-danger="state == 'error'" decoration-muted="state == 'discarded'" decoration-info="state == 'processing'">
+                <field name="name"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="provider"/>
+                <field name="page_count"/>
+                <field name="proposal_count"/>
+                <field name="invoice_count"/>
+                <field name="state" widget="badge"/>
+                <field name="create_date"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_fec_batch_form" model="ir.ui.view">
+        <field name="name">sng.ai.fec.batch.form</field>
+        <field name="model">sng.ai.fec.batch</field>
+        <field name="arch" type="xml">
+            <form string="Digitalización IA FEC">
+                <header>
+                    <button name="action_queue" string="Enviar a cola" type="object" class="btn-primary" invisible="state not in ('uploaded','error')"/>
+                    <button name="action_process_now" string="Analizar ahora" type="object" groups="sng_ai_fec_digitizer.group_fec_digitizer_manager" invisible="state not in ('uploaded','queued','error')"/>
+                    <button name="action_open_proposals" string="Revisar propuestas" type="object" invisible="not proposal_count"/>
+                    <button name="action_discard" string="Descartar" type="object" confirm="¿Descartar este lote?" invisible="state in ('done','discarded')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="uploaded,queued,processing,review,done,error"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_open_proposals" type="object" class="oe_stat_button" icon="fa-files-o" invisible="not proposal_count">
+                            <field name="proposal_count" widget="statinfo" string="Propuestas"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Error" bg_color="text-bg-danger" invisible="state != 'error'"/>
+                    <group>
+                        <group>
+                            <field name="name" readonly="state != 'uploaded'"/>
+                            <field name="pdf_data" filename="pdf_filename" readonly="state != 'uploaded'"/>
+                            <field name="pdf_filename" invisible="1"/>
+                            <field name="provider" readonly="state != 'uploaded'"/>
+                            <field name="privacy_accepted" readonly="state not in ('uploaded','error')"/>
+                            <div class="alert alert-warning" role="alert" invisible="privacy_accepted">
+                                El PDF contiene datos fiscales y personales. Para analizarlo se enviará a Anthropic y,
+                                si selecciona DeepSeek, la extracción también se enviará a DeepSeek.
+                            </div>
+                            <field name="company_id" readonly="state != 'uploaded'" groups="base.group_multi_company"/>
+                        </group>
+                        <group>
+                            <field name="page_count"/>
+                            <field name="processed_at"/>
+                            <field name="attempt_count"/>
+                            <field name="cost_usd" groups="sng_ai_fec_digitizer.group_fec_digitizer_manager"/>
+                            <field name="estimated_cost_usd"/>
+                            <field name="privacy_accepted_by" invisible="not privacy_accepted_by"/>
+                            <field name="privacy_accepted_at" invisible="not privacy_accepted_at"/>
+                        </group>
+                    </group>
+                    <field name="error_message" invisible="not error_message" readonly="1"/>
+                    <notebook>
+                        <page string="Propuestas">
+                            <field name="proposal_ids" readonly="1">
+                                <list>
+                                    <field name="page_numbers"/>
+                                    <field name="supplier_name"/>
+                                    <field name="supplier_vat"/>
+                                    <field name="reference"/>
+                                    <field name="invoice_date"/>
+                                    <field name="total"/>
+                                    <field name="confidence" widget="percentage"/>
+                                    <field name="state" widget="badge"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Auditoría IA" groups="sng_ai_fec_digitizer.group_fec_digitizer_manager">
+                            <group>
+                                <field name="anthropic_model"/>
+                                <field name="anthropic_input_tokens"/>
+                                <field name="anthropic_output_tokens"/>
+                                <field name="deepseek_model"/>
+                                <field name="deepseek_input_tokens"/>
+                                <field name="deepseek_output_tokens"/>
+                            </group>
+                            <field name="raw_response" nolabel="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_fec_proposal_list" model="ir.ui.view">
+        <field name="name">sng.ai.fec.proposal.list</field>
+        <field name="model">sng.ai.fec.proposal</field>
+        <field name="arch" type="xml">
+            <list decoration-danger="state == 'duplicate'" decoration-warning="state == 'review'" decoration-success="state == 'invoice'">
+                <field name="batch_id"/>
+                <field name="page_numbers"/>
+                <field name="partner_id"/>
+                <field name="supplier_name" optional="hide"/>
+                <field name="reference"/>
+                <field name="invoice_date"/>
+                <field name="total"/>
+                <field name="confidence" widget="percentage"/>
+                <field name="history_applied" optional="show"/>
+                <field name="state" widget="badge"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_fec_proposal_form" model="ir.ui.view">
+        <field name="name">sng.ai.fec.proposal.form</field>
+        <field name="model">sng.ai.fec.proposal</field>
+        <field name="arch" type="xml">
+            <form string="Propuesta FEC">
+                <header>
+                    <button name="action_validate_ready" string="Validar propuesta" type="object" class="btn-primary" invisible="state not in ('review','ready')"/>
+                    <button name="action_create_invoice" string="Crear factura borrador" type="object" class="btn-primary" invisible="state != 'ready'"/>
+                    <button name="action_open_invoice" string="Abrir factura" type="object" invisible="not invoice_id"/>
+                    <button name="action_discard" string="Descartar" type="object" confirm="¿Descartar esta propuesta?" invisible="state in ('invoice','discarded')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="review,ready,invoice"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Posible duplicado" bg_color="text-bg-danger" invisible="not duplicate_proposal_id and not duplicate_move_id"/>
+                    <div class="oe_title"><h1><field name="name" readonly="1"/></h1></div>
+                    <field name="warning_message" widget="html" invisible="not warning_message"/>
+                    <group>
+                        <group string="Documento escaneado">
+                            <field name="batch_id" readonly="1"/>
+                            <field name="page_numbers" readonly="state in ('invoice','discarded')"/>
+                            <field name="preview_image" widget="image" class="oe_avatar" options="{'size': [600, 800]}"/>
+                            <field name="confidence" widget="percentage" readonly="1"/>
+                        </group>
+                        <group string="Proveedor">
+                            <field name="supplier_name"/>
+                            <field name="supplier_vat"/>
+                            <field name="supplier_activity"/>
+                            <field name="partner_id" context="{'default_supplier_rank': 1}"/>
+                            <field name="economic_activity_id" domain="[('company_id','=',company_id)]"/>
+                            <field name="simplified_regime"/>
+                        </group>
+                    </group>
+                    <group string="Comprobante">
+                        <group>
+                            <field name="reference"/>
+                            <field name="invoice_date"/>
+                            <field name="currency_id"/>
+                        </group>
+                        <group>
+                            <field name="payment_method_id"/>
+                            <field name="payment_condition"/>
+                            <field name="journal_id"/>
+                        </group>
+                    </group>
+                    <field name="line_ids">
+                        <list editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="description"/>
+                            <field name="quantity"/>
+                            <field name="product_id"/>
+                            <field name="uom_id"/>
+                            <field name="unit_price"/>
+                            <field name="discount"/>
+                            <field name="tax_ids" widget="many2many_tags"/>
+                            <field name="account_id"/>
+                            <field name="cabys_code"/>
+                            <field name="detected_tax_rate" optional="hide"/>
+                            <field name="detected_total"/>
+                            <field name="source" widget="badge" optional="show"/>
+                        </list>
+                    </field>
+                    <group class="oe_subtotal_footer oe_right">
+                        <field name="subtotal"/>
+                        <field name="tax_total"/>
+                        <field name="total"/>
+                    </group>
+                    <notebook>
+                        <page string="Historial y duplicados">
+                            <group>
+                                <field name="history_invoice_count"/>
+                                <field name="historical_match_rate" widget="percentage"/>
+                                <field name="history_applied"/>
+                                <field name="duplicate_proposal_id"/>
+                                <field name="duplicate_move_id"/>
+                                <field name="invoice_id"/>
+                            </group>
+                        </page>
+                        <page string="Confianza" groups="sng_ai_fec_digitizer.group_fec_digitizer_manager">
+                            <field name="confidence_json" nolabel="1"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_fec_batch" model="ir.actions.act_window">
+        <field name="name">Digitalización IA FEC</field>
+        <field name="res_model">sng.ai.fec.batch</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <record id="action_fec_proposal" model="ir.actions.act_window">
+        <field name="name">Propuestas FEC</field>
+        <field name="res_model">sng.ai.fec.proposal</field>
+        <field name="view_mode">list,form</field>
+    </record>
+    <menuitem id="menu_fec_digitizer" name="Digitalización IA FEC" parent="account.menu_finance_payables" action="action_fec_batch" sequence="30" groups="sng_ai_fec_digitizer.group_fec_digitizer_user"/>
+    <menuitem id="menu_fec_proposals" name="Propuestas FEC IA" parent="account.menu_finance_payables" action="action_fec_proposal" sequence="31" groups="sng_ai_fec_digitizer.group_fec_digitizer_user"/>
+</odoo>

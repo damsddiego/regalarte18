@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sng_ai_analysis_user,sng.ai.dashboard.analysis user,model_sng_ai_dashboard_analysis,group_ai_dashboard_user,1,0,1,0
+access_sng_ai_analysis_admin,sng.ai.dashboard.analysis admin,model_sng_ai_dashboard_analysis,base.group_system,1,1,1,1

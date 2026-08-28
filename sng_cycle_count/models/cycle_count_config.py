@@ -126,7 +126,21 @@ class CycleCountConfig(models.Model):
 
         candidates = Quant.search(domain)
 
-        # Excluir quants contados recientemente
+        # Un quant que ya pertenece a un conteo abierto no debe volver a
+        # programarse, aunque el nuevo conteo provenga de otra configuracion.
+        # Esperar a que la linea quede ``adjusted`` provoca que los borradores
+        # pendientes se repitan todos los dias.
+        open_lines = self.env["sng.cycle.count.line"].sudo().search([
+            ("quant_id", "in", candidates.ids),
+            (
+                "cycle_count_id.state",
+                "in",
+                ["draft", "in_progress", "pending_approval"],
+            ),
+        ])
+        excluded_quant_ids = set(open_lines.mapped("quant_id.id"))
+
+        # Excluir tambien quants aprobados y contados recientemente.
         if self.min_days_between_counts > 0:
             cutoff_date = fields.Datetime.subtract(fields.Datetime.now(), days=self.min_days_between_counts)
             recent_lines = self.env["sng.cycle.count.line"].sudo().search([
@@ -134,7 +148,9 @@ class CycleCountConfig(models.Model):
                 ("state", "=", "adjusted"),
                 ("count_date", ">=", cutoff_date),
             ])
-            excluded_quant_ids = set(recent_lines.mapped("quant_id.id"))
+            excluded_quant_ids.update(recent_lines.mapped("quant_id.id"))
+
+        if excluded_quant_ids:
             candidates = candidates.filtered(lambda q: q.id not in excluded_quant_ids)
 
         # Filtrar por valor mínimo (valor absoluto: un negativo grande también importa)

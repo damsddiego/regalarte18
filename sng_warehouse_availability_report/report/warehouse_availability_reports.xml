@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_sng_warehouse_availability_xlsx" model="ir.actions.report">
+        <field name="name">Disponibilidad por Almacenes XLSX</field>
+        <field name="model">sng.warehouse.availability.wizard</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">sng_warehouse_availability_report.availability_xlsx</field>
+        <field name="print_report_name">'Disponibilidad_%s' % object.warehouse_group_id.name</field>
+        <field name="groups_id" eval="[(4, ref('stock.group_stock_manager'))]"/>
+    </record>
+</odoo>

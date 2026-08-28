@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_replenishment_config_list" model="ir.ui.view">
+        <field name="name">sng.biweekly.replenishment.config.list</field>
+        <field name="model">sng.biweekly.replenishment.config</field>
+        <field name="arch" type="xml">
+            <list string="Configuraciones de reabastecimiento">
+                <field name="name"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="main_warehouse_id"/>
+                <field name="coverage_days"/>
+                <field name="safety_days"/>
+                <field name="lead_time_days"/>
+                <field name="next_run_date"/>
+                <field name="automation_active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_replenishment_config_form" model="ir.ui.view">
+        <field name="name">sng.biweekly.replenishment.config.form</field>
+        <field name="model">sng.biweekly.replenishment.config</field>
+        <field name="arch" type="xml">
+            <form string="Configuración de reabastecimiento">
+                <header>
+                    <button name="action_preview_cycle" type="object" string="Simular ciclo"
+                            class="btn-secondary" invisible="not id"/>
+                    <button name="action_run_now" type="object" string="Generar ahora"
+                            class="btn-primary" invisible="not id"
+                            confirm="Se calculará el ciclo de hoy y se crearán transferencias en borrador. ¿Continuar?"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_batches" type="object" class="oe_stat_button" icon="fa-calendar">
+                            <field name="batch_count" widget="statinfo" string="Ciclos"/>
+                        </button>
+                        <button name="action_view_alerts" type="object" class="oe_stat_button" icon="fa-warning">
+                            <field name="open_alert_count" widget="statinfo" string="Alertas abiertas"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Automatización inactiva" bg_color="text-bg-warning"
+                            invisible="automation_active"/>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name"/></h1>
+                    </div>
+                    <group>
+                        <group string="Almacenes">
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="warehouse_group_id"/>
+                            <field name="available_warehouse_ids" invisible="1"/>
+                            <field name="main_warehouse_id"
+                                   domain="[('id', 'in', available_warehouse_ids)]"/>
+                            <field name="planner_user_ids" widget="many2many_tags"/>
+                        </group>
+                        <group string="Parámetros">
+                            <field name="demand_window_days"/>
+                            <field name="coverage_days"/>
+                            <field name="safety_days"/>
+                            <field name="lead_time_days"/>
+                            <field name="cycle_interval_days"/>
+                            <field name="next_run_date"/>
+                            <field name="automation_active"/>
+                            <field name="last_alert_check_date" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="CEDIS y prioridad">
+                            <field name="source_line_ids" context="{'default_company_id': company_id}">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="available_warehouse_ids" column_invisible="True"/>
+                                    <field name="main_warehouse_id" column_invisible="True"/>
+                                    <field name="warehouse_id"
+                                           domain="[('id', 'in', available_warehouse_ids), ('id', '!=', main_warehouse_id)]"/>
+                                    <field name="responsible_user_ids" widget="many2many_tags"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Demanda e inclusión de productos">
+                            <group>
+                                <field name="demand_picking_type_ids" widget="many2many_tags"
+                                       domain="[('warehouse_id', '=', main_warehouse_id)]"/>
+                                <field name="category_ids" widget="many2many_tags"/>
+                                <field name="product_ids" widget="many2many_tags"
+                                       domain="[('is_storable', '=', True)]"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_replenishment_config_search" model="ir.ui.view">
+        <field name="name">sng.biweekly.replenishment.config.search</field>
+        <field name="model">sng.biweekly.replenishment.config</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="main_warehouse_id"/>
+                <field name="warehouse_group_id"/>
+                <filter name="automation" string="Automatización activa" domain="[('automation_active', '=', True)]"/>
+                <filter name="inactive" string="Archivadas" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_company" string="Compañía" context="{'group_by': 'company_id'}"/>
+                    <filter name="group_main_warehouse" string="Bodega Principal" context="{'group_by': 'main_warehouse_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_replenishment_config" model="ir.actions.act_window">
+        <field name="name">Configuración de reabastecimiento</field>
+        <field name="res_model">sng.biweekly.replenishment.config</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_replenishment_config_search"/>
+        <field name="groups_id" eval="[(4, ref('group_replenishment_manager'))]"/>
+    </record>
+</odoo>

@@ -116,16 +116,37 @@ Al abrirlo se pide un rango de fechas y si se incluyen rutas y vendedores sin ve
 
 El resultado se presenta en dos secciones sobre el mismo total:
 
-- **Pesos por ruta**: una línea por ruta (con su código y su vendedor de referencia), más una línea **Sin ruta** para los documentos de clientes que no tienen ruta asignada.
-- **Pesos por vendedor**: una línea por vendedor, tomando el vendedor guardado en la factura (`salesperson_id`), más una línea **Sin vendedor** cuando la factura no lo tiene.
+- **Pesos por ruta**: una línea por ruta con su código y su vendedor. El vendedor es el de referencia configurado en la ruta y, si la ruta no lo tiene, el vendedor que más facturó en esa ruta durante el periodo. Se agrega una línea **Sin ruta** para los documentos de clientes que no tienen ruta asignada.
+- **Pesos por vendedor**: una línea por vendedor, tomando el **vendedor asignado al cliente** guardado en la factura (`assigned_salesperson_id`, del módulo `sng_invoice_assigned_salesperson`). Si la factura no lo tiene, se usa `salesperson_id` como respaldo y, si tampoco existe, la línea cae en **Sin vendedor**.
 
 Cada línea muestra el monto, el **Peso %** sobre el total del periodo y la cantidad de documentos.
 
 Los vendedores que aparecen en facturas pero que ya no están marcados como vendedor se muestran igual, con su propio nombre, para que las dos secciones siempre sumen el mismo total.
 
-El botón **Exportar Excel** genera el archivo con las dos tablas y sus totales.
+El botón **Exportar Excel** genera el archivo XLSX con las dos tablas y sus totales, y el botón **Imprimir PDF** genera el mismo reporte en PDF con el encabezado de la compañía.
 
-El reporte se construye por usuario: cada quien ve el resultado de la última consulta que ejecutó.
+### Montos y base del Peso %
+
+Cada línea del resumen trae dos montos:
+
+- **Ventas Netas IVAI**: total facturado con impuestos incluidos.
+- **Ventas Brutas A.I**: total facturado sin impuestos.
+
+En ambos casos las notas de crédito restan. El wizard permite elegir con **Base del Peso %** sobre cuál de los dos se reparte el 100%; por defecto usa *Ventas Netas IVAI*, que es la base del reporte de gerencia.
+
+### Auxiliar por cliente
+
+El reporte incluye un auxiliar con **una línea por cliente**, con las mismas columnas del reporte de gerencia: *codigo, Cliente, Ventas Netas IVAI, Ventas Brutas A.I, cod Ruta, Ruta, Cod Vend, Vendedor*.
+
+Está disponible en los tres formatos:
+
+- **En pantalla**: botón **Ver por cliente** en el wizard, o el botón de personas en cada línea del resumen, que abre el auxiliar filtrado por esa ruta o ese vendedor. Cada línea del auxiliar tiene además una lupa que abre las facturas y notas de crédito de ese cliente.
+- **En Excel**: hoja *Ventas por cliente* con el encabezado de compañía, periodo y la fila **TOTAL GENERAL :**.
+- **En PDF**: sección *Ventas por cliente* al final, si se marca **Incluir auxiliar por cliente**.
+
+El auxiliar agrupa por cliente, ruta y vendedor, así que un cliente con facturas en más de una ruta aparece en una línea por ruta. Gracias a eso la suma del auxiliar siempre coincide con la de las dos tablas del resumen.
+
+Las líneas del resumen también conservan la lupa **Ver documentos**, que abre las facturas y notas de crédito que componen ese monto.
 
 ## Columnas en cuenta por cobrar vencida
 

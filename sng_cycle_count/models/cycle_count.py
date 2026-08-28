@@ -214,10 +214,10 @@ class CycleCount(models.Model):
         que ve Gerencia puede diferir del asiento real (o arrastrar costos
         corruptos, caso Peluche Perezoso Roxy 2026-08)."""
         self.ensure_one()
-        for line in self.line_ids.filtered(lambda l: l.state != "cancelled"):
+        for line in self.sudo().line_ids.filtered(lambda l: l.state != "cancelled"):
             std = line.product_id.with_company(self.company_id).standard_price
             if abs((line.unit_cost or 0.0) - std) > 0.005:
-                line.sudo().write({"unit_cost": std})
+                line.write({"unit_cost": std})
 
     def action_submit_for_approval(self):
         for count in self:
@@ -322,6 +322,20 @@ class CycleCount(models.Model):
             "context": {"default_cycle_count_id": self.id},
         }
 
+    def action_open_add_product_wizard(self):
+        self.ensure_one()
+        if self.state not in ("draft", "in_progress"):
+            raise UserError(_("Solo puede agregar productos a un conteo en borrador o en progreso."))
+        return {
+            "name": _("Agregar producto al conteo"),
+            "type": "ir.actions.act_window",
+            "res_model": "sng.cycle.count.add.product.wizard",
+            "view_mode": "form",
+            "view_id": self.env.ref("sng_cycle_count.view_cycle_count_add_product_wizard_form").id,
+            "target": "new",
+            "context": {"default_cycle_count_id": self.id},
+        }
+
     def action_cancel(self):
         for count in self:
             if count.state not in ("draft", "in_progress"):
@@ -420,7 +434,7 @@ class CycleCount(models.Model):
         if activities:
             activities.action_feedback(feedback=feedback)
 
-    def _notify_operator_recount(self, reason, reset_lines):
+    def _notify_operator_recount(self, reason, reset_lines, reset_details=None):
         self.ensure_one()
         operator = self.user_id
         self.sudo().activity_search([RECOUNT_ACTIVITY]).unlink()
@@ -432,14 +446,28 @@ class CycleCount(models.Model):
                 note=reason,
             )
 
-        reset_message = _("No fue necesario reiniciar cantidades.")
+        reset_message = Markup("<p>%s</p>") % _("No fue necesario reiniciar cantidades.")
         if reset_lines:
-            reset_message = _("Se reiniciaron %s líneas cuyo stock teórico cambió.") % len(
-                reset_lines
+            reset_message = Markup("<p>%s</p>") % (
+                _("Se reiniciaron %s líneas cuyo stock teórico cambió:") % len(reset_lines)
             )
+            rows = Markup("").join(
+                Markup("<li>%s (%s): teórico %s → %s, contado anterior %s</li>")
+                % (
+                    d["product"],
+                    d["location"],
+                    d["old_theo"],
+                    d["new_theo"],
+                    d["old_counted"],
+                )
+                for d in (reset_details or [])
+            )
+            if rows:
+                reset_message += Markup("<ul>%s</ul>") % rows
         self.message_post(
-            body=Markup("<p><strong>%s</strong></p><p>%s</p><p>%s</p>")
-            % (_("Conteo devuelto para reconteo"), reason, reset_message),
+            body=Markup("<p><strong>%s</strong></p><p>%s</p>")
+            % (_("Conteo devuelto para reconteo"), reason)
+            + reset_message,
             partner_ids=operator.partner_id.ids if operator else [],
             subtype_xmlid="mail.mt_comment",
         )

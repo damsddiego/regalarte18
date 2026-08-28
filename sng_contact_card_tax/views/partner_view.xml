@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="partner_view_buttons_inherit_tax_incl" model="ir.ui.view">
+        <field name="name">partner.view.buttons.inherit.tax.incl</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="account.partner_view_buttons"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='total_invoiced']" position="replace">
+                <field name="total_invoiced_tax_incl" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+            </xpath>
+            <xpath expr="//button[@name='action_view_partner_invoices']//span[hasclass('o_stat_text')]" position="replace">
+                <span class="o_stat_text">Facturado</span>
+            </xpath>
+        </field>
+    </record>
+</odoo>

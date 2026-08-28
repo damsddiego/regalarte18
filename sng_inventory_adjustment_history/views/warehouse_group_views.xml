@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_warehouse_group_form_history" model="ir.ui.view">
+        <field name="name">sng.warehouse.group.form.inventory.history</field>
+        <field name="model">sng.warehouse.group</field>
+        <field name="inherit_id" ref="sng_warehouse_group.view_sng_warehouse_group_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/widget[@name='web_ribbon']" position="after">
+                <div class="oe_button_box" name="button_box">
+                    <button
+                        name="action_view_inventory_adjustment_history"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-history"
+                    >
+                        <field name="adjustment_history_count" widget="statinfo" string="Ajustes"/>
+                    </button>
+                </div>
+            </xpath>
+            <xpath expr="//group[field[@name='warehouse_ids']]" position="after">
+                <group string="Alertas de ajustes de inventario">
+                    <field
+                        name="adjustment_notify_emails"
+                        placeholder="Ej. bodega@sngstore.com, auditoria@sngstore.com"
+                    />
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

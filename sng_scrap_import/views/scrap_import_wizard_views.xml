@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Wizard Form View -->
+    <record id="view_sng_scrap_import_wizard_form" model="ir.ui.view">
+        <field name="name">sng.scrap.import.wizard.form</field>
+        <field name="model">sng.scrap.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Importar Desechos desde Excel">
+
+                <!-- PASO 1: Cargar archivo -->
+                <group invisible="state != 'upload'">
+                    <group string="Archivo">
+                        <field name="file_data" filename="file_name" widget="binary"
+                               attrs="{'required': [('state', '=', 'upload')]}"/>
+                        <field name="file_name" invisible="1"/>
+                    </group>
+                    <group string="Configuración">
+                        <field name="location_id"/>
+                        <field name="scrap_location_id"/>
+                        <field name="auto_validate"/>
+                    </group>
+                </group>
+
+                <!-- PASO 2: Previsualización -->
+                <group invisible="state != 'preview'">
+                    <group string="Configuración">
+                        <field name="location_id" readonly="1"/>
+                        <field name="scrap_location_id" readonly="1"/>
+                        <field name="auto_validate" readonly="1"/>
+                    </group>
+                    <group string="Resumen">
+                        <field name="count_ok" string="Líneas OK"/>
+                        <field name="count_warning" string="Advertencias (producto no encontrado)"/>
+                        <field name="count_error" string="Errores (cantidad inválida)"/>
+                    </group>
+                </group>
+
+                <notebook invisible="state != 'preview'">
+                    <page string="Líneas a importar">
+                        <field name="line_ids" readonly="1">
+                            <list decoration-success="state == 'ok'"
+                                  decoration-warning="state == 'warning'"
+                                  decoration-danger="state == 'error'">
+                                <field name="product_code"/>
+                                <field name="product_description"/>
+                                <field name="product_id"/>
+                                <field name="qty"/>
+                                <field name="warning"/>
+                                <field name="state" optional="show"/>
+                            </list>
+                        </field>
+                    </page>
+                </notebook>
+
+                <footer>
+                    <!-- Pie PASO 1 -->
+                    <button name="action_load_preview" string="Cargar y previsualizar"
+                            type="object" class="btn-primary"
+                            invisible="state != 'upload'"/>
+                    <button string="Cancelar" class="btn-secondary"
+                            special="cancel" invisible="state != 'upload'"/>
+
+                    <!-- Pie PASO 2 -->
+                    <button name="action_import_scraps" string="Importar desechos"
+                            type="object" class="btn-primary"
+                            invisible="state != 'preview'"
+                            confirm="¿Confirmar la creación de los desechos para las líneas en estado OK?"/>
+                    <button name="action_back" string="Atrás"
+                            type="object" class="btn-secondary"
+                            invisible="state != 'preview'"/>
+                    <button string="Cancelar" class="btn-secondary"
+                            special="cancel" invisible="state != 'preview'"/>
+                </footer>
+
+            </form>
+        </field>
+    </record>
+
+    <!-- Menu Action -->
+    <record id="action_sng_scrap_import_wizard" model="ir.actions.act_window">
+        <field name="name">Importar Desechos desde Excel</field>
+        <field name="res_model">sng.scrap.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <!-- Menu bajo Inventario > Operaciones -->
+    <menuitem
+        id="menu_sng_scrap_import"
+        name="Importar Desechos"
+        parent="stock.menu_stock_warehouse_mgmt"
+        action="action_sng_scrap_import_wizard"
+        sequence="99"/>
+
+</odoo>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="paperformat_replenishment_landscape" model="report.paperformat">
+        <field name="name">Reabastecimiento bisemanal A4 horizontal</field>
+        <field name="default" eval="False"/>
+        <field name="format">A4</field>
+        <field name="orientation">Landscape</field>
+        <field name="margin_top">25</field>
+        <field name="margin_bottom">15</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">20</field>
+        <field name="dpi">90</field>
+    </record>
+
+    <record id="action_replenishment_batch_pdf" model="ir.actions.report">
+        <field name="name">Reporte consolidado de reabastecimiento</field>
+        <field name="model">sng.biweekly.replenishment.batch</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sng_biweekly_replenishment.report_replenishment_batch</field>
+        <field name="report_file">sng_biweekly_replenishment.report_replenishment_batch</field>
+        <field name="print_report_name">'Reabastecimiento - %s' % object.name</field>
+        <field name="paperformat_id" ref="paperformat_replenishment_landscape"/>
+        <field name="binding_model_id" ref="model_sng_biweekly_replenishment_batch"/>
+        <field name="binding_type">report</field>
+        <field name="groups_id" eval="[(4, ref('group_replenishment_planner'))]"/>
+    </record>
+
+    <record id="action_replenishment_batch_xlsx" model="ir.actions.report">
+        <field name="name">Reabastecimiento XLSX</field>
+        <field name="model">sng.biweekly.replenishment.batch</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">sng_biweekly_replenishment.replenishment_batch_xlsx</field>
+        <field name="print_report_name">'Reabastecimiento_%s' % object.name.replace('/', '_')</field>
+        <field name="binding_model_id" ref="model_sng_biweekly_replenishment_batch"/>
+        <field name="binding_type">report</field>
+        <field name="groups_id" eval="[(4, ref('group_replenishment_planner'))]"/>
+    </record>
+</odoo>
+

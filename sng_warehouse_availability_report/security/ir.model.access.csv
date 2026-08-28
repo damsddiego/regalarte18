@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sng_warehouse_availability_wizard_manager,sng.warehouse.availability.wizard.manager,model_sng_warehouse_availability_wizard,stock.group_stock_manager,1,1,1,1
+access_sng_warehouse_availability_line_manager,sng.warehouse.availability.line.manager,model_sng_warehouse_availability_line,stock.group_stock_manager,1,1,1,1

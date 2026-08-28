@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Conteos Cíclicos Diarios",
-    "version": "18.0.2.0.2",
+    "version": "18.0.2.2.1",
     "category": "Inventory",
     "summary": "Automatización de conteos cíclicos diarios con selección inteligente y conciliación en tiempo real",
     "author": "SNG",
@@ -15,6 +15,7 @@
         "data/mail_data.xml",
         "views/cycle_count_config_views.xml",
         "wizard/cycle_count_return_wizard_views.xml",
+        "wizard/cycle_count_add_product_wizard_views.xml",
         "views/cycle_count_views.xml",
         "report/report_discrepancy_pdf.xml",
         "report/report_actions.xml",

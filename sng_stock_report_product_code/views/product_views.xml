@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Reporte nativo: Inventario > Reportes > Existencias
+        Vista heredada: stock.product_product_stock_tree (model product.product)
+
+        Por defecto la columna "Producto" usa display_name, que devuelve
+        "[CÓDIGO] Nombre" (código concatenado con la descripción).
+
+        Aquí ocultamos display_name (se mantiene cargada para no romper el
+        js_class del reporte) y mostramos dos columnas separadas:
+          - Código   -> default_code
+          - Producto -> name (solo el nombre, sin el código)
+    -->
+    <record id="product_product_stock_tree_code_split" model="ir.ui.view">
+        <field name="name">product.product.stock.list.code.split</field>
+        <field name="model">product.product</field>
+        <field name="inherit_id" ref="stock.product_product_stock_tree"/>
+        <field name="arch" type="xml">
+            <field name="display_name" position="attributes">
+                <attribute name="column_invisible">1</attribute>
+            </field>
+            <field name="display_name" position="after">
+                <field name="default_code" string="Código"/>
+                <field name="name" string="Producto"/>
+            </field>
+        </field>
+    </record>
+</odoo>

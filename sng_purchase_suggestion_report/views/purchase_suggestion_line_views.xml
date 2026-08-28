@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_purchase_suggestion_line_list" model="ir.ui.view">
+        <field name="name">sng.purchase.suggestion.line.list</field>
+        <field name="model">sng.purchase.suggestion.line</field>
+        <field name="arch" type="xml">
+            <list string="Reporte Sugerido de Compras" create="0" edit="0" delete="0" default_order="qty_to_buy desc, qty_sold desc">
+                <field name="product_name"/>
+                <field name="product_code"/>
+                <field name="supplier_name"/>
+                <field name="qty_on_hand" sum="Total Existencia"/>
+                <field name="qty_in_purchase" sum="Total en Compras"/>
+                <field name="qty_sold" sum="Total Vendido"/>
+                <field name="avg_monthly_sales" sum="Total Promedio"/>
+                <field name="is_outlier" optional="show"/>
+                <field name="suggested_purchase_qty" sum="Total Sugerido"/>
+                <field name="qty_to_buy" sum="Total Diferencia"/>
+                <button name="action_open_product" string="Abrir producto" type="object" icon="fa-external-link" class="btn-link"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_purchase_suggestion_line_search" model="ir.ui.view">
+        <field name="name">sng.purchase.suggestion.line.search</field>
+        <field name="model">sng.purchase.suggestion.line</field>
+        <field name="arch" type="xml">
+            <search string="Reporte Sugerido de Compras">
+                <field name="product_name"/>
+                <field name="product_code"/>
+                <field name="supplier_name"/>
+                <field name="product_id"/>
+                <field name="vendor_id"/>
+                <filter name="filter_purchase_needed" string="Solo por comprar" domain="[('qty_to_buy', '&gt;', 0)]"/>
+                <filter name="filter_with_sales" string="Solo con ventas" domain="[('qty_sold', '&gt;', 0)]"/>
+                <filter name="filter_without_stock" string="Sin existencias" domain="[('qty_on_hand', '&lt;=', 0)]"/>
+                <separator/>
+                <filter name="filter_outlier" string="Solo ventas atipicas" domain="[('is_outlier', '=', True)]"/>
+                <separator/>
+                <filter name="group_vendor" string="Proveedor" context="{'group_by': 'vendor_id'}"/>
+                <filter name="group_product" string="Producto" context="{'group_by': 'product_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_sng_purchase_suggestion_line_pivot" model="ir.ui.view">
+        <field name="name">sng.purchase.suggestion.line.pivot</field>
+        <field name="model">sng.purchase.suggestion.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Reporte Sugerido de Compras">
+                <field name="vendor_id" type="row"/>
+                <field name="product_id" type="row"/>
+                <field name="qty_on_hand" type="measure"/>
+                <field name="qty_in_purchase" type="measure"/>
+                <field name="qty_sold" type="measure"/>
+                <field name="suggested_purchase_qty" type="measure"/>
+                <field name="qty_to_buy" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_sng_purchase_suggestion_line" model="ir.actions.act_window">
+        <field name="name">Reporte Sugerido de Compras</field>
+        <field name="res_model">sng.purchase.suggestion.line</field>
+        <field name="view_mode">list,pivot</field>
+        <field name="search_view_id" ref="view_sng_purchase_suggestion_line_search"/>
+        <field name="context">{}</field>
+        <field name="groups_id" eval="[
+            (4, ref('purchase.group_purchase_user')),
+            (4, ref('purchase.group_purchase_manager'))
+        ]"/>
+    </record>
+</odoo>

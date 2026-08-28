@@ -1,0 +1,23 @@
+.account_report.customer_statement,
+.o_content.customer_statement {
+    .line_cell.o_customer_statement_status {
+        text-align: center;
+
+        .name {
+            font-size: 18px;
+            line-height: 1;
+        }
+    }
+
+    .o_customer_statement_status_paid .name {
+        color: #198754;
+    }
+
+    .o_customer_statement_status_partial .name {
+        color: #f0ad00;
+    }
+
+    .o_customer_statement_status_unpaid .name {
+        color: #dc3545;
+    }
+}

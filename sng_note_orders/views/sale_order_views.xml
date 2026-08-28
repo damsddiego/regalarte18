@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_order_form_line_notes" model="ir.ui.view">
+        <field name="name">sale.order.form.line.notes</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='order_lines']/field[@name='order_line']/form/field[@name='name']" position="after">
+                <field name="sng_line_note" placeholder="Nota de la linea..."/>
+            </xpath>
+            <xpath expr="//page[@name='order_lines']/field[@name='order_line']/list/field[@name='name']" position="after">
+                <field name="sng_line_note" string="Nota" optional="show" placeholder="Nota de la linea..."/>
+            </xpath>
+            <xpath expr="//page[@name='order_lines']/field[@name='order_line']/kanban/field[@name='price_subtotal']" position="after">
+                <field name="sng_line_note"/>
+            </xpath>
+            <xpath expr="//page[@name='order_lines']/field[@name='order_line']/kanban/templates/t[@t-name='card']//main/div[hasclass('text-muted')][last()]" position="after">
+                <div class="text-muted" t-if="record.sng_line_note.raw_value">
+                    Nota: <field name="sng_line_note"/>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

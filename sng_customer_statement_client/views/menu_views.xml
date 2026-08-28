@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_customer_statement_client"
+              name="Estado de Cuenta para Cliente"
+              parent="account.menu_finance_reports"
+              action="action_customer_statement_client_wizard"
+              sequence="87"
+              groups="sng_customer_statement.group_customer_statement_user"/>
+</odoo>

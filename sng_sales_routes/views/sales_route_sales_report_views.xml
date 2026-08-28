@@ -7,12 +7,20 @@
             <list string="Ventas por Ruta y Vendedor" create="false" edit="false" delete="false" default_order="line_type,sequence,name">
                 <field name="code"/>
                 <field name="name"/>
-                <field name="amount_untaxed" sum="Total" widget="monetary"/>
+                <field name="amount_total" sum="Total" widget="monetary"/>
+                <field name="amount_untaxed" sum="Total" widget="monetary" optional="show"/>
                 <field name="weight" widget="percentage" digits="[16,2]" sum="Total"/>
                 <field name="route_salesperson_name"/>
-                <field name="invoice_count" optional="hide" sum="Documentos"/>
+                <field name="invoice_count" optional="show" sum="Documentos"/>
+                <button name="action_view_clients" type="object"
+                        string="Ver clientes" icon="fa-users"
+                        title="Ver el auxiliar por cliente de esta línea"/>
+                <button name="action_view_moves" type="object"
+                        string="Ver documentos" icon="fa-search"
+                        title="Ver las facturas y notas de crédito de esta línea"/>
                 <field name="date_from" optional="hide"/>
                 <field name="date_to" optional="hide"/>
+                <field name="weight_base" optional="hide"/>
                 <field name="line_type" column_invisible="1"/>
                 <field name="sequence" column_invisible="1"/>
                 <field name="currency_id" column_invisible="1"/>
@@ -46,7 +54,7 @@
         <field name="arch" type="xml">
             <graph string="Ventas por Ruta y Vendedor" type="bar" sample="1">
                 <field name="name"/>
-                <field name="amount_untaxed" type="measure"/>
+                <field name="amount_total" type="measure"/>
             </graph>
         </field>
     </record>

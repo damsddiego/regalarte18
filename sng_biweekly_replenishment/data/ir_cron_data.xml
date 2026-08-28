@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="ir_cron_generate_replenishment_cycles" model="ir.cron">
+        <field name="name">Reabastecimiento: generar ciclos bisemanales</field>
+        <field name="model_id" ref="model_sng_biweekly_replenishment_config"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_generate_due_cycles()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="nextcall" eval="(DateTime.now().replace(hour=12, minute=0, second=0) + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        <field name="active" eval="True"/>
+    </record>
+
+    <record id="ir_cron_check_replenishment_alerts" model="ir.cron">
+        <field name="name">Reabastecimiento: revisar puntos de reorden</field>
+        <field name="model_id" ref="model_sng_biweekly_replenishment_config"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_check_reorder_alerts()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">days</field>
+        <field name="nextcall" eval="(DateTime.now().replace(hour=12, minute=5, second=0) + timedelta(days=1)).strftime('%Y-%m-%d %H:%M:%S')"/>
+        <field name="active" eval="True"/>
+    </record>
+</odoo>
+

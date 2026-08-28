@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_replenishment_root" name="Reabastecimiento bisemanal"
+              parent="stock.menu_stock_warehouse_mgmt" sequence="35"
+              groups="sng_biweekly_replenishment.group_replenishment_planner"/>
+    <menuitem id="menu_replenishment_batches" name="Ciclos"
+              parent="menu_replenishment_root" action="action_replenishment_batch"
+              sequence="10" groups="sng_biweekly_replenishment.group_replenishment_planner"/>
+    <menuitem id="menu_replenishment_alerts" name="Alertas de reorden"
+              parent="menu_replenishment_root" action="action_replenishment_alert"
+              sequence="20" groups="sng_biweekly_replenishment.group_replenishment_planner"/>
+    <menuitem id="menu_replenishment_analysis" name="Análisis de SKUs"
+              parent="menu_replenishment_root" action="action_replenishment_line_analysis"
+              sequence="30" groups="sng_biweekly_replenishment.group_replenishment_planner"/>
+    <menuitem id="menu_replenishment_config" name="Reabastecimiento bisemanal"
+              parent="stock.menu_stock_config_settings" action="action_replenishment_config"
+              sequence="90" groups="sng_biweekly_replenishment.group_replenishment_manager"/>
+</odoo>
+

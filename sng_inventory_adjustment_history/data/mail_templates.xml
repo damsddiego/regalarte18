@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="mail_adjustment_notification" name="Alerta de ajustes de inventario">
+        <div style="font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #333;">
+            <p>
+                Se aplicaron ajustes de inventario en almacenes del grupo
+                <strong t-out="group.name"/>.
+            </p>
+            <table style="border-collapse: collapse; width: 100%;" border="1" cellpadding="5">
+                <thead>
+                    <tr style="background-color: #f0f0f0; text-align: left;">
+                        <th>Fecha</th>
+                        <th>Producto</th>
+                        <th>Ubicación</th>
+                        <th>Lote/Serie</th>
+                        <th style="text-align: right;">Cant. anterior</th>
+                        <th style="text-align: right;">Ajuste</th>
+                        <th style="text-align: right;">Nueva cant.</th>
+                        <th style="text-align: right;">Costo del ajuste</th>
+                        <th>Ajustado por</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr t-foreach="histories" t-as="history">
+                        <td><span t-field="history.adjustment_date"/></td>
+                        <td t-out="history.product_id.display_name"/>
+                        <td t-out="history.location_id.complete_name"/>
+                        <td t-out="history.lot_id.name or '-'"/>
+                        <td style="text-align: right;">
+                            <span t-field="history.previous_quantity"/>
+                            <t t-out="history.uom_id.name"/>
+                        </td>
+                        <td t-attf-style="text-align: right; color: {{ 'green' if history.adjusted_quantity &gt;= 0 else '#c0392b' }};">
+                            <span t-field="history.adjusted_quantity"/>
+                        </td>
+                        <td style="text-align: right;">
+                            <span t-field="history.new_quantity"/>
+                        </td>
+                        <td style="text-align: right;">
+                            <span t-field="history.adjustment_cost"
+                                  t-options='{"widget": "monetary", "display_currency": history.currency_id}'/>
+                        </td>
+                        <td t-out="history.adjusted_by_id.name"/>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr style="background-color: #f0f0f0; font-weight: bold;">
+                        <td colspan="7" style="text-align: right;">Costo total del ajuste</td>
+                        <td style="text-align: right;">
+                            <span t-out="total_cost"
+                                  t-options='{"widget": "monetary", "display_currency": currency}'/>
+                        </td>
+                        <td/>
+                    </tr>
+                </tfoot>
+            </table>
+            <p style="color: #888; font-size: 11px;">
+                Alerta automática del historial de ajustes de inventario.
+            </p>
+        </div>
+    </template>
+</odoo>

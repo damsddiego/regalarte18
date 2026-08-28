@@ -1,0 +1,22 @@
+# Translation of Odoo Server.
+# This file contains the translation of the following modules:
+#   * sng_contact_card_tax
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Odoo Server 18.0\n"
+"Report-Msgid-Bugs-To: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: \n"
+"Language: es\n"
+
+#. module: sng_contact_card_tax
+#: model:ir.model.fields,field_description:sng_contact_card_tax.field_res_partner__total_invoiced_tax_incl
+msgid "Total Invoiced (Tax Incl.)"
+msgstr "Total Facturado (Imp. Inc.)"
+
+#. module: sng_contact_card_tax
+#: model_terms:ir.ui.view,arch_db:sng_contact_card_tax.partner_view_buttons_inherit_tax_incl
+msgid "Invoiced (Tax Incl.)"
+msgstr "Facturado"

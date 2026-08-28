@@ -28,10 +28,23 @@ class CycleCountReturnWizard(models.TransientModel):
 
         count._lock_quants()
         changed_lines = count._get_lines_with_changed_stock()
+        reset_details = []
         for line in changed_lines:
+            new_theoretical = line.quant_id.quantity
+            reset_details.append(
+                {
+                    "product": line.product_id.display_name,
+                    "location": line.location_id.display_name,
+                    "old_theo": line.theoretical_qty,
+                    "new_theo": new_theoretical,
+                    "old_counted": line.counted_qty,
+                }
+            )
             line.sudo().write(
                 {
-                    "theoretical_qty": line.quant_id.quantity,
+                    "previous_theoretical_qty": line.theoretical_qty,
+                    "previous_counted_qty": line.counted_qty,
+                    "theoretical_qty": new_theoretical,
                     "counted_qty": 0.0,
                     "state": "pending",
                     "count_date": False,
@@ -42,5 +55,5 @@ class CycleCountReturnWizard(models.TransientModel):
             _("Conteo devuelto por %s.") % self.env.user.display_name
         )
         count.sudo().write({"state": "in_progress"})
-        count._notify_operator_recount(reason, changed_lines)
+        count._notify_operator_recount(reason, changed_lines, reset_details)
         return {"type": "ir.actions.act_window_close"}

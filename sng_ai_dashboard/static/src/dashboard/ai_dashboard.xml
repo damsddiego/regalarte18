@@ -1,0 +1,500 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<templates xml:space="preserve">
+    <t t-name="sng_ai_dashboard.AiDashboard">
+        <div class="o_sng_ai_dashboard o_action h-100 overflow-auto p-3">
+            <div t-if="state.loading" class="text-center p-5">
+                <i class="fa fa-spinner fa-spin fa-2x" role="img" aria-label="Cargando"/>
+            </div>
+            <t t-else="">
+                <!-- Encabezado -->
+                <div class="d-flex align-items-center flex-wrap gap-2 mb-3">
+                    <h2 class="mb-0 me-auto">Dashboard IA</h2>
+                    <div class="btn-group" role="group" aria-label="Período de análisis">
+                        <t t-foreach="periods" t-as="p" t-key="p">
+                            <button type="button"
+                                    t-att-class="'btn ' + (state.months === p ? 'btn-primary' : 'btn-outline-secondary')"
+                                    t-on-click="() => this.setPeriod(p)">
+                                <t t-esc="p"/><t t-esc="p === 1 ? ' mes' : ' meses'"/>
+                            </button>
+                        </t>
+                    </div>
+                    <button class="btn btn-secondary ms-2" t-on-click="refresh">
+                        <i class="fa fa-refresh me-1" role="img" aria-label="Actualizar"/>Actualizar
+                    </button>
+                </div>
+                <div t-if="!state.data.ai.configured" class="alert alert-warning py-2">
+                    No hay API key configurada. Vaya a <strong>Ajustes → Dashboard IA</strong> para
+                    activar los análisis de IA. Los indicadores funcionan de todas formas.
+                </div>
+
+                <!-- Pestañas -->
+                <ul class="nav nav-tabs mb-3">
+                    <li class="nav-item">
+                        <a href="#" t-att-class="'nav-link' + (state.tab === 'general' ? ' active' : '')"
+                           t-on-click.prevent="() => this.setTab('general')">General</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" t-att-class="'nav-link' + (state.tab === 'cxc' ? ' active' : '')"
+                           t-on-click.prevent="() => this.setTab('cxc')">Cuentas por cobrar</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="#" t-att-class="'nav-link' + (state.tab === 'inventario' ? ' active' : '')"
+                           t-on-click.prevent="() => this.setTab('inventario')">Inventario</a>
+                    </li>
+                </ul>
+
+                <t t-if="state.tab === 'cxc'">
+                    <!-- KPIs de cobranza -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-sm-6 col-xl-2">
+                            <div class="o_sng_tile">
+                                <div class="o_sng_tile_label">CxC total</div>
+                                <div class="o_sng_tile_value" t-esc="fmtCompact(state.data.receivables.buckets.total)"/>
+                                <div class="small text-muted">saldo abierto por cobrar</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-2">
+                            <div class="o_sng_tile">
+                                <div class="o_sng_tile_label">Vencido</div>
+                                <div class="o_sng_tile_value o_sng_value_danger"
+                                     t-esc="fmtCompact(state.data.receivables.buckets.overdue)"/>
+                                <div class="small text-muted">
+                                    <t t-esc="pctOf(state.data.receivables.buckets.overdue, state.data.receivables.buckets.total)"/> del total
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-2">
+                            <div class="o_sng_tile">
+                                <div class="o_sng_tile_label">Morosidad +90 días</div>
+                                <div class="o_sng_tile_value o_sng_value_danger"
+                                     t-esc="fmtCompact(state.data.receivables.buckets.d90_plus)"/>
+                                <div class="small text-muted">la más difícil de recuperar</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-2">
+                            <div class="o_sng_tile">
+                                <div class="o_sng_tile_label">DSO</div>
+                                <div class="o_sng_tile_value"><t t-esc="state.data.collections.dso_days"/> días</div>
+                                <div class="small text-muted">días promedio de cobro</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-2">
+                            <div class="o_sng_tile">
+                                <div class="o_sng_tile_label">Cobrado del mes</div>
+                                <div class="o_sng_tile_value" t-esc="fmtCompact(state.data.collections.current_month)"/>
+                                <div class="small text-muted">pagos aplicados a CxC</div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6 col-xl-2">
+                            <div class="o_sng_tile">
+                                <div class="o_sng_tile_label">Recuperación del período</div>
+                                <div class="o_sng_tile_value">
+                                    <t t-esc="state.data.cxc.collection_rate !== null ? state.data.cxc.collection_rate + '%' : '—'"/>
+                                </div>
+                                <div class="small text-muted">cobrado ÷ facturado (con IVA)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Gráficos -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-12 col-xl-7">
+                            <div class="o_sng_card">
+                                <h5>Cobros por mes vs facturado (<t t-esc="state.months"/><t t-esc="state.months === 1 ? ' mes' : ' meses'"/>)</h5>
+                                <div class="o_sng_chart"><canvas t-ref="cxcMonthlyChart"/></div>
+                                <div class="small text-muted mt-1">
+                                    Con IVA, para comparar contra lo cobrado. La tasa de recuperación de cada mes aparece en el tooltip.
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-xl-5">
+                            <div class="o_sng_card">
+                                <h5>Antigüedad del saldo — áreas a atacar</h5>
+                                <div class="o_sng_chart"><canvas t-ref="cxcAgingChart"/></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Lista de cobro de hoy -->
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <div class="o_sng_card">
+                                <h5>
+                                    <i class="fa fa-phone me-2 text-primary" role="img" aria-label="Llamar"/>Lista de cobro de hoy
+                                </h5>
+                                <div class="small text-muted mb-2">
+                                    Clientes priorizados por monto vencido y antigüedad. Se recalcula cada día con los saldos vigentes.
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>Cliente</th>
+                                                <th>Teléfono</th>
+                                                <th>Correo</th>
+                                                <th class="text-end">Vencido</th>
+                                                <th class="text-end">Total abierto</th>
+                                                <th class="text-end">Facturas venc.</th>
+                                                <th class="text-end">Días prom.</th>
+                                                <th class="text-end">Últ. pago</th>
+                                                <th>Acción sugerida</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-foreach="state.data.cxc.call_list" t-as="c" t-key="c.partner_id">
+                                                <td t-esc="c_index + 1"/>
+                                                <td t-esc="c.name"/>
+                                                <td t-esc="c.phone || '—'"/>
+                                                <td class="text-truncate" style="max-width: 180px;" t-esc="c.email || '—'"/>
+                                                <td class="text-end fw-bold" t-esc="fmtFull(c.overdue)"/>
+                                                <td class="text-end" t-esc="fmtFull(c.total_open)"/>
+                                                <td class="text-end" t-esc="c.overdue_count"/>
+                                                <td class="text-end" t-esc="c.weighted_days"/>
+                                                <td class="text-end" t-esc="fmtDate(c.last_payment)"/>
+                                                <td>
+                                                    <span t-att-class="'o_sng_badge ' + urgency(c).cls" t-esc="urgency(c).label"/>
+                                                </td>
+                                            </tr>
+                                            <tr t-if="!state.data.cxc.call_list.length">
+                                                <td colspan="10" class="text-muted">No hay clientes con saldo vencido. 🎉</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Facturas vencidas más grandes -->
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="o_sng_card">
+                                <h5>Facturas vencidas más grandes</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Factura</th>
+                                                <th>Cliente</th>
+                                                <th class="text-end">Vencimiento</th>
+                                                <th class="text-end">Días vencida</th>
+                                                <th class="text-end">Saldo</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-foreach="state.data.cxc.top_overdue_invoices" t-as="f" t-key="f_index">
+                                                <td t-esc="f.invoice"/>
+                                                <td t-esc="f.partner"/>
+                                                <td class="text-end" t-esc="fmtDate(f.due_date)"/>
+                                                <td class="text-end"
+                                                    t-att-class="'text-end' + (f.days &gt; 90 ? ' o_sng_delta_down' : '')"
+                                                    t-esc="f.days"/>
+                                                <td class="text-end" t-esc="fmtFull(f.residual)"/>
+                                            </tr>
+                                            <tr t-if="!state.data.cxc.top_overdue_invoices.length">
+                                                <td colspan="5" class="text-muted">Sin facturas vencidas. 🎉</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </t>
+
+                <t t-if="state.tab === 'inventario'">
+                    <div t-if="!state.data.inventory_wh.available" class="alert alert-warning py-2">
+                        No se encontró el almacén configurado para las métricas de inventario.
+                    </div>
+                    <t t-else="">
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <div class="o_sng_tile">
+                                    <div class="o_sng_tile_label">
+                                        Valor inventario — <t t-esc="state.data.inventory_wh.warehouses"/>
+                                    </div>
+                                    <div class="o_sng_tile_value" t-esc="fmtCompact(state.data.inventory_wh.total_value)"/>
+                                    <div class="small text-muted">a costo, ubicaciones internas</div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <div class="o_sng_tile">
+                                    <div class="o_sng_tile_label">Meses de cobertura</div>
+                                    <div class="o_sng_tile_value">
+                                        <t t-esc="state.data.inventory_wh.months_cover !== null ? state.data.inventory_wh.months_cover : '—'"/>
+                                    </div>
+                                    <div class="small text-muted">
+                                        stock ÷ venta prom. mensual (ventana <t t-esc="state.data.inventory_wh.avg_months_window"/> meses)
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <div class="o_sng_tile">
+                                    <div class="o_sng_tile_label">Productos sin movimiento</div>
+                                    <div class="o_sng_tile_value o_sng_value_danger"
+                                         t-esc="state.data.inventory_wh.no_movement_count"/>
+                                    <div class="small text-muted">con stock y cero ventas en el período</div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-sm-6 col-xl-3">
+                                <div class="o_sng_tile">
+                                    <div class="o_sng_tile_label">Capital sin movimiento</div>
+                                    <div class="o_sng_tile_value o_sng_value_danger"
+                                         t-esc="fmtCompact(state.data.inventory_wh.no_movement_value)"/>
+                                    <div class="small text-muted">valor a costo de esos productos</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-12 col-xl-6">
+                                <div class="o_sng_card">
+                                    <h5>Valor por categoría (top 10)</h5>
+                                    <div class="o_sng_chart o_sng_chart_tall"><canvas t-ref="whValueChart"/></div>
+                                </div>
+                            </div>
+                            <div class="col-12 col-xl-6">
+                                <div class="o_sng_card">
+                                    <h5>Meses de cobertura por categoría</h5>
+                                    <div class="o_sng_chart o_sng_chart_tall"><canvas t-ref="whCoverChart"/></div>
+                                    <div class="small text-muted mt-1">
+                                        azul ≤ 6 meses · ámbar 6-12 · rojo &gt; 12 (sobre-stock)
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-12">
+                                <div class="o_sng_card">
+                                    <h5>Top 10 productos más vendidos (por monto)</h5>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Producto</th>
+                                                    <th class="text-end">Unidades</th>
+                                                    <th class="text-end">Venta</th>
+                                                    <th class="text-end">Margen aprox.</th>
+                                                    <th class="text-end">Stock</th>
+                                                    <th class="text-end">Cobertura</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr t-foreach="state.data.inventory_wh.top_sellers" t-as="p" t-key="p_index">
+                                                    <td t-esc="p.name"/>
+                                                    <td class="text-end" t-esc="p.qty_sold"/>
+                                                    <td class="text-end" t-esc="fmtCompact(p.revenue)"/>
+                                                    <td class="text-end"
+                                                        t-att-class="'text-end' + (p.margin_pct !== null and p.margin_pct &lt; 15 ? ' o_sng_delta_down' : '')"
+                                                        t-esc="p.margin_pct !== null ? p.margin_pct + '%' : '—'"/>
+                                                    <td class="text-end" t-esc="p.stock"/>
+                                                    <td class="text-end"
+                                                        t-att-class="'text-end' + (p.months_cover !== null and p.months_cover &lt; 1 ? ' o_sng_delta_down' : '')"
+                                                        t-esc="p.months_cover !== null ? p.months_cover + ' m' : '—'"/>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="small text-muted mt-1">
+                                        Margen aproximado sobre costo actual del producto. Cobertura en rojo: menos de 1 mes de stock.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-12 col-xl-6">
+                                <div class="o_sng_card">
+                                    <h5>Riesgo de faltante (venden bien, &lt; 1 mes de stock)</h5>
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Producto</th>
+                                                <th class="text-end">Venta prom. u/mes</th>
+                                                <th class="text-end">Stock</th>
+                                                <th class="text-end">Cobertura</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-foreach="state.data.inventory_wh.stockout_risk" t-as="p" t-key="p_index">
+                                                <td t-esc="p.name"/>
+                                                <td class="text-end" t-esc="p.monthly_avg"/>
+                                                <td class="text-end" t-esc="p.stock"/>
+                                                <td class="text-end o_sng_delta_down" t-esc="p.months_cover + ' m'"/>
+                                            </tr>
+                                            <tr t-if="!state.data.inventory_wh.stockout_risk.length">
+                                                <td colspan="4" class="text-muted">Sin productos en riesgo de faltante. 🎉</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            <div class="col-12 col-xl-6">
+                                <div class="o_sng_card">
+                                    <h5>Sin movimiento — top por valor</h5>
+                                    <table class="table table-sm mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Producto</th>
+                                                <th class="text-end">Cantidad</th>
+                                                <th class="text-end">Valor</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr t-foreach="state.data.inventory_wh.no_movement_top" t-as="p" t-key="p_index">
+                                                <td t-esc="p.name"/>
+                                                <td class="text-end" t-esc="p.qty"/>
+                                                <td class="text-end" t-esc="fmtFull(p.value)"/>
+                                            </tr>
+                                            <tr t-if="!state.data.inventory_wh.no_movement_top.length">
+                                                <td colspan="3" class="text-muted">Todo el inventario tuvo movimiento. 🎉</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+
+                <t t-if="state.tab === 'general'">
+                <!-- KPIs -->
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="o_sng_tile">
+                            <div class="o_sng_tile_label">Ventas del mes (sin IVA)</div>
+                            <div class="o_sng_tile_value" t-esc="fmtCompact(state.data.sales.current_month)"/>
+                            <div class="small">
+                                <span t-att-class="deltaClass(state.data.sales.current_month, state.data.sales.previous_month_same_day)"
+                                      t-esc="fmtPct(state.data.sales.current_month, state.data.sales.previous_month_same_day) || 's/d'"/>
+                                <span class="text-muted"> vs mes anterior</span>
+                            </div>
+                            <div class="small">
+                                <span t-att-class="deltaClass(state.data.sales.current_month, state.data.sales.same_month_last_year_same_day)"
+                                      t-esc="fmtPct(state.data.sales.current_month, state.data.sales.same_month_last_year_same_day) || 's/d'"/>
+                                <span class="text-muted"> vs año pasado</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="o_sng_tile">
+                            <div class="o_sng_tile_label">Cobrado del mes</div>
+                            <div class="o_sng_tile_value" t-esc="fmtCompact(state.data.collections.current_month)"/>
+                            <div class="small text-muted">
+                                pagos de clientes aplicados a CxC
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="o_sng_tile">
+                            <div class="o_sng_tile_label">DSO — días promedio de cobro</div>
+                            <div class="o_sng_tile_value">
+                                <t t-esc="state.data.collections.dso_days"/> días
+                            </div>
+                            <div class="small text-muted">CxC total ÷ venta diaria (90 días)</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="o_sng_tile">
+                            <div class="o_sng_tile_label">CxC vencido</div>
+                            <div class="o_sng_tile_value o_sng_value_danger"
+                                 t-esc="fmtCompact(state.data.receivables.buckets.overdue)"/>
+                            <div class="small text-muted">
+                                de <t t-esc="fmtCompact(state.data.receivables.buckets.total)"/> por cobrar
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="o_sng_tile">
+                            <div class="o_sng_tile_label">Morosidad +90 días</div>
+                            <div class="o_sng_tile_value o_sng_value_danger"
+                                 t-esc="fmtCompact(state.data.receivables.buckets.d90_plus)"/>
+                            <div class="small text-muted">la parte más difícil de recuperar</div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-sm-6 col-xl-3">
+                        <div class="o_sng_tile">
+                            <div class="o_sng_tile_label">Valor del inventario</div>
+                            <div class="o_sng_tile_value" t-esc="fmtCompact(state.data.inventory.total)"/>
+                            <div class="small text-muted">
+                                <t t-if="state.data.inventory.available">costo según valoración de stock</t>
+                                <t t-else="">valoración de stock no disponible</t>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gráficos -->
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-xl-7">
+                        <div class="o_sng_card">
+                            <h5>Facturado vs cobrado (<t t-esc="state.months"/><t t-esc="state.months === 1 ? ' mes' : ' meses'"/>)</h5>
+                            <div class="o_sng_chart"><canvas t-ref="salesChart"/></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-xl-5">
+                        <div class="o_sng_card">
+                            <h5>Cuentas por cobrar por antigüedad</h5>
+                            <div class="o_sng_chart"><canvas t-ref="agingChart"/></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-xl-6">
+                        <div class="o_sng_card">
+                            <h5>Ventas por vendedor asignado (<t t-esc="state.months"/><t t-esc="state.months === 1 ? ' mes' : ' meses'"/>)</h5>
+                            <div class="o_sng_chart o_sng_chart_tall"><canvas t-ref="salespersonChart"/></div>
+                        </div>
+                    </div>
+                    <div class="col-12 col-xl-6">
+                        <div class="o_sng_card">
+                            <h5>Top clientes con saldo vencido</h5>
+                            <table class="table table-sm mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th class="text-end">Vencido</th>
+                                        <th class="text-end">Días máx.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="state.data.receivables.top_debtors" t-as="d" t-key="d_index">
+                                        <td t-esc="d.name"/>
+                                        <td class="text-end" t-esc="fmtFull(d.overdue)"/>
+                                        <td class="text-end" t-esc="d.max_days"/>
+                                    </tr>
+                                    <tr t-if="!state.data.receivables.top_debtors.length">
+                                        <td colspan="3" class="text-muted">Sin saldos vencidos. 🎉</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                </t>
+
+                <!-- Panel de análisis IA (visible en ambas pestañas) -->
+                <div class="row g-3 mt-0">
+                    <div class="col-12">
+                        <div class="o_sng_card o_sng_ai_panel">
+                            <div class="d-flex align-items-baseline flex-wrap gap-2">
+                                <h5 class="me-auto mb-2">
+                                    <i class="fa fa-magic me-2 text-primary" role="img" aria-label="IA"/>Análisis y recomendaciones
+                                </h5>
+                                <span t-if="state.data.ai.latest" class="text-muted small">
+                                    <t t-esc="state.data.ai.latest.name"/> ·
+                                    período <t t-esc="state.data.ai.latest.period_months || 3"/> meses
+                                </span>
+                            </div>
+                            <div t-if="state.data.ai.latest" class="o_sng_ai_content" t-out="aiContent"/>
+                            <div t-else="" class="text-muted">
+                                Todavía no hay análisis generados.
+                                <t t-if="state.data.ai.configured">El análisis se genera automáticamente dos veces al día (6:30 a.m. y 6:30 p.m.).</t>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+</templates>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_invoice_report_salesperson_rule_list" model="ir.ui.view">
+        <field name="name">invoice.report.salesperson.rule.list</field>
+        <field name="model">invoice.report.salesperson.rule</field>
+        <field name="arch" type="xml">
+            <list string="Invoice Report Salesperson Rules">
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="user_id"/>
+                <field name="salesperson_id"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_invoice_report_salesperson_rule_form" model="ir.ui.view">
+        <field name="name">invoice.report.salesperson.rule.form</field>
+        <field name="model">invoice.report.salesperson.rule</field>
+        <field name="arch" type="xml">
+            <form string="Invoice Report Salesperson Rule">
+                <sheet>
+                    <group>
+                        <field name="active"/>
+                        <field name="company_id" groups="base.group_multi_company"/>
+                        <field name="user_id" options="{'no_create': True}"/>
+                        <field name="salesperson_id" options="{'no_create': True}"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_invoice_report_salesperson_rule_search" model="ir.ui.view">
+        <field name="name">invoice.report.salesperson.rule.search</field>
+        <field name="model">invoice.report.salesperson.rule</field>
+        <field name="arch" type="xml">
+            <search string="Invoice Report Salesperson Rules">
+                <field name="user_id"/>
+                <field name="salesperson_id"/>
+                <field name="company_id"/>
+                <filter name="inactive" string="Archived" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_company" string="Company" context="{'group_by': 'company_id'}"/>
+                    <filter name="group_salesperson" string="Report Salesperson" context="{'group_by': 'salesperson_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_invoice_report_salesperson_rule" model="ir.actions.act_window">
+        <field name="name">Invoice Report Salesperson Rules</field>
+        <field name="res_model">invoice.report.salesperson.rule</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_invoice_report_salesperson_rule_search"/>
+    </record>
+
+    <menuitem id="menu_invoice_report_salesperson_rule"
+              name="Invoice Report Salesperson Rules"
+              parent="account.menu_finance_configuration"
+              action="action_invoice_report_salesperson_rule"
+              groups="account.group_account_manager"
+              sequence="90"/>
+</odoo>

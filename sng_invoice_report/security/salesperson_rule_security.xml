@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="invoice_report_salesperson_rule_company" model="ir.rule">
+        <field name="name">Invoice Report Salesperson Rule: allowed companies</field>
+        <field name="model_id" ref="model_invoice_report_salesperson_rule"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+
+    <record id="invoice_report_line_company" model="ir.rule">
+        <field name="name">Invoice Report Line: allowed companies</field>
+        <field name="model_id" ref="model_invoice_report_line"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

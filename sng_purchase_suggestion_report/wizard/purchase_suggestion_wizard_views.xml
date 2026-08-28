@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_purchase_suggestion_wizard_form" model="ir.ui.view">
+        <field name="name">sng.purchase.suggestion.wizard.form</field>
+        <field name="model">sng.purchase.suggestion.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Reporte Sugerido de Compras">
+                <group>
+                    <group>
+                        <field name="date_from"/>
+                        <field name="date_to"/>
+                        <field name="coverage_days"/>
+                    </group>
+                    <group>
+                        <field name="company_ids" widget="many2many_tags" groups="base.group_multi_company"/>
+                        <field name="warehouse_group_id" options="{'no_create': True}"/>
+                        <field name="warehouse_ids" widget="many2many_tags" readonly="warehouse_group_id"/>
+                        <field name="location_ids" widget="many2many_tags"/>
+                    </group>
+                </group>
+                <group>
+                    <group>
+                        <field name="product_ids" widget="many2many_tags"/>
+                    </group>
+                    <group>
+                        <field name="product_code"/>
+                        <field name="only_with_sales"/>
+                    </group>
+                </group>
+                <group string="Deteccion de ventas atipicas">
+                    <group>
+                        <field name="outlier_threshold"/>
+                    </group>
+                    <group>
+                        <field name="min_history_months"/>
+                    </group>
+                </group>
+                <footer>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                    <button string="Ver en Pantalla" type="object" name="action_view_report" class="btn-primary"/>
+                    <button string="Exportar XLSX" type="object" name="action_export_xlsx"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sng_purchase_suggestion_wizard" model="ir.actions.act_window">
+        <field name="name">Reporte Sugerido de Compras</field>
+        <field name="res_model">sng.purchase.suggestion.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="groups_id" eval="[
+            (4, ref('purchase.group_purchase_user')),
+            (4, ref('purchase.group_purchase_manager'))
+        ]"/>
+    </record>
+
+    <menuitem
+        id="menu_sng_purchase_report_root"
+        name="Reportes Personalizados"
+        parent="purchase.menu_purchase_root"
+        sequence="80"
+        groups="purchase.group_purchase_user,purchase.group_purchase_manager"
+    />
+
+    <menuitem
+        id="menu_sng_purchase_suggestion_wizard"
+        name="Reporte Sugerido de Compras"
+        parent="menu_sng_purchase_report_root"
+        action="action_sng_purchase_suggestion_wizard"
+        sequence="10"
+        groups="purchase.group_purchase_user,purchase.group_purchase_manager"
+    />
+</odoo>

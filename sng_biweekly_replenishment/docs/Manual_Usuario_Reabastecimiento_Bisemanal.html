@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <title>Manual de usuario - Reabastecimiento bisemanal</title>
+    <style>
+        @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            color: #000;
+            font-family: "DejaVu Sans", Arial, sans-serif;
+            font-size: 10.5pt;
+            line-height: 1.4;
+        }
+        h1, h2, h3, h4 { color: #000; page-break-after: avoid; }
+        h1 { font-size: 20pt; margin: 0 0 12px; }
+        h2 {
+            font-size: 14pt;
+            border-bottom: 1px solid #000;
+            padding-bottom: 4px;
+            margin: 22px 0 10px;
+        }
+        h3 { font-size: 11.5pt; margin: 15px 0 6px; }
+        h4 { font-size: 10.5pt; margin: 11px 0 4px; }
+        p { margin: 5px 0 8px; }
+        ul, ol { margin: 4px 0 9px 22px; padding-left: 8px; }
+        li { margin: 2px 0; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0 12px; page-break-inside: avoid; }
+        th { background: #e6e6e6; color: #000; font-weight: bold; text-align: left; }
+        th, td { border: 1px solid #999; padding: 5px 6px; vertical-align: top; }
+        code { background: #f0f0f0; padding: 0 3px; color: #000; }
+        .cover { padding: 0 0 8mm; page-break-after: always; }
+        .cover h1 { font-size: 22pt; margin-top: 0; }
+        .cover .eyebrow { font-size: 11pt; }
+        .cover .subtitle { font-size: 11.5pt; margin-top: 6px; }
+        .cover .meta { margin-top: 10mm; border-top: 1px solid #000; padding-top: 8px; }
+        .brand-bar { display: none; }
+        .toc { page-break-after: always; }
+        .toc table td { border: 0; padding: 3px 2px; background: white !important; }
+        .toc .num { width: 10mm; font-weight: bold; }
+        .callout, .warning, .success {
+            border-left: 3px solid #000;
+            background: #f2f2f2;
+            padding: 7px 10px;
+            margin: 8px 0 11px;
+            page-break-inside: avoid;
+        }
+        .formula {
+            border-left: 3px solid #000;
+            background: #f7f7f7;
+            padding: 8px 10px;
+            margin: 8px 0 11px;
+            font-family: "DejaVu Sans Mono", monospace;
+            page-break-inside: avoid;
+        }
+        .label { font-weight: bold; }
+        .check { font-weight: bold; }
+        .page-break { page-break-before: always; }
+        .keep { page-break-inside: avoid; }
+        .small { font-size: 8.8pt; color: #444; }
+        .path { font-weight: bold; }
+        .flow td { text-align: center; vertical-align: middle; }
+        .flow .arrow { width: 7%; border: 0; background: white !important; font-size: 14pt; }
+        .flow .step { width: 26%; border: 1px solid #999; }
+        .footer-note { margin-top: 20px; border-top: 1px solid #000; padding-top: 6px; font-size: 8.5pt; color: #333; }
+    </style>
+</head>
+<body>
+    <section class="cover">
+        <div class="eyebrow">Odoo 18 · Inventario</div>
+        <div class="brand-bar"></div>
+        <h1>Manual de usuario<br/>Reabastecimiento bisemanal</h1>
+        <p class="subtitle">Cómo configurar el módulo, revisar una simulación y operar los traslados de los CEDIS hacia la Bodega Principal.</p>
+        <div class="meta">
+            <p><strong>Módulo:</strong> SNG Reabastecimiento Bisemanal</p>
+            <p><strong>Versión:</strong> 18.0.1.0.0</p>
+            <p><strong>Configuración prevista:</strong> Regalarte (WH)</p>
+            <p><strong>Fecha del documento:</strong> 25 de agosto de 2026</p>
+        </div>
+    </section>
+
+    <section class="toc">
+        <h1>Contenido</h1>
+        <table>
+            <tr><td class="num">1</td><td>Propósito y resultado esperado</td></tr>
+            <tr><td class="num">2</td><td>Requisitos previos de datos y permisos</td></tr>
+            <tr><td class="num">3</td><td>Configuración recomendada para Regalarte</td></tr>
+            <tr><td class="num">4</td><td>Cómo interpreta Odoo la demanda y el stock</td></tr>
+            <tr><td class="num">5</td><td>Simulación y validación antes de activar</td></tr>
+            <tr><td class="num">6</td><td>Activación de la automatización</td></tr>
+            <tr><td class="num">7</td><td>Flujo operativo de cada ciclo</td></tr>
+            <tr><td class="num">8</td><td>Alertas, reportes y estados</td></tr>
+            <tr><td class="num">9</td><td>Errores comunes y diagnóstico</td></tr>
+            <tr><td class="num">10</td><td>Lista de aceptación y control periódico</td></tr>
+        </table>
+        <div class="callout">
+            Antes de confiar en los números que propone el módulo, conviene tener claro que depende de que los movimientos estén bien tipificados, las unidades de medida cuadren y las existencias de cada bodega estén al día. Sin eso, las sugerencias van a salir mal.
+        </div>
+    </section>
+
+    <h2>1. Propósito y resultado esperado</h2>
+    <p>El módulo mira las salidas físicas de los últimos 14 días en la Bodega Principal, calcula cuánto debería haber de cada SKU y arma traslados desde los CEDIS, empezando por el de mayor prioridad y bajando según lo que quede disponible.</p>
+    <table class="flow">
+        <tr>
+            <td class="step"><strong>1. Demanda real</strong><br/>Movimientos terminados de 14 días</td>
+            <td class="arrow">→</td>
+            <td class="step"><strong>2. Necesidad</strong><br/>Objetivo menos stock proyectado</td>
+            <td class="arrow">→</td>
+            <td class="step"><strong>3. Traslados</strong><br/>Borrador por cada CEDIS utilizado</td>
+        </tr>
+    </table>
+    <p>Al final de cada ciclo queda un resumen con la demanda, el stock, lo sugerido, cuánto se asignó a cada CEDIS, lo que faltó y la referencia de las transferencias. Eso es lo que después se usa para auditar y para que cada bodega prepare lo suyo.</p>
+    <div class="warning">
+        <strong>Importante:</strong> los pickings nacen en borrador. No mueven ni reservan inventario hasta que alguien los confirma y revisa la disponibilidad.
+    </div>
+
+    <h2>2. Requisitos previos de datos y permisos</h2>
+    <h3>2.1 Permisos de usuario</h3>
+    <table>
+        <thead><tr><th>Rol</th><th>Uso</th><th>Puede hacer</th></tr></thead>
+        <tbody>
+            <tr><td>Planificador de reabastecimiento</td><td>Consulta y seguimiento</td><td>Ver ciclos, alertas, análisis y reportes.</td></tr>
+            <tr><td>Responsable de reabastecimiento</td><td>Administración</td><td>Configurar, simular, generar, recalcular antes de crear pickings y cancelar ciclos.</td></tr>
+            <tr><td>Responsable del CEDIS</td><td>Preparación física</td><td>Acceder a las transferencias de su almacén según la seguridad existente, confirmar, reservar, preparar y validar.</td></tr>
+        </tbody>
+    </table>
+    <p>Asigne los grupos desde <span class="path">Ajustes → Usuarios y compañías → Usuarios → Derechos de acceso</span>. Si trabajan en varias compañías, revisen también que el usuario tenga activa la compañía de la configuración.</p>
+
+    <h3>2.2 Maestros de inventario</h3>
+    <ul>
+        <li>La Bodega Principal y todos los CEDIS tienen que ser de la misma compañía.</li>
+        <li>Todos deben estar dentro del grupo de almacenes <strong>Inv Bod Reg</strong>.</li>
+        <li>Cada CEDIS necesita un tipo de operación interna y una ubicación de existencias válida.</li>
+        <li>Los productos deben estar activos y marcados como <strong>almacenables</strong>.</li>
+        <li>La unidad de medida de venta o de movimiento debe ser de la misma categoría que la unidad base del producto.</li>
+        <li>Antes de comparar una simulación, hay que tener al día los ajustes de inventario y las validaciones pendientes.</li>
+    </ul>
+
+    <h3>2.3 Calidad de movimientos</h3>
+    <p>Para que una salida cuente como demanda, tiene que estar en estado <strong>Hecho</strong>, salir de una ubicación de la Bodega Principal, usar uno de los tipos configurados y ser una salida física real.</p>
+    <div class="warning">
+        Las cotizaciones, pedidos, transferencias en borrador, cancelaciones y movimientos que solo están reservados no cuentan como demanda histórica. Si un picking se valida tarde, cae en otro período y ya no entra donde se esperaba.
+    </div>
+
+    <div class="page-break"></div>
+    <h2>3. Configuración recomendada para Regalarte</h2>
+    <p class="path">Inventario → Configuración → Reabastecimiento bisemanal</p>
+    <p>Abran la configuración inicial <strong>Reabastecimiento bisemanal - Regalarte</strong> y dejen la automatización apagada mientras terminan de completar y validar los datos.</p>
+
+    <h3>3.1 Almacenes y responsables</h3>
+    <table>
+        <thead><tr><th>Campo</th><th>Valor recomendado</th><th>Regla de control</th></tr></thead>
+        <tbody>
+            <tr><td>Compañía</td><td>Compañía operativa de Regalarte</td><td>Tiene que coincidir con los almacenes y tipos de operación.</td></tr>
+            <tr><td>Grupo de almacenes</td><td>Inv Bod Reg</td><td>Debe contener WH, BBAPO, BBAOD y BBPOD.</td></tr>
+            <tr><td>Bodega Principal</td><td>Regalarte (WH)</td><td>No puede repetirse como CEDIS.</td></tr>
+            <tr><td>Planificadores responsables</td><td>Usuarios que revisarán ciclos y faltantes</td><td>Debe haber al menos un responsable operativo, si no las actividades quedan sin dueño.</td></tr>
+        </tbody>
+    </table>
+
+    <h3>3.2 CEDIS y prioridad</h3>
+    <table>
+        <thead><tr><th>Prioridad</th><th>Almacén</th><th>Código</th><th>Responsables</th></tr></thead>
+        <tbody>
+            <tr><td>1</td><td>Alfidepa Pavas</td><td>BBAPO</td><td>Usuarios que preparan y despachan desde Alfidepa Pavas.</td></tr>
+            <tr><td>2</td><td>Bodega Alajuela</td><td>BBAOD</td><td>Usuarios responsables de Alajuela.</td></tr>
+            <tr><td>3</td><td>Bodega Pavas</td><td>BBPOD</td><td>Usuarios responsables de Pavas.</td></tr>
+        </tbody>
+    </table>
+    <p>El orden se cambia arrastrando la columna de secuencia. El módulo agota primero la disponibilidad libre del CEDIS con mayor prioridad y sigue con el siguiente.</p>
+    <div class="warning">
+        No repitan un CEDIS, no pongan WH como origen y no mezclen almacenes de distintas compañías. Odoo no va a dejar guardar esas combinaciones.
+    </div>
+
+    <h3>3.3 Parámetros</h3>
+    <table>
+        <thead><tr><th>Parámetro</th><th>Valor inicial</th><th>Efecto</th></tr></thead>
+        <tbody>
+            <tr><td>Ventana histórica</td><td>14 días (solo lectura)</td><td>Período exacto anterior al momento de ejecutar el ciclo.</td></tr>
+            <tr><td>Días de cobertura</td><td>14</td><td>Días de demanda que se quiere mantener disponibles.</td></tr>
+            <tr><td>Días de seguridad</td><td>2</td><td>Colchón que se suma al objetivo y al punto de reorden.</td></tr>
+            <tr><td>Plazo interno</td><td>1</td><td>Tiempo previsto del traslado entre CEDIS y Principal.</td></tr>
+            <tr><td>Periodicidad</td><td>14</td><td>Separación entre ciclos automáticos.</td></tr>
+            <tr><td>Próximo ciclo</td><td>Fecha acordada de arranque</td><td>Ese día se genera el siguiente ciclo si la automatización está activa.</td></tr>
+        </tbody>
+    </table>
+    <p>No cambien cobertura, seguridad ni plazo sin que lo apruebe el responsable de inventario. Subir cualquiera de esos valores agranda el objetivo y puede pedir traslados de más.</p>
+
+    <h3>3.4 Tipos de operación que representan salidas</h3>
+    <p>Seleccionen los tipos de operación de WH que correspondan a:</p>
+    <ul>
+        <li>Entregas o salidas a clientes.</li>
+        <li><strong>RELL</strong>, cuando sea un traslado físico que sale de WH.</li>
+        <li><strong>CONS</strong> y <strong>REGOUT</strong>, según cómo operen hoy.</li>
+    </ul>
+    <p>Al elegir WH, Odoo ya propone las operaciones salientes y los códigos RELL, CONS y REGOUT que existen para esa bodega. Revisen la lista: no seleccionen recepciones, ajustes, descartes ni operaciones de otra compañía.</p>
+    <div class="callout">
+        CONS y REGOUT cuentan como demanda física incluso en ciertos flujos internos de WH. RELL solo se suma cuando el destino queda fuera de la Bodega Principal, para no contar las reubicaciones internas como si fueran consumo.
+    </div>
+
+    <h3 class="page-break">3.5 Productos y categorías</h3>
+    <table>
+        <thead><tr><th>Configuración</th><th>Resultado</th><th>Uso recomendado</th></tr></thead>
+        <tbody>
+            <tr><td>Productos vacío + Categorías vacío</td><td>Todos los productos almacenables activos.</td><td>Operación completa después del piloto.</td></tr>
+            <tr><td>Productos seleccionados + Categorías vacío</td><td>Solo los SKUs seleccionados.</td><td>Piloto controlado.</td></tr>
+            <tr><td>Productos vacío + Categorías seleccionadas</td><td>Productos de esas categorías y subcategorías.</td><td>Despliegue por familia.</td></tr>
+            <tr><td>Ambos seleccionados</td><td>Solo los productos elegidos que además estén en las categorías marcadas.</td><td>Filtro muy restrictivo; revisarlo con cuidado.</td></tr>
+        </tbody>
+    </table>
+    <div class="warning">
+        Si un SKU que esperaban no aparece, empiecen por estos dos filtros. Un producto sin demanda positiva en los 14 días tampoco genera línea ni transferencia.
+    </div>
+
+    <div class="page-break"></div>
+    <h2>4. Cómo interpreta Odoo la demanda y el stock</h2>
+    <h3>4.1 Demanda bruta</h3>
+    <p>El módulo suma las cantidades que realmente se ejecutaron en los movimientos terminados. Cada movimiento se pasa a la unidad base del producto y no se restan devoluciones; por eso hablamos de demanda bruta.</p>
+    <table>
+        <thead><tr><th>Se incluye</th><th>Se excluye</th></tr></thead>
+        <tbody>
+            <tr><td>Ventas y entregas terminadas seleccionadas.</td><td>Entradas y devoluciones recibidas.</td></tr>
+            <tr><td>Consignaciones y traslados salientes configurados.</td><td>Movimientos internos dentro de WH, salvo las reglas de CONS/REGOUT.</td></tr>
+            <tr><td>Movimientos con fecha de ejecución dentro de los últimos 14 días.</td><td>Borradores, esperas, reservas, cancelaciones, inventarios y descartes.</td></tr>
+        </tbody>
+    </table>
+
+    <h3>4.2 Fórmulas</h3>
+    <div class="formula">
+        demanda_diaria = salidas_14_días ÷ 14<br/>
+        stock_objetivo = demanda_diaria × (cobertura + seguridad)<br/>
+        punto_reorden = demanda_diaria × (plazo_interno + seguridad)<br/>
+        cantidad_sugerida = máximo(0, stock_objetivo − stock_proyectado_WH)
+    </div>
+    <p>Las cantidades se redondean hacia arriba según el redondeo configurado en la unidad de medida del producto.</p>
+
+    <h3>4.3 Stock libre y stock proyectado</h3>
+    <ul>
+        <li><strong>Stock libre WH:</strong> existencias disponibles sin reservas.</li>
+        <li><strong>Stock previsto WH:</strong> existencias de Odoo incluyendo entradas y salidas confirmadas.</li>
+        <li><strong>Entradas/salidas en borrador previas:</strong> traslados creados por este módulo en ciclos anteriores.</li>
+        <li><strong>Stock proyectado WH:</strong> previsto + borradores entrantes − borradores salientes del módulo.</li>
+        <li><strong>Disponible CEDIS:</strong> stock libre menos lo comprometido en borradores anteriores del módulo.</li>
+    </ul>
+    <div class="callout">
+        Dejar pickings viejos en borrador sí afecta los ciclos siguientes: se toman como abastecimiento pendiente, para no pedir dos veces lo mismo.
+    </div>
+
+    <h3>4.4 Caso de referencia</h3>
+    <table>
+        <thead><tr><th>Dato</th><th>Cálculo</th><th>Resultado</th></tr></thead>
+        <tbody>
+            <tr><td>Salidas</td><td>140 ÷ 14</td><td>10 unidades/día</td></tr>
+            <tr><td>Objetivo</td><td>10 × (14 + 2)</td><td>160</td></tr>
+            <tr><td>Punto de reorden</td><td>10 × (1 + 2)</td><td>30</td></tr>
+            <tr><td>Sugerido</td><td>160 − 40 proyectadas</td><td>120</td></tr>
+        </tbody>
+    </table>
+    <p>Con disponibilidades de 70, 30 y 50, la distribución correcta es 70 desde BBAPO, 30 desde BBAOD y 20 desde BBPOD. Si solo hay 100 unidades disponibles, se asignan 100 y quedan 20 de faltante.</p>
+
+    <div class="page-break"></div>
+    <h2>5. Simulación y validación antes de activar</h2>
+    <h3>5.1 Ejecutar la simulación</h3>
+    <ol>
+        <li>Dejen <strong>Automatización activa</strong> sin marcar.</li>
+        <li>Guarden la configuración.</li>
+        <li>Presionen <strong>Simular ciclo</strong>.</li>
+        <li>Abran la pestaña <strong>SKUs</strong> del ciclo generado.</li>
+        <li>Revisen demanda, stock previsto/proyectado, sugerencia, asignación y faltante.</li>
+    </ol>
+    <p>La simulación crea o reutiliza el ciclo de la fecha actual y calcula sus líneas, pero no arma transferencias hasta que se presiona <strong>Generar transferencias</strong> o <strong>Generar ahora</strong>.</p>
+    <div class="warning">
+        Un ciclo que ya tiene transferencias no se puede recalcular. Así se protege la fotografía que se usó. Si el piloto salió mal, cancelen el ciclo y corrijan antes la configuración o los datos.
+    </div>
+
+    <h3>5.2 Muestra mínima de validación</h3>
+    <p>Elijan al menos cinco SKUs representativos:</p>
+    <ul>
+        <li>Un SKU de alta rotación.</li>
+        <li>Un SKU con ventas y consignaciones.</li>
+        <li>Un SKU con unidades de medida distintas.</li>
+        <li>Un SKU con una entrada o salida confirmada pendiente.</li>
+        <li>Un SKU con stock insuficiente en CEDIS.</li>
+    </ul>
+    <p>Para cada uno, comparen a mano en Inventario los movimientos terminados del mismo intervalo exacto y pasen las cantidades a la unidad base.</p>
+
+    <h3>5.3 Criterios para aprobar la simulación</h3>
+    <ul>
+        <li><span class="check">✓</span> Las salidas de 14 días coinciden con los movimientos terminados.</li>
+        <li><span class="check">✓</span> No aparecen recepciones, descartes ni reubicaciones internas que no debían estar.</li>
+        <li><span class="check">✓</span> El stock libre es el de la bodega, no el total de la compañía.</li>
+        <li><span class="check">✓</span> Los borradores anteriores aparecen como entradas pendientes.</li>
+        <li><span class="check">✓</span> La distribución respeta BBAPO, BBAOD y BBPOD.</li>
+        <li><span class="check">✓</span> Ningún CEDIS asigna más de su disponibilidad calculada.</li>
+    </ul>
+
+    <h2>6. Activación de la automatización</h2>
+    <ol>
+        <li>Definan <strong>Próximo ciclo</strong> con la fecha acordada. No usen una fecha pasada para arrancar.</li>
+        <li>Confirmen los planificadores y los responsables de cada CEDIS.</li>
+        <li>Vuelvan a revisar los tipos de operación.</li>
+        <li>Marquen <strong>Automatización activa</strong> y guarden.</li>
+    </ol>
+    <table>
+        <thead><tr><th>Automatización diaria</th><th>Hora Costa Rica</th><th>Acción</th></tr></thead>
+        <tbody>
+            <tr><td>Generar ciclos bisemanales</td><td>06:00</td><td>Genera el ciclo cuando se llega a la fecha próxima y adelanta esa fecha según la periodicidad.</td></tr>
+            <tr><td>Revisar puntos de reorden</td><td>06:05</td><td>Compara el stock libre contra el punto dinámico y administra las alertas.</td></tr>
+        </tbody>
+    </table>
+    <div class="success">
+        Los crons pueden estar activos a nivel técnico sin generar ciclos, mientras la casilla <strong>Automatización activa</strong> de la configuración siga sin marcar.
+    </div>
+
+    <div class="page-break"></div>
+    <h2>7. Flujo operativo de cada ciclo</h2>
+    <p class="path">Inventario → Operaciones → Reabastecimiento bisemanal → Ciclos</p>
+    <ol>
+        <li>El sistema calcula y crea un ciclo.</li>
+        <li>Genera un picking en borrador por cada CEDIS con cantidad asignada.</li>
+        <li>Los planificadores reciben una actividad sobre el ciclo.</li>
+        <li>Los responsables de los CEDIS reciben una actividad sobre su picking.</li>
+        <li>El CEDIS confirma, revisa disponibilidad, prepara y valida.</li>
+        <li>El planificador sigue los faltantes y el estado general.</li>
+    </ol>
+
+    <h3>7.1 Acciones del responsable del CEDIS</h3>
+    <ol>
+        <li>Abrir la actividad o ir a <strong>Inventario → Operaciones → Transferencias</strong>.</li>
+        <li>Revisar que origen y destino sean correctos: existencias del CEDIS → <strong>WH/Existencias</strong>.</li>
+        <li>Confirmar la transferencia.</li>
+        <li>Ejecutar <strong>Comprobar disponibilidad</strong> y revisar los faltantes reales.</li>
+        <li>Preparar físicamente, registrar las cantidades hechas y validar.</li>
+    </ol>
+    <div class="warning">
+        No cambien el almacén de origen, el destino ni los productos sin avisar al planificador. Esos cambios separan la ejecución física de la fotografía del ciclo.
+    </div>
+
+    <h3>7.2 Ejecución manual</h3>
+    <p>El responsable puede usar <strong>Generar ahora</strong> desde la configuración para calcular el ciclo del día y crear los borradores al instante. Sirve para un piloto aprobado o una ejecución puntual, no para repetir un ciclo que ya se generó.</p>
+
+    <h3>7.3 Cancelación</h3>
+    <p><strong>Cancelar ciclo</strong> cancela los pickings que sigan abiertos y conserva líneas, asignaciones y mensajes. Los pickings ya terminados no se revierten solos.</p>
+
+    <h2>8. Alertas, reportes y estados</h2>
+    <h3>8.1 Alertas de reorden</h3>
+    <p class="path">Inventario → Operaciones → Reabastecimiento bisemanal → Alertas de reorden</p>
+    <p>La alerta se abre cuando el stock libre de WH queda por debajo del punto dinámico y hay demanda histórica positiva. Solo existe una alerta vigente por configuración y SKU:</p>
+    <ul>
+        <li>La actividad no se repite mientras siga la misma escasez.</li>
+        <li>Se cierra sola cuando el stock se recupera.</li>
+        <li>Una caída posterior abre un episodio nuevo y sube el contador.</li>
+    </ul>
+
+    <h3>8.2 Estados del ciclo</h3>
+    <table>
+        <thead><tr><th>Estado</th><th>Significado</th><th>Acción sugerida</th></tr></thead>
+        <tbody>
+            <tr><td>Borrador</td><td>Cálculo disponible; todavía no hay pickings.</td><td>Revisar o recalcular.</td></tr>
+            <tr><td>Generado</td><td>Pickings creados en borrador, sin faltante.</td><td>Pedir la preparación.</td></tr>
+            <tr><td>Con faltantes</td><td>Los CEDIS no cubrieron toda la sugerencia.</td><td>Buscar abastecimiento alterno.</td></tr>
+            <tr><td>En proceso</td><td>Algún picking ya se confirmó o va avanzando.</td><td>Dar seguimiento.</td></tr>
+            <tr><td>Completado</td><td>Todos los pickings aplicables están terminados.</td><td>Cerrar la revisión.</td></tr>
+            <tr><td>Cancelado</td><td>El ciclo se canceló conservando el historial.</td><td>Ver el chatter para la razón.</td></tr>
+        </tbody>
+    </table>
+
+    <h3>8.3 PDF, XLSX y análisis</h3>
+    <ul>
+        <li>Desde el menú <strong>Imprimir</strong> del ciclo se genera el PDF agrupado por CEDIS para la preparación física.</li>
+        <li>El XLSX guarda todas las columnas analíticas y la distribución por origen.</li>
+        <li><strong>Análisis de SKUs</strong> sirve para revisar demanda, sugerencias, asignaciones y faltantes por producto y período.</li>
+        <li>Cada picking conserva también el reporte estándar de operaciones de Odoo.</li>
+    </ul>
+
+    <div class="page-break"></div>
+    <h2>9. Errores comunes y diagnóstico</h2>
+    <table>
+        <thead><tr><th>Síntoma</th><th>Causa probable</th><th>Corrección</th></tr></thead>
+        <tbody>
+            <tr><td>Un SKU vendido no aparece.</td><td>Producto filtrado, no almacenable, inactivo o sin salida terminada dentro del período.</td><td>Revisar filtros, ficha del producto, estado y fecha del movimiento.</td></tr>
+            <tr><td>Demanda en cero.</td><td>Tipos de operación incorrectos o pickings todavía pendientes/reservados.</td><td>Comparar los tipos configurados y validar los movimientos reales.</td></tr>
+            <tr><td>Demanda demasiado alta.</td><td>Se incluyó un tipo no deseado o se duplicó el flujo operativo.</td><td>Auditar tipos y destinos físicos; quitar las operaciones que no sean consumo.</td></tr>
+            <tr><td>Demanda con factor 12, 24 u otro.</td><td>Unidad de medida mal configurada o de categoría incompatible.</td><td>Corregir la UoM del producto y del movimiento; volver a simular.</td></tr>
+            <tr><td>Sugerencia inesperadamente baja.</td><td>Hay entradas confirmadas o borradores previos considerados pendientes.</td><td>Revisar el stock previsto y las columnas de entradas en borrador.</td></tr>
+            <tr><td>Sugerencia inesperadamente alta.</td><td>Stock de WH desactualizado, salidas confirmadas pendientes o parámetros elevados.</td><td>Conciliar el inventario y revisar cobertura/seguridad/plazo.</td></tr>
+            <tr><td>CEDIS no asigna existencias.</td><td>Stock reservado o comprometido por borradores anteriores.</td><td>Revisar el stock libre y los pickings abiertos del módulo.</td></tr>
+            <tr><td>No se creó ciclo automático.</td><td>Automatización desactivada o fecha próxima futura.</td><td>Revisar la casilla, la fecha y la compañía activa.</td></tr>
+            <tr><td>No llega una actividad.</td><td>Planificador o responsable sin configurar.</td><td>Asignar usuarios en configuración/CEDIS.</td></tr>
+            <tr><td>No permite recalcular.</td><td>El ciclo ya tiene pickings.</td><td>Conservar la fotografía; cancelar si corresponde y corregir para un ciclo posterior.</td></tr>
+        </tbody>
+    </table>
+
+    <h3>9.1 Orden recomendado de investigación</h3>
+    <ol>
+        <li>Confirmar compañía, grupo, WH y alcance de productos.</li>
+        <li>Confirmar tipos de operación configurados.</li>
+        <li>Filtrar movimientos del SKU por fecha, estado Hecho, origen y destino.</li>
+        <li>Revisar UoM y cantidad hecha.</li>
+        <li>Revisar stock libre, previsto y borradores anteriores.</li>
+        <li>Revisar el chatter del ciclo y los pickings vinculados.</li>
+    </ol>
+
+    <h2>10. Lista de aceptación y control periódico</h2>
+    <h3>10.1 Antes de activar</h3>
+    <ul>
+        <li>☐ Usuarios y compañías correctos.</li>
+        <li>☐ Grupo Inv Bod Reg contiene los cuatro almacenes.</li>
+        <li>☐ WH es Principal; BBAPO, BBAOD y BBPOD están ordenados.</li>
+        <li>☐ Cada CEDIS tiene responsables y tipo interno operativo.</li>
+        <li>☐ Operaciones salientes, RELL, CONS y REGOUT revisadas.</li>
+        <li>☐ Alcance de productos/categorías definido a conciencia.</li>
+        <li>☐ Parámetros 14/2/1 y periodicidad 14 aprobados.</li>
+        <li>☐ Cinco SKUs comparados manualmente.</li>
+        <li>☐ PDF y XLSX revisados.</li>
+        <li>☐ Fecha del próximo ciclo acordada.</li>
+    </ul>
+
+    <h3 class="page-break">10.2 Después de cada ciclo</h3>
+    <ul>
+        <li>☐ Revisar actividades del ciclo y faltantes.</li>
+        <li>☐ Confirmar que cada picking corresponda al CEDIS correcto.</li>
+        <li>☐ Evitar borradores abandonados; confirmar o cancelar con una decisión documentada.</li>
+        <li>☐ Validar las cantidades reales y cerrar las actividades.</li>
+        <li>☐ Conciliar cualquier diferencia importante entre lo sugerido y lo despachado.</li>
+    </ul>
+
+    <h3>10.3 Durante los primeros dos ciclos</h3>
+    <p>Pongan atención sobre todo a los SKUs con consignaciones, unidades alternativas, alta rotación y disponibilidad parcial. No ajusten cobertura ni seguridad para tapar un problema de datos: primero corrijan tipos, movimientos, UoM o existencias.</p>
+    <div class="success">
+        <strong>Configuración lista:</strong> la automatización puede quedar activa cuando la muestra manual coincide, las prioridades son correctas, los responsables reciben actividades y los pickings piloto tienen origen/destino válidos.
+    </div>
+
+    <div class="footer-note">
+        Documento funcional del módulo SNG Reabastecimiento Bisemanal para Odoo 18. Si más adelante cambian almacenes, tipos de operación, unidades o políticas de inventario, hagan de nuevo una simulación de control.
+    </div>
+</body>
+</html>

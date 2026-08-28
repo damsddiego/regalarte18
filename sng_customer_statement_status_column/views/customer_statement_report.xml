@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="customer_statement_report_status_column" model="account.report.column">
+        <field name="report_id" ref="account_reports.customer_statement_report"/>
+        <field name="name">Estado</field>
+        <field name="expression_label">invoice_payment_status</field>
+        <field name="figure_type">string</field>
+        <field name="sequence">-10</field>
+    </record>
+
+    <template id="pdf_export_cell_status_class" inherit_id="account_reports.pdf_export_cell">
+        <xpath expr="//span[@t-att-class='o_classes']" position="attributes">
+            <attribute name="t-att-class">o_classes + (' ' + cell.get('class', '') if cell.get('class') else '')</attribute>
+        </xpath>
+    </template>
+</odoo>

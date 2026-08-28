@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_replenishment_batch_list" model="ir.ui.view">
+        <field name="name">sng.biweekly.replenishment.batch.list</field>
+        <field name="model">sng.biweekly.replenishment.batch</field>
+        <field name="arch" type="xml">
+            <list string="Ciclos de reabastecimiento" create="0" delete="0"
+                  decoration-warning="state == 'partial'"
+                  decoration-success="state == 'done'"
+                  decoration-muted="state == 'cancel'">
+                <field name="name"/>
+                <field name="run_date"/>
+                <field name="config_id"/>
+                <field name="main_warehouse_id"/>
+                <field name="line_count"/>
+                <field name="picking_count"/>
+                <field name="total_suggested_qty" sum="Total sugerido"/>
+                <field name="total_allocated_qty" sum="Total asignado"/>
+                <field name="total_shortage_qty" sum="Total faltante"/>
+                <field name="state" widget="badge"
+                       decoration-warning="state == 'partial'"
+                       decoration-success="state == 'done'"
+                       decoration-danger="state == 'cancel'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_replenishment_batch_form" model="ir.ui.view">
+        <field name="name">sng.biweekly.replenishment.batch.form</field>
+        <field name="model">sng.biweekly.replenishment.batch</field>
+        <field name="arch" type="xml">
+            <form string="Ciclo de reabastecimiento" create="0" delete="0">
+                <header>
+                    <button name="action_recalculate" type="object" string="Recalcular"
+                            class="btn-secondary" invisible="state != 'draft' or picking_count"
+                            groups="sng_biweekly_replenishment.group_replenishment_manager"/>
+                    <button name="action_generate_pickings" type="object" string="Generar transferencias"
+                            class="btn-primary" invisible="state != 'draft'"
+                            groups="sng_biweekly_replenishment.group_replenishment_manager"
+                            confirm="Se crearán transferencias internas en borrador. ¿Continuar?"/>
+                    <button name="action_cancel" type="object" string="Cancelar ciclo"
+                            invisible="state in ('done', 'cancel')"
+                            groups="sng_biweekly_replenishment.group_replenishment_manager"
+                            confirm="Las transferencias abiertas se cancelarán y el historial se conservará. ¿Continuar?"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="draft,generated,partial,progress,done,cancel"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_pickings" type="object" class="oe_stat_button" icon="fa-exchange">
+                            <field name="picking_count" widget="statinfo" string="Transferencias"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Con faltantes" bg_color="text-bg-warning"
+                            invisible="state != 'partial'"/>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="config_id" readonly="1"/>
+                            <field name="company_id" groups="base.group_multi_company" readonly="1"/>
+                            <field name="main_warehouse_id" readonly="1"/>
+                            <field name="run_date" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="period_start" readonly="1"/>
+                            <field name="period_end" readonly="1"/>
+                            <field name="generated_at" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Totales" col="4">
+                        <field name="total_demand_qty"/>
+                        <field name="total_suggested_qty"/>
+                        <field name="total_allocated_qty"/>
+                        <field name="total_shortage_qty"/>
+                    </group>
+                    <notebook>
+                        <page string="SKUs">
+                            <field name="line_ids" readonly="1">
+                                <list decoration-warning="shortage_qty &gt; 0">
+                                    <field name="product_code"/>
+                                    <field name="product_id"/>
+                                    <field name="uom_id"/>
+                                    <field name="demand_qty" sum="Demanda"/>
+                                    <field name="daily_demand"/>
+                                    <field name="target_stock"/>
+                                    <field name="reorder_point" optional="hide"/>
+                                    <field name="free_qty"/>
+                                    <field name="forecast_qty" optional="hide"/>
+                                    <field name="draft_in_qty" optional="hide"/>
+                                    <field name="draft_out_qty" optional="hide"/>
+                                    <field name="projected_qty"/>
+                                    <field name="suggested_qty" sum="Sugerido"/>
+                                    <field name="allocated_qty" sum="Asignado"/>
+                                    <field name="shortage_qty" sum="Faltante"/>
+                                    <field name="allocation_summary" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Asignación por CEDIS">
+                            <field name="allocation_ids" readonly="1">
+                                <list>
+                                    <field name="priority"/>
+                                    <field name="warehouse_id"/>
+                                    <field name="product_id"/>
+                                    <field name="available_qty"/>
+                                    <field name="allocated_qty" sum="Total asignado"/>
+                                    <field name="picking_id"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_replenishment_batch_search" model="ir.ui.view">
+        <field name="name">sng.biweekly.replenishment.batch.search</field>
+        <field name="model">sng.biweekly.replenishment.batch</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="config_id"/>
+                <field name="main_warehouse_id"/>
+                <field name="run_date"/>
+                <filter name="partial" string="Con faltantes" domain="[('state', '=', 'partial')]"/>
+                <filter name="open" string="Abiertos" domain="[('state', 'in', ('draft', 'generated', 'partial', 'progress'))]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
+                    <filter name="group_config" string="Configuración" context="{'group_by': 'config_id'}"/>
+                    <filter name="group_month" string="Mes" context="{'group_by': 'run_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_replenishment_line_pivot" model="ir.ui.view">
+        <field name="name">sng.biweekly.replenishment.line.pivot</field>
+        <field name="model">sng.biweekly.replenishment.line</field>
+        <field name="arch" type="xml">
+            <pivot string="Análisis de reabastecimiento">
+                <field name="product_id" type="row"/>
+                <field name="run_date" type="col" interval="month"/>
+                <field name="demand_qty" type="measure"/>
+                <field name="suggested_qty" type="measure"/>
+                <field name="allocated_qty" type="measure"/>
+                <field name="shortage_qty" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_replenishment_line_search" model="ir.ui.view">
+        <field name="name">sng.biweekly.replenishment.line.search</field>
+        <field name="model">sng.biweekly.replenishment.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="product_id"/>
+                <field name="product_code"/>
+                <field name="batch_id"/>
+                <field name="main_warehouse_id"/>
+                <filter name="with_shortage" string="Con faltante" domain="[('shortage_qty', '&gt;', 0)]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_product" string="Producto" context="{'group_by': 'product_id'}"/>
+                    <filter name="group_batch" string="Ciclo" context="{'group_by': 'batch_id'}"/>
+                    <filter name="group_month" string="Mes" context="{'group_by': 'run_date:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_replenishment_batch" model="ir.actions.act_window">
+        <field name="name">Ciclos de reabastecimiento</field>
+        <field name="res_model">sng.biweekly.replenishment.batch</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_replenishment_batch_search"/>
+        <field name="groups_id" eval="[(4, ref('group_replenishment_planner'))]"/>
+    </record>
+
+    <record id="action_replenishment_line_analysis" model="ir.actions.act_window">
+        <field name="name">Análisis de reabastecimiento</field>
+        <field name="res_model">sng.biweekly.replenishment.line</field>
+        <field name="view_mode">pivot,list</field>
+        <field name="search_view_id" ref="view_replenishment_line_search"/>
+        <field name="groups_id" eval="[(4, ref('group_replenishment_planner'))]"/>
+    </record>
+</odoo>

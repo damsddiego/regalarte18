@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_fec_digitizer" model="ir.ui.view">
+        <field name="name">res.config.settings.form.sng.ai.fec.digitizer</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="sng_ai_dashboard.res_config_settings_view_form_ai"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='sng_ai_dashboard']" position="inside">
+                <block title="Digitalización de Facturas Electrónicas de Compra">
+                    <setting string="Confianza mínima" help="Los documentos bajo este umbral se resaltan para revisión.">
+                        <field name="sng_ai_fec_confidence_threshold"/>
+                    </setting>
+                    <setting string="Límites del archivo">
+                        <div class="content-group">
+                            <label for="sng_ai_fec_max_pages" string="Páginas" class="me-2"/>
+                            <field name="sng_ai_fec_max_pages" class="w-25"/>
+                            <label for="sng_ai_fec_max_file_mb" string="MB" class="ms-3 me-2"/>
+                            <field name="sng_ai_fec_max_file_mb" class="w-25"/>
+                        </div>
+                    </setting>
+                    <setting string="Costo máximo por lote (USD)">
+                        <field name="sng_ai_fec_max_cost_usd"/>
+                    </setting>
+                    <setting string="Diario predeterminado FEC">
+                        <field name="sng_ai_fec_journal_id"/>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>
+

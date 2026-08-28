@@ -1,0 +1,468 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+<template id="report_customer_statement_client">
+    <t t-call="web.html_container">
+        <t t-foreach="docs" t-as="wizard">
+            <div class="article page sng_corporate_statement"
+                 lang="es"
+                 t-att-data-oe-model="wizard._name"
+                 t-att-data-oe-id="wizard.id"
+                 t-att-data-oe-lang="wizard.env.lang">
+                <style>
+                    @font-face {
+                        font-family: 'SNG DejaVu';
+                        src: url('/sng_customer_statement_client/static/src/fonts/DejaVuSans.ttf') format('truetype');
+                        font-style: normal;
+                        font-weight: normal;
+                    }
+                    @font-face {
+                        font-family: 'SNG DejaVu';
+                        src: url('/sng_customer_statement_client/static/src/fonts/DejaVuSans-Bold.ttf') format('truetype');
+                        font-style: normal;
+                        font-weight: bold;
+                    }
+                    .sng_corporate_statement {
+                        width: 100%;
+                        margin: 0;
+                        padding: 0;
+                        color: #20262b;
+                        font-family: 'SNG DejaVu', 'DejaVu Sans', sans-serif;
+                        font-size: 9px;
+                        line-height: 1.35;
+                    }
+                    .sng_corporate_statement * { box-sizing: border-box; }
+                    .sng_corporate_statement table {
+                        width: 100%;
+                        border-collapse: collapse;
+                    }
+                    .sng_corporate_statement .header_table td { vertical-align: middle; }
+                    .sng_corporate_statement .logo_cell { width: 64px; }
+                    .sng_corporate_statement .company_logo {
+                        display: block;
+                        max-width: 53px;
+                        max-height: 53px;
+                    }
+                    .sng_corporate_statement .logo_fallback {
+                        width: 53px;
+                        height: 53px;
+                        padding-top: 20px;
+                        border: 1px solid #205b34;
+                        color: #205b34;
+                        font-size: 8px;
+                        font-weight: bold;
+                        text-align: center;
+                    }
+                    .sng_corporate_statement .company_name {
+                        color: #173d26;
+                        font-size: 16px;
+                        font-weight: bold;
+                        letter-spacing: .1px;
+                    }
+                    .sng_corporate_statement .company_legal {
+                        margin-top: 3px;
+                        color: #657078;
+                        font-size: 8px;
+                    }
+                    .sng_corporate_statement .company_contact {
+                        width: 255px;
+                        padding-left: 14px;
+                        color: #4f585f;
+                        font-size: 8px;
+                        line-height: 1.5;
+                        text-align: right;
+                    }
+                    .sng_corporate_statement .brand_rule {
+                        height: 3px;
+                        margin: 8px 0 14px;
+                        background: #205b34;
+                    }
+                    .sng_corporate_statement .document_head td { vertical-align: bottom; }
+                    .sng_corporate_statement .document_title {
+                        margin: 0;
+                        color: #20262b;
+                        font-size: 21px;
+                        font-weight: bold;
+                        letter-spacing: .65px;
+                        text-transform: uppercase;
+                    }
+                    .sng_corporate_statement .document_meta {
+                        width: 275px;
+                        text-align: right;
+                    }
+                    .sng_corporate_statement .document_meta_label {
+                        display: inline-block;
+                        width: 96px;
+                        color: #657078;
+                        text-align: left;
+                    }
+                    .sng_corporate_statement .document_meta_value {
+                        display: inline-block;
+                        min-width: 130px;
+                        font-weight: bold;
+                        text-align: right;
+                    }
+                    .sng_corporate_statement .client_table {
+                        margin-top: 13px;
+                        border-top: 1px solid #cfd5d8;
+                        border-bottom: 1px solid #cfd5d8;
+                        background: #f3f5f4;
+                    }
+                    .sng_corporate_statement .client_table td {
+                        padding: 8px 10px;
+                        vertical-align: top;
+                    }
+                    .sng_corporate_statement .client_primary { width: 58%; }
+                    .sng_corporate_statement .client_secondary {
+                        width: 42%;
+                        border-left: 1px solid #cfd5d8;
+                    }
+                    .sng_corporate_statement .small_label {
+                        color: #657078;
+                        font-size: 7px;
+                        font-weight: bold;
+                        letter-spacing: .55px;
+                        text-transform: uppercase;
+                    }
+                    .sng_corporate_statement .client_name {
+                        margin: 2px 0 3px;
+                        color: #173d26;
+                        font-size: 13px;
+                        font-weight: bold;
+                    }
+                    .sng_corporate_statement .pair_label {
+                        display: inline-block;
+                        width: 102px;
+                        color: #657078;
+                    }
+                    .sng_corporate_statement .section_title {
+                        margin: 14px 0 5px;
+                        color: #173d26;
+                        font-size: 10px;
+                        font-weight: bold;
+                        letter-spacing: .3px;
+                        text-transform: uppercase;
+                    }
+                    .sng_corporate_statement .summary_table {
+                        border-top: 2px solid #173d26;
+                        border-bottom: 1px solid #173d26;
+                    }
+                    .sng_corporate_statement .summary_table th,
+                    .sng_corporate_statement .summary_table td {
+                        padding: 7px 9px;
+                        border-bottom: 1px solid #cfd5d8;
+                    }
+                    .sng_corporate_statement .summary_table th {
+                        color: #657078;
+                        font-size: 7px;
+                        text-align: right;
+                        text-transform: uppercase;
+                    }
+                    .sng_corporate_statement .summary_table th:first-child,
+                    .sng_corporate_statement .summary_table td:first-child { text-align: left; }
+                    .sng_corporate_statement .summary_table td {
+                        font-size: 11px;
+                        font-weight: bold;
+                        text-align: right;
+                    }
+                    .sng_corporate_statement .summary_table .currency_name {
+                        color: #173d26;
+                        font-size: 8px;
+                        letter-spacing: .4px;
+                        text-transform: uppercase;
+                    }
+                    .sng_corporate_statement .overdue_amount { color: #8b2e2e; }
+                    .sng_corporate_statement .documents_table { table-layout: fixed; }
+                    .sng_corporate_statement .documents_table thead { display: table-header-group; }
+                    .sng_corporate_statement .documents_table th {
+                        padding: 6px 4px;
+                        background: #173d26;
+                        color: #ffffff;
+                        font-size: 6.7px;
+                        text-align: left;
+                        text-transform: uppercase;
+                    }
+                    .sng_corporate_statement .documents_table th.right {
+                        text-align: right;
+                    }
+                    .sng_corporate_statement .documents_table td {
+                        padding: 6px 4px;
+                        border-bottom: 1px solid #dce0e2;
+                        font-size: 7.5px;
+                        vertical-align: top;
+                    }
+                    .sng_corporate_statement .documents_table tbody tr:nth-child(even) { background: #f7f8f8; }
+                    .sng_corporate_statement .documents_table .number { text-align: right; }
+                    .sng_corporate_statement .documents_table .document {
+                        color: #173d26;
+                        font-weight: bold;
+                    }
+                    .sng_corporate_statement .documents_table .balance { font-weight: bold; }
+                    .sng_corporate_statement .status {
+                        font-size: 7px;
+                        font-weight: bold;
+                    }
+                    .sng_corporate_statement .status.overdue { color: #8b2e2e; }
+                    .sng_corporate_statement .status.upcoming,
+                    .sng_corporate_statement .status.today { color: #205b34; }
+                    .sng_corporate_statement .status.credit { color: #4f6573; }
+                    .sng_corporate_statement .documents_table tfoot td {
+                        padding: 6px 4px;
+                        border-top: 1px solid #173d26;
+                        border-bottom: 0;
+                        background: #f3f5f4;
+                        font-weight: bold;
+                    }
+                    .sng_corporate_statement .aging_table th,
+                    .sng_corporate_statement .aging_table td {
+                        padding: 6px 7px;
+                        border: 1px solid #cfd5d8;
+                        text-align: right;
+                    }
+                    .sng_corporate_statement .aging_table th {
+                        background: #f3f5f4;
+                        color: #4f585f;
+                        font-size: 6.8px;
+                        text-transform: uppercase;
+                    }
+                    .sng_corporate_statement .aging_table th:first-child,
+                    .sng_corporate_statement .aging_table td:first-child {
+                        width: 76px;
+                        color: #173d26;
+                        font-weight: bold;
+                        text-align: left;
+                    }
+                    .sng_corporate_statement .aging_table .critical {
+                        color: #8b2e2e;
+                        font-weight: bold;
+                    }
+                    .sng_corporate_statement .credit_note {
+                        margin-top: 8px;
+                        padding: 6px 8px;
+                        border-left: 3px solid #4f6573;
+                        background: #f2f4f5;
+                    }
+                    .sng_corporate_statement .pending_payment {
+                        margin-top: 9px;
+                        padding: 7px 9px;
+                        border-left: 3px solid #8b7849;
+                        background: #f7f5ef;
+                    }
+                    .sng_corporate_statement .pending_payment td { vertical-align: top; }
+                    .sng_corporate_statement .pending_amounts {
+                        width: 180px;
+                        font-weight: bold;
+                        line-height: 1.5;
+                        text-align: right;
+                    }
+                    .sng_corporate_statement .payment_table {
+                        margin-top: 13px;
+                        border-top: 1px solid #cfd5d8;
+                        border-bottom: 1px solid #cfd5d8;
+                    }
+                    .sng_corporate_statement .payment_table td {
+                        width: 50%;
+                        padding: 8px 10px;
+                        vertical-align: top;
+                    }
+                    .sng_corporate_statement .payment_table td + td { border-left: 1px solid #cfd5d8; }
+                    .sng_corporate_statement .payment_title {
+                        display: block;
+                        margin-bottom: 3px;
+                        color: #173d26;
+                        font-size: 8px;
+                    }
+                    .sng_corporate_statement .bank_line { margin-top: 2px; }
+                    .sng_corporate_statement .footer_table {
+                        margin-top: 13px;
+                        border-top: 1px solid #cfd5d8;
+                    }
+                    .sng_corporate_statement .footer_table td {
+                        padding-top: 6px;
+                        color: #7b848a;
+                        font-size: 6.5px;
+                    }
+                    .sng_corporate_statement .right { text-align: right; }
+                    .sng_corporate_statement .nowrap { white-space: nowrap; }
+                    .sng_corporate_statement .muted { color: #657078; }
+                </style>
+
+                <table class="header_table">
+                    <tr>
+                        <td class="logo_cell">
+                            <img t-if="company.logo" class="company_logo"
+                                 t-att-src="image_data_uri(company.logo)" t-att-alt="company.name"/>
+                            <div t-else="" class="logo_fallback">LOGO</div>
+                        </td>
+                        <td>
+                            <div class="company_name" t-esc="company.name"/>
+                            <div class="company_legal">
+                                <t t-if="company.vat">C&#233;dula jur&#237;dica <span t-esc="company.vat"/></t>
+                                <t t-if="company.vat and data.get('company_address')"> &#183; </t>
+                                <span t-if="data.get('company_address')" style="white-space:pre-line;"
+                                      t-esc="data.get('company_address')"/>
+                            </div>
+                        </td>
+                        <td class="company_contact">
+                            <div t-if="company.phone"><strong>Tel&#233;fono:</strong> <span t-esc="company.phone"/></div>
+                            <div t-if="company.email"><strong>Correo:</strong> <span t-esc="company.email"/></div>
+                            <div t-if="company.website"><strong>Sitio web:</strong> <span t-esc="company.website"/></div>
+                            <div><strong>Departamento:</strong> Cr&#233;dito y Cobro</div>
+                        </td>
+                    </tr>
+                </table>
+                <div class="brand_rule"></div>
+
+                <table class="document_head">
+                    <tr>
+                        <td><h1 class="document_title">Estado de cuenta</h1></td>
+                        <td class="document_meta">
+                            <div><span class="document_meta_label">Fecha de corte</span>
+                                <span class="document_meta_value" t-esc="fmt_long_date(data.get('statement_date'))"/></div>
+                            <div><span class="document_meta_label">Documentos abiertos</span>
+                                <span class="document_meta_value" t-esc="data.get('document_count', 0)"/></div>
+                        </td>
+                    </tr>
+                </table>
+
+                <table class="client_table">
+                    <tr>
+                        <td class="client_primary">
+                            <div class="small_label">Cliente</div>
+                            <div class="client_name" t-esc="data.get('partner').name"/>
+                            <div>
+                                <t t-if="data.get('commercial_name')">Nombre comercial: <span t-esc="data.get('commercial_name')"/> &#183; </t>
+                                Identificaci&#243;n: <span t-esc="data.get('partner').vat or '-'"/>
+                            </div>
+                        </td>
+                        <td class="client_secondary">
+                            <div><span class="pair_label">C&#243;digo de cliente</span><strong t-esc="data.get('customer_code') or '-'"/></div>
+                            <div><span class="pair_label">Condici&#243;n de pago</span><strong t-esc="data.get('payment_term') or '-'"/></div>
+                            <div><span class="pair_label">Monedas</span><strong>
+                                <t t-foreach="data.get('currency_groups', [])" t-as="group">
+                                    <span t-esc="group.get('currency').name"/><t t-if="not group_last"> / </t>
+                                </t>
+                            </strong></div>
+                        </td>
+                    </tr>
+                </table>
+
+                <div class="section_title">Resumen de saldos</div>
+                <table class="summary_table">
+                    <thead><tr><th>Moneda</th><th>Saldo por pagar</th><th>Vencido</th><th>Por vencer</th></tr></thead>
+                    <tbody>
+                        <tr t-foreach="data.get('currency_groups', [])" t-as="group">
+                            <td class="currency_name"><span t-esc="fmt_currency_name(group.get('currency'))"/> (<span t-esc="group.get('currency').name"/>)</td>
+                            <td class="nowrap" t-esc="fmt_money(group.get('balance'), group.get('currency'))"/>
+                            <td class="overdue_amount nowrap" t-esc="fmt_money(group.get('overdue'), group.get('currency'))"/>
+                            <td class="nowrap" t-esc="fmt_money(group.get('not_due'), group.get('currency'))"/>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="section_title">Detalle de documentos pendientes</div>
+                <table class="documents_table">
+                    <colgroup>
+                        <col style="width:14%;"/><col style="width:8%;"/><col style="width:11%;"/><col style="width:12%;"/>
+                        <col style="width:14%;"/><col style="width:13%;"/><col style="width:14%;"/><col style="width:14%;"/>
+                    </colgroup>
+                    <thead><tr>
+                        <th>Documento</th><th>Moneda</th><th>Emisi&#243;n</th><th>Vencimiento</th>
+                        <th class="right">Importe</th><th class="right">Abonos</th><th class="right">Saldo</th><th>Condici&#243;n</th>
+                    </tr></thead>
+                    <tbody>
+                        <t t-foreach="data.get('currency_groups', [])" t-as="group">
+                            <tr t-foreach="group.get('rows', [])" t-as="row">
+                                <td class="document" t-esc="row.get('document')"/>
+                                <td t-esc="row.get('currency').name"/>
+                                <td class="nowrap" t-esc="fmt_date(row.get('invoice_date'))"/>
+                                <td class="nowrap" t-esc="fmt_date(row.get('date_due'))"/>
+                                <td class="number nowrap" t-esc="fmt_money(row.get('original'), row.get('currency'))"/>
+                                <td class="number nowrap" t-esc="fmt_money(row.get('applied'), row.get('currency'))"/>
+                                <td class="number balance nowrap" t-esc="fmt_money(row.get('balance'), row.get('currency'))"/>
+                                <td><span t-att-class="'status ' + row.get('status_key', '')" t-esc="row.get('status_label')"/></td>
+                            </tr>
+                        </t>
+                    </tbody>
+                    <tfoot>
+                        <tr t-foreach="data.get('currency_groups', [])" t-as="group">
+                            <td colspan="6">Saldo total en <span t-esc="fmt_currency_name(group.get('currency')).lower()"/> (<span t-esc="group.get('currency').name"/>)</td>
+                            <td class="number nowrap" t-esc="fmt_money(group.get('balance'), group.get('currency'))"/><td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+
+                <div class="section_title">Antig&#252;edad del saldo</div>
+                <table class="aging_table">
+                    <thead><tr>
+                        <th>Moneda</th><th>Por vencer</th><th>1&#8211;30 d&#237;as</th><th>31&#8211;60 d&#237;as</th>
+                        <th>61&#8211;90 d&#237;as</th><th>M&#225;s de 90 d&#237;as</th>
+                    </tr></thead>
+                    <tbody>
+                        <tr t-foreach="data.get('currency_groups', [])" t-as="group">
+                            <td t-esc="group.get('currency').name"/>
+                            <td t-esc="fmt_money(group.get('aging', {}).get('not_due', 0), group.get('currency'))"/>
+                            <td t-esc="fmt_money(group.get('aging', {}).get('1_30', 0), group.get('currency'))"/>
+                            <td t-esc="fmt_money(group.get('aging', {}).get('31_60', 0), group.get('currency'))"/>
+                            <td t-att-class="'critical' if group.get('aging', {}).get('61_90', 0) else ''"
+                                t-esc="fmt_money(group.get('aging', {}).get('61_90', 0), group.get('currency'))"/>
+                            <td t-att-class="'critical' if group.get('aging', {}).get('91_plus', 0) else ''"
+                                t-esc="fmt_money(group.get('aging', {}).get('91_plus', 0), group.get('currency'))"/>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div t-if="any(group.get('credit_available', 0) for group in data.get('currency_groups', []))" class="credit_note">
+                    <strong>Cr&#233;ditos disponibles:</strong>
+                    <t t-foreach="data.get('currency_groups', [])" t-as="group">
+                        <t t-if="group.get('credit_available', 0)">
+                            <span t-esc="fmt_money(group.get('credit_available'), group.get('currency'))"/><t t-if="not group_last"> &#183; </t>
+                        </t>
+                    </t>
+                    Las notas de cr&#233;dito abiertas ya est&#225;n consideradas en el saldo por pagar.
+                </div>
+
+                <div t-if="data.get('draft_payment_groups')" class="pending_payment">
+                    <table><tr>
+                        <td><strong>Pagos recibidos pendientes de confirmaci&#243;n</strong><br/>
+                            Se muestran por separado y todav&#237;a no han sido aplicados al saldo del estado de cuenta.</td>
+                        <td class="pending_amounts">
+                            <div t-foreach="data.get('draft_payment_groups', [])" t-as="draft_group">
+                                <span t-esc="draft_group.get('currency').name"/> <span t-esc="fmt_money(draft_group.get('amount'), draft_group.get('currency'))"/>
+                            </div>
+                        </td>
+                    </tr></table>
+                </div>
+
+                <table class="payment_table"><tr>
+                    <td>
+                        <strong class="payment_title">Informaci&#243;n para realizar el pago</strong>
+                        <t t-if="data.get('bank_accounts')">
+                            <div class="bank_line" t-foreach="data.get('bank_accounts')" t-as="account">
+                                <span t-esc="account.get('bank_name') or 'Cuenta bancaria'"/> &#183; <span t-esc="account.get('acc_number')"/>
+                                <t t-if="account.get('currency_name')"> &#183; <span t-esc="account.get('currency_name')"/></t>
+                            </div>
+                        </t>
+                        <div t-else="" class="bank_line muted">Consulte con el Departamento de Cr&#233;dito y Cobro las cuentas autorizadas.</div>
+                        <div class="bank_line">Indique el c&#243;digo de cliente
+                            <strong t-esc="data.get('customer_code') or data.get('partner').name"/> en la referencia.</div>
+                    </td>
+                    <td>
+                        <strong class="payment_title">Consultas sobre este estado de cuenta</strong>
+                        <div class="bank_line">Departamento de Cr&#233;dito y Cobro</div>
+                        <div class="bank_line">
+                            <span t-if="company.phone" t-esc="company.phone"/><t t-if="company.phone and company.email"> &#183; </t>
+                            <span t-if="company.email" t-esc="company.email"/>
+                        </div>
+                    </td>
+                </tr></table>
+
+                <table class="footer_table"><tr>
+                    <td>Documento informativo sujeto a verificaci&#243;n y aplicaci&#243;n de pagos.</td>
+                    <td class="right">Generado el <span t-esc="fmt_date(data.get('statement_date'))"/> &#183;
+                        P&#225;gina <span class="page"/> de <span class="topage"/></td>
+                </tr></table>
+            </div>
+        </t>
+    </t>
+</template>
+</odoo>

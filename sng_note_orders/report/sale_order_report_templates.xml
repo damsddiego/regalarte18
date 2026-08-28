@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_saleorder_document_line_notes" inherit_id="sale.report_saleorder_document">
+        <xpath expr="//td[@name='td_name']/span[@t-field='line.name']" position="after">
+            <div t-if="line.sng_line_note" class="text-muted small mt-1">
+                <strong>Nota:</strong>
+                <span t-field="line.sng_line_note"/>
+            </div>
+        </xpath>
+    </template>
+</odoo>

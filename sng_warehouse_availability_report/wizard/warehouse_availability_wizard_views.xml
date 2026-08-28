@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_warehouse_availability_wizard_form" model="ir.ui.view">
+        <field name="name">sng.warehouse.availability.wizard.form</field>
+        <field name="model">sng.warehouse.availability.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Disponibilidad por Almacenes">
+                <group>
+                    <field name="warehouse_group_id" options="{'no_create': True}"/>
+                    <field name="product_ids" widget="many2many_tags"/>
+                    <field name="product_code"/>
+                    <field name="only_available"/>
+                </group>
+                <footer>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                    <button string="Ver en Pantalla" type="object" name="action_view_report" class="btn-primary"/>
+                    <button string="Exportar XLSX" type="object" name="action_export_xlsx"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sng_warehouse_availability_wizard" model="ir.actions.act_window">
+        <field name="name">Disponibilidad por Almacenes</field>
+        <field name="res_model">sng.warehouse.availability.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="groups_id" eval="[(4, ref('stock.group_stock_manager'))]"/>
+    </record>
+
+    <menuitem
+        id="menu_sng_warehouse_availability_wizard"
+        name="Disponibilidad por Almacenes"
+        parent="stock.menu_warehouse_report"
+        action="action_sng_warehouse_availability_wizard"
+        sequence="160"
+        groups="stock.group_stock_manager"
+    />
+</odoo>

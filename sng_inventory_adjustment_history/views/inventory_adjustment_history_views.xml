@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_inventory_adjustment_history_list" model="ir.ui.view">
+        <field name="name">sng.inventory.adjustment.history.list</field>
+        <field name="model">sng.inventory.adjustment.history</field>
+        <field name="arch" type="xml">
+            <list string="Historial de ajustes de inventario" create="0" edit="0" delete="0" default_order="adjustment_date desc">
+                <field name="adjustment_date"/>
+                <field name="warehouse_group_ids" widget="many2many_tags"/>
+                <field name="warehouse_id"/>
+                <field name="location_id" optional="show"/>
+                <field name="product_id"/>
+                <field name="lot_id" optional="hide" groups="stock.group_production_lot"/>
+                <field name="previous_quantity" sum="Cantidad anterior"/>
+                <field name="adjusted_quantity" sum="Cantidad ajustada" decoration-danger="adjusted_quantity &lt; 0" decoration-success="adjusted_quantity &gt; 0"/>
+                <field name="new_quantity" sum="Nueva cantidad"/>
+                <field name="uom_id" optional="hide" groups="uom.group_uom"/>
+                <field name="currency_id" column_invisible="True" groups="custom_ui_security.group_view_product_cost"/>
+                <field name="unit_cost" optional="hide" groups="custom_ui_security.group_view_product_cost"/>
+                <field name="adjustment_cost" sum="Costo total" groups="custom_ui_security.group_view_product_cost"/>
+                <field name="adjusted_by_id" widget="many2one_avatar_user"/>
+                <field name="company_id" optional="hide" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_inventory_adjustment_history_form" model="ir.ui.view">
+        <field name="name">sng.inventory.adjustment.history.form</field>
+        <field name="model">sng.inventory.adjustment.history</field>
+        <field name="arch" type="xml">
+            <form string="Ajuste de inventario" create="0" edit="0" delete="0">
+                <sheet>
+                    <group>
+                        <group string="Ajuste">
+                            <field name="adjustment_date"/>
+                            <field name="product_id"/>
+                            <field name="previous_quantity"/>
+                            <field name="adjusted_quantity"/>
+                            <field name="new_quantity"/>
+                            <field name="uom_id"/>
+                        </group>
+                        <group string="Responsable">
+                            <field name="adjusted_by_id" widget="many2one_avatar_user"/>
+                            <field name="counted_by_id" widget="many2one_avatar_user" invisible="not counted_by_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <group>
+                        <group string="Almacén y ubicación">
+                            <field name="warehouse_group_ids" widget="many2many_tags"/>
+                            <field name="warehouse_id"/>
+                            <field name="location_id"/>
+                        </group>
+                        <group string="Trazabilidad">
+                            <field name="lot_id" invisible="not lot_id" groups="stock.group_production_lot"/>
+                            <field name="package_id" invisible="not package_id" groups="stock.group_tracking_lot"/>
+                            <field name="owner_id" invisible="not owner_id" groups="stock.group_tracking_owner"/>
+                            <field name="quant_id" groups="base.group_no_one"/>
+                            <field name="move_ids" widget="many2many_tags" groups="base.group_no_one"/>
+                        </group>
+                    </group>
+                    <group string="Costo" groups="custom_ui_security.group_view_product_cost">
+                        <field name="currency_id" invisible="1"/>
+                        <field name="unit_cost"/>
+                        <field name="adjustment_cost"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_inventory_adjustment_history_search" model="ir.ui.view">
+        <field name="name">sng.inventory.adjustment.history.search</field>
+        <field name="model">sng.inventory.adjustment.history</field>
+        <field name="arch" type="xml">
+            <search string="Buscar ajustes de inventario">
+                <field name="product_id"/>
+                <field name="warehouse_group_ids"/>
+                <field name="warehouse_id"/>
+                <field name="location_id"/>
+                <field name="adjusted_by_id"/>
+                <field name="adjustment_date"/>
+                <filter string="Entradas" name="positive_adjustments" domain="[('adjusted_quantity', '&gt;', 0)]"/>
+                <filter string="Salidas" name="negative_adjustments" domain="[('adjusted_quantity', '&lt;', 0)]"/>
+                <separator/>
+                <filter string="Fecha" name="group_by_date" context="{'group_by': 'adjustment_date:month'}"/>
+                <filter string="Almacén" name="group_by_warehouse" context="{'group_by': 'warehouse_id'}"/>
+                <filter string="Producto" name="group_by_product" context="{'group_by': 'product_id'}"/>
+                <filter string="Usuario" name="group_by_user" context="{'group_by': 'adjusted_by_id'}"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_inventory_adjustment_history_pivot" model="ir.ui.view">
+        <field name="name">sng.inventory.adjustment.history.pivot</field>
+        <field name="model">sng.inventory.adjustment.history</field>
+        <field name="arch" type="xml">
+            <pivot string="Análisis de ajustes de inventario">
+                <field name="warehouse_id" type="row"/>
+                <field name="product_id" type="row"/>
+                <field name="adjustment_date" interval="month" type="col"/>
+                <field name="adjusted_quantity" type="measure"/>
+                <field name="adjustment_cost" type="measure" groups="custom_ui_security.group_view_product_cost"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="action_inventory_adjustment_history" model="ir.actions.act_window">
+        <field name="name">Historial de ajustes</field>
+        <field name="res_model">sng.inventory.adjustment.history</field>
+        <field name="view_mode">list,pivot,form</field>
+        <field name="search_view_id" ref="view_inventory_adjustment_history_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Todavía no hay ajustes registrados</p>
+            <p>Se registrarán automáticamente los ajustes aplicados en almacenes que pertenezcan a un grupo.</p>
+        </field>
+    </record>
+
+    <menuitem
+        id="menu_inventory_adjustment_history"
+        name="Historial de ajustes"
+        parent="stock.menu_stock_adjustments"
+        action="action_inventory_adjustment_history"
+        sequence="20"
+        groups="stock.group_stock_user"
+    />
+</odoo>

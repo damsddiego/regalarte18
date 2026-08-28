@@ -130,6 +130,32 @@ class TestCycleCountApproval(TransactionCase):
         self.assertEqual(count.total_theoretical_value, 100.0)
         self.assertEqual(count.total_counted_value, 0.0)
 
+    def test_open_count_quant_is_not_selected_again(self):
+        self.config.write({"daily_product_count": 100000})
+        count = self._create_count()
+
+        self.assertNotIn(self.quant_gain, self.config._select_quants())
+
+        count.sudo().write({"state": "in_progress"})
+        self.assertNotIn(self.quant_gain, self.config._select_quants())
+
+        count.line_ids.sudo().write(
+            {
+                "counted_qty": self.quant_gain.quantity,
+                "state": "counted",
+                "count_date": fields.Datetime.now(),
+            }
+        )
+        count.sudo().write({"state": "pending_approval"})
+        self.assertNotIn(self.quant_gain, self.config._select_quants())
+
+    def test_cancelled_count_quant_can_be_selected_again(self):
+        self.config.write({"daily_product_count": 100000})
+        count = self._create_count()
+        count.sudo().write({"state": "cancelled"})
+
+        self.assertIn(self.quant_gain, self.config._select_quants())
+
     def test_cost_is_frozen_and_totals_separate_gain_and_shortage(self):
         count = self._create_count(include_shortage=True)
         gain_line = count.line_ids.filtered(lambda line: line.product_id == self.product_gain)

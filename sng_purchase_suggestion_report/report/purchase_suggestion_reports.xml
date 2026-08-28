@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_sng_purchase_suggestion_xlsx" model="ir.actions.report">
+        <field name="name">Reporte Sugerido de Compras XLSX</field>
+        <field name="model">sng.purchase.suggestion.wizard</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">sng_purchase_suggestion_report.purchase_suggestion_xlsx</field>
+        <field name="print_report_name">'Reporte_Sugerido_Compras_%s' % (object.date_to or '')</field>
+        <field name="groups_id" eval="[
+            (4, ref('purchase.group_purchase_user')),
+            (4, ref('purchase.group_purchase_manager'))
+        ]"/>
+    </record>
+</odoo>

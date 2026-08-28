@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Sustitución reversible del punto de entrada del estado de cuenta.
+
+        El módulo original conserva modelos, reportes generados y exportación
+        XLSX. Solo se reemplaza la opción principal que utiliza el usuario.
+    -->
+    <record id="sng_customer_statement.menu_customer_statement_report" model="ir.ui.menu">
+        <field name="name">Estado de Cuenta de Clientes</field>
+        <field name="action" ref="sng_customer_statement_client.action_customer_statement_client_wizard"/>
+        <field name="active" eval="True"/>
+    </record>
+
+    <!-- El nuevo acceso ya utiliza el menú principal; evitamos duplicados. -->
+    <record id="menu_customer_statement_client" model="ir.ui.menu">
+        <field name="active" eval="False"/>
+    </record>
+
+    <!-- Los reportes anteriores se conservan como histórico consultable. -->
+    <record id="sng_customer_statement.menu_customer_statement_generated" model="ir.ui.menu">
+        <field name="name">Histórico de Estados de Cuenta</field>
+        <field name="active" eval="True"/>
+    </record>
+
+    <!-- Retira el PDF anterior del menú Imprimir del contacto. -->
+    <record id="sng_customer_statement.action_report_customer_statement" model="ir.actions.report">
+        <field name="binding_model_id" eval="False"/>
+    </record>
+
+    <!-- Abre el nuevo asistente desde Acciones en la ficha del cliente. -->
+    <record id="action_customer_statement_client_wizard" model="ir.actions.act_window">
+        <field name="name">Estado de Cuenta de Clientes</field>
+        <field name="binding_model_id" ref="base.model_res_partner"/>
+        <field name="binding_type">action</field>
+        <field name="binding_view_types">form</field>
+    </record>
+</odoo>

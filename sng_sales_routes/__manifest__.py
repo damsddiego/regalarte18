@@ -12,6 +12,7 @@
         "customer_sequence",
         "sng_custom_name_partner",
         "sales_commission_omax",
+        "sng_invoice_assigned_salesperson",
         "account_reports",
     ],
     "data": [
@@ -25,6 +26,8 @@
         "views/sales_commission_analysis_views.xml",
         "views/sales_route_partner_report_views.xml",
         "views/sales_route_sales_report_views.xml",
+        "views/sales_route_client_report_views.xml",
+        "report/sales_route_sales_report_templates.xml",
         "wizard/sales_route_sales_report_wizard_views.xml",
         "views/aged_receivable_report_views.xml",
     ],

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="report_sales_route_sales_section">
+        <table class="table table-sm table-bordered" style="font-size: 11px;">
+            <thead>
+                <tr>
+                    <th colspan="6" class="text-center" style="background-color: #FFFF00;">
+                        <span t-out="section_title"/>
+                    </th>
+                </tr>
+                <tr style="background-color: #D9E2F3;">
+                    <th class="text-center" style="width: 10%;"><span t-out="code_label"/></th>
+                    <th style="width: 27%;"><span t-out="name_label"/></th>
+                    <th class="text-end" style="width: 19%;">Ventas Netas IVAI</th>
+                    <th class="text-end" style="width: 19%;">Ventas Brutas A.I</th>
+                    <th class="text-center" style="width: 10%;">Peso %</th>
+                    <th style="width: 15%;">Vendedor</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr t-foreach="section['lines']" t-as="line">
+                    <td class="text-center"><span t-out="line.code or ''"/></td>
+                    <td><span t-out="line.name or ''"/></td>
+                    <td class="text-end">
+                        <span t-out="line.amount_total"
+                              t-options='{"widget": "monetary", "display_currency": currency}'/>
+                    </td>
+                    <td class="text-end">
+                        <span t-out="line.amount_untaxed"
+                              t-options='{"widget": "monetary", "display_currency": currency}'/>
+                    </td>
+                    <td class="text-center">
+                        <span t-out="line.weight * 100"
+                              t-options='{"widget": "float", "precision": 2}'/>%</td>
+                    <td><span t-out="line.route_salesperson_name or ''"/></td>
+                </tr>
+            </tbody>
+            <tfoot>
+                <tr style="font-weight: bold; background-color: #F2F2F2;">
+                    <td colspan="2" class="text-center">TOTAL</td>
+                    <td class="text-end">
+                        <span t-out="section['total_amount']"
+                              t-options='{"widget": "monetary", "display_currency": currency}'/>
+                    </td>
+                    <td class="text-end">
+                        <span t-out="section['total_untaxed']"
+                              t-options='{"widget": "monetary", "display_currency": currency}'/>
+                    </td>
+                    <td class="text-center">
+                        <span t-out="section['total_weight'] * 100"
+                              t-options='{"widget": "float", "precision": 2}'/>%</td>
+                    <td/>
+                </tr>
+            </tfoot>
+        </table>
+    </template>
+
+    <template id="report_sales_route_sales">
+        <t t-call="web.html_container">
+            <t t-call="web.external_layout">
+                <div class="page">
+                    <h3 class="text-center mb-0">Ventas por Ruta y Vendedor</h3>
+                    <p class="text-center mb-4">
+                        <span t-out="company.name"/><br/>
+                        Del <span t-out="date_from" t-options='{"widget": "date"}'/>
+                        al <span t-out="date_to" t-options='{"widget": "date"}'/>
+                    </p>
+
+                    <t t-call="sng_sales_routes.report_sales_route_sales_section">
+                        <t t-set="section" t-value="route_section"/>
+                        <t t-set="section_title">PESOS POR RUTA</t>
+                        <t t-set="code_label">COD_RUTA</t>
+                        <t t-set="name_label">RUTA</t>
+                        <t t-set="amount_label">Ventas Brutas A.I</t>
+                    </t>
+
+                    <t t-call="sng_sales_routes.report_sales_route_sales_section">
+                        <t t-set="section" t-value="salesperson_section"/>
+                        <t t-set="section_title">PESOS POR VENDEDOR</t>
+                        <t t-set="code_label">COD</t>
+                        <t t-set="name_label">VENDEDOR</t>
+                        <t t-set="amount_label">Ventas</t>
+                    </t>
+
+                    <p class="text-muted" style="font-size: 10px;">
+                        Incluye facturas y notas de crédito de cliente publicadas, por importe sin impuestos.
+                    </p>
+
+                    <t t-if="client_lines">
+                        <div style="page-break-before: always;"/>
+                        <h4 class="mt-3">Ventas por cliente</h4>
+                        <table class="table table-sm table-bordered" style="font-size: 9px;">
+                            <thead>
+                                <tr style="background-color: #D9E2F3;">
+                                    <th>codigo</th>
+                                    <th>Cliente</th>
+                                    <th class="text-end">Ventas Netas IVAI</th>
+                                    <th class="text-end">Ventas Brutas A.I</th>
+                                    <th>cod Ruta</th>
+                                    <th>Ruta</th>
+                                    <th>Cod Vend</th>
+                                    <th>Vendedor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="client_lines" t-as="client">
+                                    <td><span t-out="client.partner_code or ''"/></td>
+                                    <td><span t-out="client.partner_name or ''"/></td>
+                                    <td class="text-end">
+                                        <span t-out="client.amount_total"
+                                              t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-out="client.amount_untaxed"
+                                              t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    </td>
+                                    <td><span t-out="client.route_code or ''"/></td>
+                                    <td><span t-out="client.route_name or 'Sin ruta'"/></td>
+                                    <td><span t-out="client.salesperson_code or ''"/></td>
+                                    <td><span t-out="client.salesperson_name or 'Sin vendedor'"/></td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr style="font-weight: bold; background-color: #F2F2F2;">
+                                    <td colspan="2" class="text-end">TOTAL GENERAL :</td>
+                                    <td class="text-end">
+                                        <span t-out="client_total"
+                                              t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    </td>
+                                    <td class="text-end">
+                                        <span t-out="client_total_untaxed"
+                                              t-options='{"widget": "monetary", "display_currency": currency}'/>
+                                    </td>
+                                    <td colspan="4"/>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </t>
+
+                </div>
+            </t>
+        </t>
+    </template>
+
+    <record id="action_report_sales_route_sales" model="ir.actions.report">
+        <field name="name">Ventas por Ruta y Vendedor</field>
+        <field name="model">sng.sales.route.sales.report.wizard</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sng_sales_routes.report_sales_route_sales</field>
+        <field name="report_file">sng_sales_routes.report_sales_route_sales</field>
+        <field name="print_report_name">'Ventas por Ruta %s - %s' % (object.date_from, object.date_to)</field>
+        <field name="binding_model_id" eval="False"/>
+    </record>
+</odoo>

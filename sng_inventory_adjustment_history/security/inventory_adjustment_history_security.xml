@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="inventory_adjustment_history_company_rule" model="ir.rule">
+        <field name="name">Historial de ajustes: compañías permitidas</field>
+        <field name="model_id" ref="model_sng_inventory_adjustment_history"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+        <field name="global" eval="True"/>
+    </record>
+</odoo>
+

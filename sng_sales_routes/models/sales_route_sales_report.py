@@ -18,6 +18,10 @@ LINE_TYPE_SALESPERSON = "salesperson"
 # Documentos de venta considerados: facturas y notas de crédito publicadas.
 SALE_MOVE_TYPES = ("out_invoice", "out_refund")
 
+# Base sobre la que se calcula el Peso %
+WEIGHT_BASE_TOTAL = "total"      # Ventas Netas IVAI (impuestos incluidos)
+WEIGHT_BASE_UNTAXED = "untaxed"  # Ventas Brutas A.I (sin impuestos)
+
 # Secuencias reservadas para las filas "sin clasificar" (siempre al final).
 UNASSIGNED_SEQUENCE = 999999
 
@@ -71,13 +75,27 @@ class SngSalesRouteSalesReport(models.Model):
     route_salesperson_name = fields.Char(
         string="Vendedor de referencia",
         readonly=True,
-        help="Vendedor configurado en la ruta. Solo aplica a la sección de rutas.",
+        help="Vendedor de referencia de la ruta; si la ruta no lo tiene, el que más facturó en el periodo.",
+    )
+    amount_total = fields.Monetary(
+        string="Ventas Netas IVAI",
+        readonly=True,
+        currency_field="currency_id",
+        help="Suma del total con impuestos de facturas menos notas de crédito publicadas.",
     )
     amount_untaxed = fields.Monetary(
         string="Ventas Brutas A.I",
         readonly=True,
         currency_field="currency_id",
         help="Suma del importe sin impuestos de facturas menos notas de crédito publicadas.",
+    )
+    weight_base = fields.Selection(
+        [
+            (WEIGHT_BASE_TOTAL, "Ventas Netas IVAI"),
+            (WEIGHT_BASE_UNTAXED, "Ventas Brutas A.I"),
+        ],
+        string="Base del peso",
+        readonly=True,
     )
     weight = fields.Float(
         string="Peso %",
@@ -100,7 +118,9 @@ class SngSalesRouteSalesReport(models.Model):
         "sales_route_id": "INTEGER",
         "salesperson_id": "INTEGER",
         "route_salesperson_name": "VARCHAR",
+        "amount_total": "NUMERIC",
         "amount_untaxed": "NUMERIC",
+        "weight_base": "VARCHAR",
         "weight": "NUMERIC",
         "invoice_count": "INTEGER",
     }
@@ -132,12 +152,21 @@ class SngSalesRouteSalesReport(models.Model):
 
     @api.model
     def _get_amounts(self, date_from, date_to, company_ids):
-        """Devuelve (por_ruta, por_vendedor, total) leyendo las facturas del rango."""
+        """Devuelve (por_ruta, por_vendedor, por_ruta_vendedor, totales) del rango.
+
+        Cada entrada trae el total con impuestos (``total``), el importe sin
+        impuestos (``untaxed``) y la cantidad de documentos (``count``).
+
+        El vendedor se toma de ``assigned_salesperson_id`` (vendedor asignado al
+        cliente, módulo ``sng_invoice_assigned_salesperson``) y solo cuando está
+        vacío se usa ``salesperson_id`` de la factura.
+        """
         self._cr.execute(
             """
             SELECT am.sales_route_id AS route_id,
-                   am.salesperson_id AS salesperson_id,
-                   SUM(am.amount_untaxed_signed) AS amount,
+                   COALESCE(am.assigned_salesperson_id, am.salesperson_id) AS salesperson_id,
+                   SUM(am.amount_total_signed) AS amount_total,
+                   SUM(am.amount_untaxed_signed) AS amount_untaxed,
                    COUNT(*) AS doc_count
               FROM account_move am
              WHERE am.move_type IN %s
@@ -145,36 +174,132 @@ class SngSalesRouteSalesReport(models.Model):
                AND am.invoice_date >= %s
                AND am.invoice_date <= %s
                AND am.company_id IN %s
-          GROUP BY am.sales_route_id, am.salesperson_id
+          GROUP BY am.sales_route_id,
+                   COALESCE(am.assigned_salesperson_id, am.salesperson_id)
             """,
             (SALE_MOVE_TYPES, date_from, date_to, tuple(company_ids)),
         )
         by_route = {}
         by_salesperson = {}
-        total = 0.0
+        by_route_salesperson = {}
+        totals = {"total": 0.0, "untaxed": 0.0, "count": 0}
         for row in self._cr.dictfetchall():
-            amount = float(row["amount"] or 0.0)
-            count = row["doc_count"] or 0
+            values = {
+                "total": float(row["amount_total"] or 0.0),
+                "untaxed": float(row["amount_untaxed"] or 0.0),
+                "count": row["doc_count"] or 0,
+            }
             route_key = row["route_id"] or False
             salesperson_key = row["salesperson_id"] or False
-            route_amount, route_count = by_route.get(route_key, (0.0, 0))
-            by_route[route_key] = (route_amount + amount, route_count + count)
-            sp_amount, sp_count = by_salesperson.get(salesperson_key, (0.0, 0))
-            by_salesperson[salesperson_key] = (sp_amount + amount, sp_count + count)
-            total += amount
-        return by_route, by_salesperson, total
+            for store, key in ((by_route, route_key), (by_salesperson, salesperson_key)):
+                bucket = store.setdefault(key, {"total": 0.0, "untaxed": 0.0, "count": 0})
+                for field_name in ("total", "untaxed", "count"):
+                    bucket[field_name] += values[field_name]
+            route_map = by_route_salesperson.setdefault(route_key, {})
+            route_map[salesperson_key] = route_map.get(salesperson_key, 0.0) + values["total"]
+            for field_name in ("total", "untaxed", "count"):
+                totals[field_name] += values[field_name]
+        return by_route, by_salesperson, by_route_salesperson, totals
+
+    @api.model
+    def _get_route_salesperson_name(self, route, route_map):
+        """Vendedor a mostrar en la fila de la ruta.
+
+        Se usa el vendedor de referencia configurado en la ruta y, si no hay,
+        el vendedor que más facturó en esa ruta durante el periodo.
+        """
+        if route.salesperson_id:
+            return route.salesperson_id.name or ""
+        candidates = {
+            partner_id: amount
+            for partner_id, amount in (route_map or {}).items()
+            if partner_id
+        }
+        if not candidates:
+            return ""
+        best_id = max(candidates, key=lambda partner_id: candidates[partner_id])
+        return self.env["res.partner"].browse(best_id).name or ""
+
+    # ------------------------------------------------------------------
+    # Auxiliar: documentos que originan cada monto
+    # ------------------------------------------------------------------
+    @api.model
+    def _get_base_domain(self, date_from, date_to, company_ids=None):
+        """Domino de los documentos considerados por el reporte."""
+        return [
+            ("move_type", "in", list(SALE_MOVE_TYPES)),
+            ("state", "=", "posted"),
+            ("invoice_date", ">=", date_from),
+            ("invoice_date", "<=", date_to),
+            ("company_id", "in", company_ids or self._get_allowed_company_ids()),
+        ]
+
+    def _get_line_domain(self):
+        """Domino de los documentos que suman en esta línea del reporte."""
+        self.ensure_one()
+        domain = self._get_base_domain(self.date_from, self.date_to)
+        if self.line_type == LINE_TYPE_ROUTE:
+            return domain + [("sales_route_id", "=", self.sales_route_id.id or False)]
+        # El vendedor efectivo es assigned_salesperson_id y, si está vacío,
+        # salesperson_id: el dominio replica ese COALESCE.
+        if self.salesperson_id:
+            return domain + [
+                "|",
+                ("assigned_salesperson_id", "=", self.salesperson_id.id),
+                "&",
+                ("assigned_salesperson_id", "=", False),
+                ("salesperson_id", "=", self.salesperson_id.id),
+            ]
+        return domain + [
+            ("assigned_salesperson_id", "=", False),
+            ("salesperson_id", "=", False),
+        ]
+
+    def action_view_moves(self):
+        """Abre las facturas y notas de crédito que componen la línea."""
+        self.ensure_one()
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Documentos: %s") % (self.name or ""),
+            "res_model": "account.move",
+            "view_mode": "list,form",
+            "domain": self._get_line_domain(),
+            "context": {"create": False},
+        }
+
+    def action_view_clients(self):
+        """Abre el auxiliar por cliente filtrado por la línea."""
+        self.ensure_one()
+        client_model = self.env["sng.sales.route.client.report"]
+        domain = client_model._get_snapshot_domain()
+        if self.line_type == LINE_TYPE_ROUTE:
+            domain += [("sales_route_id", "=", self.sales_route_id.id or False)]
+        else:
+            domain += [("salesperson_id", "=", self.salesperson_id.id or False)]
+        return {
+            "type": "ir.actions.act_window",
+            "name": _("Clientes: %s") % (self.name or ""),
+            "res_model": client_model._name,
+            "view_mode": "list",
+            "domain": domain,
+            "context": {"create": False, "edit": False, "delete": False},
+        }
 
     # ------------------------------------------------------------------
     # Construcción del snapshot
     # ------------------------------------------------------------------
     @api.model
-    def _rebuild_snapshot(self, date_from, date_to, include_zero=True):
+    def _rebuild_snapshot(
+        self, date_from, date_to, include_zero=True, weight_base=WEIGHT_BASE_TOTAL
+    ):
         date_from = fields.Date.to_date(date_from)
         date_to = fields.Date.to_date(date_to)
         if not date_from or not date_to:
             raise UserError(_("Debe indicar la fecha inicial y la fecha final."))
         if date_from > date_to:
             raise UserError(_("La fecha inicial no puede ser posterior a la fecha final."))
+        if weight_base not in (WEIGHT_BASE_TOTAL, WEIGHT_BASE_UNTAXED):
+            weight_base = WEIGHT_BASE_TOTAL
 
         company_ids = self._get_allowed_company_ids()
         if not company_ids:
@@ -186,9 +311,10 @@ class SngSalesRouteSalesReport(models.Model):
             'DELETE FROM "%s" WHERE user_id = %%s' % self._table, (user.id,)
         )
 
-        by_route, by_salesperson, total = self._get_amounts(
+        by_route, by_salesperson, by_route_salesperson, totals = self._get_amounts(
             date_from, date_to, company_ids
         )
+        base_total = totals[weight_base]
 
         common = {
             "user_id": user.id,
@@ -196,8 +322,19 @@ class SngSalesRouteSalesReport(models.Model):
             "date_to": date_to,
             "company_id": company.id,
             "currency_id": company.currency_id.id,
+            "weight_base": weight_base,
         }
+        empty = {"total": 0.0, "untaxed": 0.0, "count": 0}
         rows = []
+
+        def _amount_values(values):
+            """Montos y peso listos para insertar."""
+            return {
+                "amount_total": values["total"],
+                "amount_untaxed": values["untaxed"],
+                "invoice_count": values["count"],
+                "weight": (values[weight_base] / base_total) if base_total else 0.0,
+            }
 
         # --- Sección 1: pesos por ruta -------------------------------------
         routes = self.env["sng.sales.route"].search(
@@ -205,8 +342,8 @@ class SngSalesRouteSalesReport(models.Model):
             order="code, name",
         )
         for index, route in enumerate(routes):
-            amount, count = by_route.get(route.id, (0.0, 0))
-            if not include_zero and not amount:
+            values = by_route.get(route.id, empty)
+            if not include_zero and not values[weight_base]:
                 continue
             rows.append(
                 dict(
@@ -217,14 +354,14 @@ class SngSalesRouteSalesReport(models.Model):
                     name=route.name or "",
                     sales_route_id=route.id,
                     salesperson_id=route.salesperson_id.id or None,
-                    route_salesperson_name=route.salesperson_id.name or "",
-                    amount_untaxed=amount,
-                    weight=(amount / total) if total else 0.0,
-                    invoice_count=count,
+                    route_salesperson_name=self._get_route_salesperson_name(
+                        route, by_route_salesperson.get(route.id)
+                    ),
+                    **_amount_values(values),
                 )
             )
-        unassigned_amount, unassigned_count = by_route.get(False, (0.0, 0))
-        if include_zero or unassigned_amount:
+        unassigned = by_route.get(False, empty)
+        if include_zero or unassigned[weight_base]:
             rows.append(
                 dict(
                     common,
@@ -235,9 +372,7 @@ class SngSalesRouteSalesReport(models.Model):
                     sales_route_id=None,
                     salesperson_id=None,
                     route_salesperson_name="",
-                    amount_untaxed=unassigned_amount,
-                    weight=(unassigned_amount / total) if total else 0.0,
-                    invoice_count=unassigned_count,
+                    **_amount_values(unassigned),
                 )
             )
 
@@ -245,37 +380,17 @@ class SngSalesRouteSalesReport(models.Model):
         salespersons = self.env["res.partner"].search(
             [("is_salesperson", "=", True)], order="ref, name"
         )
-        for index, salesperson in enumerate(salespersons):
-            amount, count = by_salesperson.get(salesperson.id, (0.0, 0))
-            if not include_zero and not amount:
-                continue
-            rows.append(
-                dict(
-                    common,
-                    line_type=LINE_TYPE_SALESPERSON,
-                    sequence=index,
-                    code=salesperson.ref or salesperson.unique_id or "",
-                    name=salesperson.name or "",
-                    sales_route_id=None,
-                    salesperson_id=salesperson.id,
-                    route_salesperson_name="",
-                    amount_untaxed=amount,
-                    weight=(amount / total) if total else 0.0,
-                    invoice_count=count,
-                )
-            )
         # Partners usados como vendedor en facturas pero no marcados como vendedor
         # (p. ej. documentos importados): se muestran igual, no se ocultan.
-        known_ids = set(salespersons.ids)
         orphan_ids = [
             partner_id
             for partner_id in by_salesperson
-            if partner_id and partner_id not in known_ids
+            if partner_id and partner_id not in set(salespersons.ids)
         ]
         orphans = self.env["res.partner"].browse(orphan_ids).exists()
-        for index, partner in enumerate(orphans, start=len(salespersons)):
-            amount, count = by_salesperson.get(partner.id, (0.0, 0))
-            if not amount and not include_zero:
+        for index, partner in enumerate(salespersons + orphans):
+            values = by_salesperson.get(partner.id, empty)
+            if not include_zero and not values[weight_base]:
                 continue
             rows.append(
                 dict(
@@ -287,14 +402,12 @@ class SngSalesRouteSalesReport(models.Model):
                     sales_route_id=None,
                     salesperson_id=partner.id,
                     route_salesperson_name="",
-                    amount_untaxed=amount,
-                    weight=(amount / total) if total else 0.0,
-                    invoice_count=count,
+                    **_amount_values(values),
                 )
             )
 
-        no_salesperson_amount, no_salesperson_count = by_salesperson.get(False, (0.0, 0))
-        if include_zero or no_salesperson_amount:
+        no_salesperson = by_salesperson.get(False, empty)
+        if include_zero or no_salesperson[weight_base]:
             rows.append(
                 dict(
                     common,
@@ -305,11 +418,14 @@ class SngSalesRouteSalesReport(models.Model):
                     sales_route_id=None,
                     salesperson_id=None,
                     route_salesperson_name="",
-                    amount_untaxed=no_salesperson_amount,
-                    weight=(no_salesperson_amount / total) if total else 0.0,
-                    invoice_count=no_salesperson_count,
+                    **_amount_values(no_salesperson),
                 )
             )
+
+        # Auxiliar por cliente, con el mismo rango y las mismas compañías.
+        self.env["sng.sales.route.client.report"]._rebuild_snapshot(
+            date_from, date_to, company_ids
+        )
 
         if rows:
             columns = list(self._COLUMNS.keys())
@@ -329,7 +445,10 @@ class SngSalesRouteSalesReport(models.Model):
     # Exportación a Excel
     # ------------------------------------------------------------------
     @api.model
-    def _get_xlsx_action(self, date_from, date_to, include_zero=True):
+    def _get_xlsx_action(
+        self, date_from, date_to, include_zero=True, include_detail=True,
+        weight_base=WEIGHT_BASE_TOTAL,
+    ):
         return {
             "type": "ir.actions.report",
             "data": {
@@ -339,6 +458,8 @@ class SngSalesRouteSalesReport(models.Model):
                         "date_from": fields.Date.to_string(date_from),
                         "date_to": fields.Date.to_string(date_to),
                         "include_zero": include_zero,
+                        "include_detail": include_detail,
+                        "weight_base": weight_base,
                     },
                     default=json_default,
                 ),
@@ -352,114 +473,217 @@ class SngSalesRouteSalesReport(models.Model):
     def get_xlsx_report(self, options, response):
         date_from = fields.Date.to_date(options.get("date_from"))
         date_to = fields.Date.to_date(options.get("date_to"))
+        weight_base = options.get("weight_base") or WEIGHT_BASE_TOTAL
         records = self.search(self._get_snapshot_domain())
 
         company = self.env.company
         currency_symbol = company.currency_id.symbol or ""
-        amount_format = '%s#,##0;-%s#,##0' % (currency_symbol, currency_symbol)
+        amount_format = "%s#,##0;-%s#,##0" % (currency_symbol, currency_symbol)
 
         output = io.BytesIO()
         workbook = xlsxwriter.Workbook(output, {"in_memory": True})
-        sheet = workbook.add_worksheet(_("Ventas por Ruta"))
+        formats = {
+            "company": workbook.add_format({"bold": True, "font_size": 12}),
+            "period": workbook.add_format({"bold": True}),
+            "section": workbook.add_format(
+                {"bold": True, "bg_color": "#FFFF00", "border": 1, "align": "center"}
+            ),
+            "header": workbook.add_format(
+                {"bold": True, "bg_color": "#D9E2F3", "border": 1, "align": "center"}
+            ),
+            "text": workbook.add_format({"border": 1}),
+            "amount": workbook.add_format({"border": 1, "num_format": amount_format}),
+            "weight": workbook.add_format(
+                {"border": 1, "bold": True, "num_format": "0.00%", "align": "center"}
+            ),
+            "total_label": workbook.add_format(
+                {"bold": True, "border": 1, "align": "center"}
+            ),
+            "total_amount": workbook.add_format(
+                {"bold": True, "border": 1, "num_format": amount_format}
+            ),
+            "total_weight": workbook.add_format(
+                {"bold": True, "border": 1, "num_format": "0.00%", "align": "center"}
+            ),
+        }
 
-        company_fmt = workbook.add_format({"bold": True, "font_size": 12})
-        period_fmt = workbook.add_format({"bold": True})
-        section_fmt = workbook.add_format(
-            {"bold": True, "bg_color": "#FFFF00", "border": 1, "align": "center"}
+        self._write_xlsx_summary_sheet(
+            workbook, formats, records, date_from, date_to, weight_base
         )
-        header_fmt = workbook.add_format(
-            {"bold": True, "bg_color": "#D9E2F3", "border": 1, "align": "center"}
-        )
-        text_fmt = workbook.add_format({"border": 1})
-        amount_fmt = workbook.add_format({"border": 1, "num_format": amount_format})
-        weight_fmt = workbook.add_format(
-            {"border": 1, "bold": True, "num_format": "0.00%", "align": "center"}
-        )
-        total_label_fmt = workbook.add_format(
-            {"bold": True, "border": 1, "align": "center"}
-        )
-        total_amount_fmt = workbook.add_format(
-            {"bold": True, "border": 1, "num_format": amount_format}
-        )
-        total_weight_fmt = workbook.add_format(
-            {"bold": True, "border": 1, "num_format": "0.00%", "align": "center"}
-        )
+        if options.get("include_detail", True):
+            self._write_xlsx_client_sheet(workbook, formats, date_from, date_to)
 
-        sheet.set_column(0, 0, 14)
-        sheet.set_column(1, 1, 32)
-        sheet.set_column(2, 2, 22)
-        sheet.set_column(3, 3, 12)
-        sheet.set_column(4, 4, 24)
+        workbook.close()
+        output.seek(0)
+        response.stream.write(output.read())
+        output.close()
+
+    def _write_xlsx_summary_sheet(
+        self, workbook, formats, records, date_from, date_to, weight_base
+    ):
+        """Hoja principal: pesos por ruta y pesos por vendedor."""
+        company = self.env.company
+        sheet = workbook.add_worksheet(_("Pesos"))
+        for col, width in enumerate((14, 34, 20, 20, 11, 26)):
+            sheet.set_column(col, col, width)
 
         row = 0
-        sheet.write(row, 0, company.name or "", company_fmt)
+        sheet.write(row, 0, company.name or "", formats["company"])
         row += 1
-        sheet.write(row, 0, _("VENTAS"), period_fmt)
+        sheet.write(row, 0, _("VENTAS"), formats["period"])
         sheet.write(
             row,
             1,
-            "%s - %s"
-            % (fields.Date.to_string(date_from), fields.Date.to_string(date_to)),
-            period_fmt,
+            _("Del día %(date_from)s al %(date_to)s")
+            % {
+                "date_from": fields.Date.to_string(date_from),
+                "date_to": fields.Date.to_string(date_to),
+            },
+            formats["period"],
         )
+        sheet.write(row, 4, _("MONEDA LOCAL"), formats["period"])
+        row += 1
+        base_label = (
+            _("Ventas Netas IVAI")
+            if weight_base == WEIGHT_BASE_TOTAL
+            else _("Ventas Brutas A.I")
+        )
+        sheet.write(row, 0, _("Peso %% calculado sobre: %s") % base_label)
         row += 2
 
         sections = [
             (
                 LINE_TYPE_ROUTE,
                 _("PESOS POR RUTA"),
-                [_("COD_RUTA"), _("RUTA"), _("VENTAS Brutas A.I"), _("Peso %"), _("VENDEDOR")],
+                [_("COD_RUTA"), _("RUTA")],
+                _("VENDEDOR"),
             ),
             (
                 LINE_TYPE_SALESPERSON,
                 _("PESOS POR VENDEDOR"),
-                [_("COD"), _("VENDEDOR"), _("VENTAS"), _("Peso %"), ""],
+                [_("COD"), _("VENDEDOR")],
+                "",
             ),
         ]
-
-        for line_type, section_title, headers in sections:
+        for line_type, section_title, headers, last_header in sections:
             lines = records.filtered(lambda r: r.line_type == line_type)
-            sheet.merge_range(row, 0, row, 4, section_title, section_fmt)
+            sheet.merge_range(row, 0, row, 5, section_title, formats["section"])
             row += 1
-            for col_idx, label in enumerate(headers):
-                sheet.write(row, col_idx, label, header_fmt)
+            labels = headers + [
+                _("Ventas Netas IVAI"),
+                _("Ventas Brutas A.I"),
+                _("Peso %"),
+                last_header,
+            ]
+            for col_idx, label in enumerate(labels):
+                sheet.write(row, col_idx, label, formats["header"])
             row += 1
 
             first_data_row = row
             for line in lines:
-                sheet.write(row, 0, line.code or "", text_fmt)
-                sheet.write(row, 1, line.name or "", text_fmt)
-                sheet.write(row, 2, line.amount_untaxed, amount_fmt)
-                sheet.write(row, 3, line.weight, weight_fmt)
+                sheet.write(row, 0, line.code or "", formats["text"])
+                sheet.write(row, 1, line.name or "", formats["text"])
+                sheet.write(row, 2, line.amount_total, formats["amount"])
+                sheet.write(row, 3, line.amount_untaxed, formats["amount"])
+                sheet.write(row, 4, line.weight, formats["weight"])
                 sheet.write(
                     row,
-                    4,
-                    line.route_salesperson_name or "" if line_type == LINE_TYPE_ROUTE else "",
-                    text_fmt,
+                    5,
+                    line.route_salesperson_name or ""
+                    if line_type == LINE_TYPE_ROUTE
+                    else "",
+                    formats["text"],
                 )
                 row += 1
 
-            sheet.merge_range(row, 0, row, 1, _("TOTAL"), total_label_fmt)
+            sheet.merge_range(row, 0, row, 1, _("TOTAL"), formats["total_label"])
             if row > first_data_row:
+                for col_idx, letter in ((2, "C"), (3, "D")):
+                    sheet.write_formula(
+                        row,
+                        col_idx,
+                        "=SUM(%s%s:%s%s)" % (letter, first_data_row + 1, letter, row),
+                        formats["total_amount"],
+                    )
                 sheet.write_formula(
                     row,
-                    2,
-                    "=SUM(C%s:C%s)" % (first_data_row + 1, row),
-                    total_amount_fmt,
-                )
-                sheet.write_formula(
-                    row,
-                    3,
-                    "=SUM(D%s:D%s)" % (first_data_row + 1, row),
-                    total_weight_fmt,
+                    4,
+                    "=SUM(E%s:E%s)" % (first_data_row + 1, row),
+                    formats["total_weight"],
                 )
             else:
-                sheet.write(row, 2, 0, total_amount_fmt)
-                sheet.write(row, 3, 0, total_weight_fmt)
-            sheet.write(row, 4, "", total_label_fmt)
+                sheet.write(row, 2, 0, formats["total_amount"])
+                sheet.write(row, 3, 0, formats["total_amount"])
+                sheet.write(row, 4, 0, formats["total_weight"])
+            sheet.write(row, 5, "", formats["total_label"])
             row += 3
 
-        workbook.close()
-        output.seek(0)
-        response.stream.write(output.read())
-        output.close()
+    def _write_xlsx_client_sheet(self, workbook, formats, date_from, date_to):
+        """Hoja auxiliar: una línea por cliente, al estilo del reporte de gerencia."""
+        client_model = self.env["sng.sales.route.client.report"]
+        lines = client_model.search(client_model._get_snapshot_domain())
+        company = self.env.company
+        sheet = workbook.add_worksheet(_("Ventas por cliente"))
+
+        columns = [
+            (_("codigo"), 12, "partner_code", "text"),
+            (_("Cliente"), 42, "partner_name", "text"),
+            (_("Ventas Netas IVAI"), 20, "amount_total", "amount"),
+            (_("Ventas Brutas A.I"), 20, "amount_untaxed", "amount"),
+            (_("cod Ruta"), 11, "route_code", "text"),
+            (_("Ruta"), 26, "route_name", "text"),
+            (_("Cod Vend"), 11, "salesperson_code", "text"),
+            (_("Vendedor"), 26, "salesperson_name", "text"),
+        ]
+        for col_idx, (_label, width, _key, _fmt) in enumerate(columns):
+            sheet.set_column(col_idx, col_idx, width)
+
+        sheet.write(0, 0, company.name or "", formats["company"])
+        sheet.write(
+            0,
+            5,
+            _("Fecha : %s") % fields.Datetime.to_string(fields.Datetime.now()),
+            formats["period"],
+        )
+        sheet.write(1, 0, _("VENTAS"), formats["period"])
+        sheet.write(
+            1,
+            2,
+            _("Del día %(date_from)s al %(date_to)s")
+            % {
+                "date_from": fields.Date.to_string(date_from),
+                "date_to": fields.Date.to_string(date_to),
+            },
+            formats["period"],
+        )
+        sheet.write(1, 5, _("MONEDA LOCAL"), formats["period"])
+
+        header_row = 2
+        for col_idx, (label, _width, _key, _fmt) in enumerate(columns):
+            sheet.write(header_row, col_idx, label, formats["header"])
+
+        row = header_row + 1
+        first_data_row = row
+        for line in lines:
+            for col_idx, (_label, _width, key, fmt_key) in enumerate(columns):
+                value = line[key]
+                if value in (False, None):
+                    value = ""
+                sheet.write(row, col_idx, value, formats[fmt_key])
+            row += 1
+
+        sheet.merge_range(row, 0, row, 1, _("TOTAL GENERAL :"), formats["total_label"])
+        if row > first_data_row:
+            for col_idx, letter in ((2, "C"), (3, "D")):
+                sheet.write_formula(
+                    row,
+                    col_idx,
+                    "=SUM(%s%s:%s%s)" % (letter, first_data_row + 1, letter, row),
+                    formats["total_amount"],
+                )
+        else:
+            sheet.write(row, 2, 0, formats["total_amount"])
+            sheet.write(row, 3, 0, formats["total_amount"])
+        for col_idx in range(4, len(columns)):
+            sheet.write(row, col_idx, "", formats["total_label"])
+        sheet.freeze_panes(header_row + 1, 0)

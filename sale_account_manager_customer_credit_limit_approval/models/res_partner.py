@@ -16,8 +16,20 @@ class ResPartner(models.Model):
 
     @api.depends('credit', 'debit')
     def _compute_amount_due(self):
+        excluded_states = ('rechazado', 'firma_invalida')
         for rec in self:
-            rec.amount_due = rec.credit - rec.debit
+            # Calculate amount_due from posted invoices excluding rejected/invalid signature
+            invoices = self.env['account.move'].search([
+                ('partner_id', '=', rec.id),
+                ('state', '=', 'posted'),
+                ('move_type', 'in', ['out_invoice', 'out_refund']),
+                '|',
+                ('state_tributacion', '=', False),
+                ('state_tributacion', 'not in', excluded_states),
+            ])
+            # amount_residual_signed already has correct sign (positive for invoices, negative for refunds)
+            rec.amount_due = sum(invoices.mapped('amount_residual_signed'))
+            # Add pending sale orders (not invoiced or with draft invoices)
             partner_so = self.env['sale.order'].search([('partner_id', '=', rec.id), ('state', '=', 'sale')])
             for order in partner_so:
                 if not order.invoice_ids:

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Replaces the generic "Partners" line of the customer statement PDF header
+        (right column) with a richer customer block: commercial name, address,
+        phone and email. Only applies to the customer statement report (detected
+        by its css_custom_class) when exactly one partner is selected, i.e. an
+        individual statement printed/sent to a customer.
+    -->
+    <template id="customer_statement_partner_header" inherit_id="account_reports.pdf_export_filters">
+        <!-- Inject the customer block where the "Partners" filter line sits -->
+        <xpath expr="//t[@t-if=&quot;options.get('partner_ids') != None&quot;]" position="before">
+            <t t-if="'customer_statement' in (options.get('css_custom_class') or '') and len(options.get('partner_ids') or []) == 1">
+                <t t-set="statement_partner" t-value="env['res.partner'].browse(options['partner_ids'][0])"/>
+                <div name="customer_statement_partner_header" class="mb-2">
+                    <div>
+                        <strong>Cliente: </strong>
+                        <t t-out="statement_partner.commercial_name or statement_partner.name"/>
+                    </div>
+                    <div class="o_text_muted" style="white-space: pre-line;"
+                         t-out="statement_partner.contact_address"/>
+                    <div class="o_text_muted" t-if="statement_partner.phone">
+                        <strong>Teléfono: </strong><t t-out="statement_partner.phone"/>
+                    </div>
+                    <div class="o_text_muted" t-if="statement_partner.email">
+                        <strong>Correo: </strong><t t-out="statement_partner.email"/>
+                    </div>
+                    <div class="o_text_muted" t-if="report_generation_datetime">
+                        <strong>Generado: </strong>
+                        <t t-out="report_generation_datetime.strftime('%d/%m/%Y %H:%M')"/>
+                    </div>
+                </div>
+            </t>
+        </xpath>
+
+        <!-- Hide the default "Partners" line for the single-customer statement -->
+        <xpath expr="//t[@t-if=&quot;options.get('partner_ids') != None&quot;]" position="attributes">
+            <attribute name="t-if">options.get('partner_ids') != None and not ('customer_statement' in (options.get('css_custom_class') or '') and len(options.get('partner_ids') or []) == 1)</attribute>
+        </xpath>
+    </template>
+</odoo>

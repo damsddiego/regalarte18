@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_ai" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.sng.ai.dashboard</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Dashboard IA" string="Dashboard IA" name="sng_ai_dashboard">
+                    <block title="Proveedor de inteligencia artificial">
+                        <setting string="Proveedor">
+                            <field name="sng_ai_provider"/>
+                        </setting>
+                        <setting string="API Key de Anthropic"
+                                 invisible="sng_ai_provider != 'anthropic'"
+                                 help="Clave generada en platform.claude.com. Sin esta clave el dashboard funciona, pero no se generan análisis de IA.">
+                            <field name="sng_ai_api_key" password="True"/>
+                        </setting>
+                        <setting string="Modelo de Anthropic"
+                                 invisible="sng_ai_provider != 'anthropic'"
+                                 help="Opus 4.8 da el mejor análisis (~$0.05-0.10 por análisis). Haiku es el más económico.">
+                            <field name="sng_ai_model"/>
+                        </setting>
+                        <setting string="API Key de DeepSeek"
+                                 invisible="sng_ai_provider != 'deepseek'"
+                                 help="Clave generada en platform.deepseek.com.">
+                            <field name="sng_ai_deepseek_api_key" password="True"/>
+                        </setting>
+                        <setting string="Modelo de DeepSeek"
+                                 invisible="sng_ai_provider != 'deepseek'">
+                            <field name="sng_ai_deepseek_model"/>
+                        </setting>
+                        <setting string="URL base de DeepSeek"
+                                 invisible="sng_ai_provider != 'deepseek'"
+                                 help="Normalmente https://api.deepseek.com. Solo cámbiela si usa un endpoint compatible.">
+                            <field name="sng_ai_deepseek_base_url" placeholder="https://api.deepseek.com"/>
+                        </setting>
+                        <setting string="Almacenes de inventario"
+                                 help="Códigos de almacén (separados por coma) que se consideran en la pestaña Inventario. Por defecto: WH (Regalarte).">
+                            <field name="sng_ai_inventory_warehouses"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+</odoo>

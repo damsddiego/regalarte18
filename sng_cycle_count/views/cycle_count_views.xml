@@ -32,6 +32,7 @@
                     <button name="action_submit_for_approval" string="Finalizar Conteo" type="object" class="btn-primary" invisible="state not in ('draft', 'in_progress')" confirm="El conteo quedará bloqueado y se enviará a Gerencia. ¿Desea continuar?"/>
                     <button name="action_approve" string="Aprobar y Aplicar Ajustes" type="object" class="btn-primary" invisible="state != 'pending_approval'" groups="sng_cycle_count.group_cycle_count_management" confirm="Se aplicarán los ajustes de inventario y el conteo quedará finalizado. ¿Desea continuar?"/>
                     <button name="action_open_return_wizard" string="Devolver para Reconteo" type="object" invisible="state != 'pending_approval'" groups="sng_cycle_count.group_cycle_count_management"/>
+                    <button name="action_open_add_product_wizard" string="Agregar Producto" type="object" invisible="state not in ('draft', 'in_progress')"/>
                     <button name="action_cancel" string="Cancelar" type="object" invisible="state not in ('draft', 'in_progress')" confirm="¿Está seguro de cancelar este conteo?"/>
                     <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,pending_approval,done,cancelled"/>
                 </header>
@@ -84,6 +85,8 @@
                                     <field name="location_id" readonly="1"/>
                                     <field name="lot_id" readonly="1" optional="show"/>
                                     <field name="package_id" readonly="1" optional="hide"/>
+                                    <field name="previous_theoretical_qty" readonly="1" optional="show" invisible="not previous_theoretical_qty and not previous_counted_qty"/>
+                                    <field name="previous_counted_qty" readonly="1" optional="show" invisible="not previous_theoretical_qty and not previous_counted_qty"/>
                                     <field name="theoretical_qty" readonly="1"/>
                                     <field name="counted_qty"/>
                                     <field name="difference_qty" readonly="1"/>
@@ -93,6 +96,7 @@
                                     <field name="counted_value" readonly="1" optional="hide" groups="sng_cycle_count.group_cycle_count_supervisor"/>
                                     <field name="difference_value" readonly="1" optional="show" groups="sng_cycle_count.group_cycle_count_supervisor"/>
                                     <field name="state" readonly="1" widget="badge"/>
+                                    <field name="is_manual" readonly="1" optional="show"/>
                                     <field name="notes"/>
                                     <button name="action_set_counted" string="Marcar Contado" type="object" icon="fa-check" invisible="state != 'pending'"/>
                                     <button name="action_copy_theoretical" string="Copiar Teórico" type="object" icon="fa-copy" invisible="state != 'pending'"/>

@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="stock_quant_search_warehouse_group" model="ir.ui.view">
+        <field name="name">stock.quant.search.warehouse.group</field>
+        <field name="model">stock.quant</field>
+        <field name="inherit_id" ref="stock.quant_search_view"/>
+        <field name="arch" type="xml">
+            <field name="warehouse_id" position="after">
+                <field name="warehouse_group_id"/>
+            </field>
+            <xpath expr="//search" position="inside">
+                <searchpanel>
+                    <field name="warehouse_group_id" string="Grupo de almacenes" expand="1" hierarchize="0"/>
+                </searchpanel>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="stock_move_search_warehouse_group" model="ir.ui.view">
+        <field name="name">stock.move.search.warehouse.group</field>
+        <field name="model">stock.move</field>
+        <field name="inherit_id" ref="stock.view_move_search"/>
+        <field name="arch" type="xml">
+            <field name="location_dest_id" position="after">
+                <field name="warehouse_group_id"/>
+            </field>
+            <xpath expr="//search" position="inside">
+                <searchpanel>
+                    <field name="warehouse_group_id" string="Grupo de almacenes" expand="1" hierarchize="0"/>
+                </searchpanel>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="stock_move_line_search_warehouse_group" model="ir.ui.view">
+        <field name="name">stock.move.line.search.warehouse.group</field>
+        <field name="model">stock.move.line</field>
+        <field name="inherit_id" ref="stock.stock_move_line_view_search"/>
+        <field name="arch" type="xml">
+            <field name="location_id" position="after">
+                <field name="warehouse_group_id"/>
+            </field>
+            <xpath expr="//search" position="inside">
+                <searchpanel>
+                    <field name="warehouse_group_id" string="Grupo de almacenes" expand="1" hierarchize="0"/>
+                </searchpanel>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="stock_valuation_layer_search_warehouse_group" model="ir.ui.view">
+        <field name="name">stock.valuation.layer.search.warehouse.group</field>
+        <field name="model">stock.valuation.layer</field>
+        <field name="inherit_id" ref="stock_account.view_inventory_valuation_search"/>
+        <field name="arch" type="xml">
+            <field name="warehouse_id" position="after">
+                <field name="warehouse_group_id"/>
+            </field>
+            <xpath expr="//search" position="inside">
+                <searchpanel>
+                    <field name="warehouse_group_id" string="Grupo de almacenes" expand="1" hierarchize="0"/>
+                </searchpanel>
+            </xpath>
+        </field>
+    </record>
+</odoo>
