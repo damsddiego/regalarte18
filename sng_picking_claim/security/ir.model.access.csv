@@ -1,0 +1,5 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_picking_device_user,sng.picking.device.user,model_sng_picking_device,sng_picking_claim.group_picking_claim_user,1,1,1,0
+access_picking_device_manager,sng.picking.device.manager,model_sng_picking_device,sng_picking_claim.group_picking_claim_manager,1,1,1,1
+access_picking_claim_user,sng.picking.claim.user,model_sng_picking_claim,sng_picking_claim.group_picking_claim_user,1,1,1,0
+access_picking_claim_manager,sng.picking.claim.manager,model_sng_picking_claim,sng_picking_claim.group_picking_claim_manager,1,1,1,1

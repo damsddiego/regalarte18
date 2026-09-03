@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_picking_device_list" model="ir.ui.view">
+        <field name="name">sng.picking.device.list</field>
+        <field name="model">sng.picking.device</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="not active">
+                <field name="name"/>
+                <field name="device_uid" optional="hide"/>
+                <field name="platform" optional="hide"/>
+                <field name="app_version" optional="hide"/>
+                <field name="last_partner_id"/>
+                <field name="last_seen_at"/>
+                <field name="active_claim_count" string="En curso"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="active" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_picking_device_form" model="ir.ui.view">
+        <field name="name">sng.picking.device.form</field>
+        <field name="model">sng.picking.device</field>
+        <field name="arch" type="xml">
+            <form string="Dispositivo de alistado">
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_claims" type="object"
+                                class="oe_stat_button" icon="fa-hand-paper-o">
+                            <field name="active_claim_count" widget="statinfo"
+                                   string="En curso"/>
+                        </button>
+                    </div>
+                    <widget name="web_ribbon" title="Archivado" bg_color="text-bg-danger"
+                            invisible="active"/>
+                    <div class="oe_title">
+                        <label for="name" string="Nombre del equipo"/>
+                        <h1><field name="name" placeholder="Tableta Bodega 3"/></h1>
+                    </div>
+                    <group>
+                        <group string="Identificación">
+                            <field name="device_uid"/>
+                            <field name="platform"/>
+                            <field name="app_version"/>
+                            <field name="active" invisible="1"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Actividad">
+                            <field name="first_seen_at"/>
+                            <field name="last_seen_at"/>
+                            <field name="last_partner_id"/>
+                        </group>
+                    </group>
+                    <group string="Notas">
+                        <field name="notes" nolabel="1" placeholder="Ubicación del equipo, número de inventario, observaciones..."/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_picking_device_search" model="ir.ui.view">
+        <field name="name">sng.picking.device.search</field>
+        <field name="model">sng.picking.device</field>
+        <field name="arch" type="xml">
+            <search string="Dispositivos">
+                <field name="name"/>
+                <field name="device_uid"/>
+                <field name="last_partner_id"/>
+                <filter name="filter_active" string="Activos" domain="[('active', '=', True)]"/>
+                <filter name="filter_archived" string="Archivados" domain="[('active', '=', False)]"/>
+                <filter name="filter_busy" string="Con documento en curso"
+                        domain="[('claim_ids.state', '=', 'held')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_by_partner" string="Último operario"
+                            context="{'group_by': 'last_partner_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_picking_device" model="ir.actions.act_window">
+        <field name="name">Dispositivos de alistado</field>
+        <field name="res_model">sng.picking.device</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_picking_device_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Todavía no se registró ningún dispositivo</p>
+            <p>
+                Cada tableta se registra sola la primera vez que un operario entra
+                a la app. Desde aquí podés renombrarla para reconocerla, y ese
+                nombre es el que va a mostrar el equipo de ahí en adelante.
+            </p>
+        </field>
+    </record>
+</odoo>

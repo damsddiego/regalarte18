@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_picking_claim_list" model="ir.ui.view">
+        <field name="name">sng.picking.claim.list</field>
+        <field name="model">sng.picking.claim</field>
+        <field name="arch" type="xml">
+            <list decoration-info="state == 'held'"
+                  decoration-muted="state == 'released'"
+                  create="false">
+                <field name="claimed_at"/>
+                <field name="source_reference" string="Documento"/>
+                <field name="source_model" optional="hide"/>
+                <field name="partner_name" string="Operario"/>
+                <field name="device_id"/>
+                <field name="role" widget="badge"/>
+                <field name="stage_name" string="Etapa al tomar" optional="show"/>
+                <field name="duration_minutes" string="Minutos" digits="[6, 1]"/>
+                <field name="released_at" optional="show"/>
+                <field name="release_reason" optional="hide"/>
+                <field name="company_id" groups="base.group_multi_company" optional="hide"/>
+                <field name="state" widget="badge"
+                       decoration-info="state == 'held'"
+                       decoration-muted="state == 'released'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_picking_claim_form" model="ir.ui.view">
+        <field name="name">sng.picking.claim.form</field>
+        <field name="model">sng.picking.claim</field>
+        <field name="arch" type="xml">
+            <form string="Reclamo de alistado" create="false" edit="false">
+                <sheet>
+                    <div class="oe_title">
+                        <h1><field name="source_reference" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group string="Quién">
+                            <field name="partner_id" readonly="1"/>
+                            <field name="partner_name" readonly="1"/>
+                            <field name="device_id" readonly="1"/>
+                            <field name="role" readonly="1"/>
+                        </group>
+                        <group string="Cuándo">
+                            <field name="claimed_at" readonly="1"/>
+                            <field name="released_at" readonly="1"/>
+                            <field name="duration_minutes" readonly="1" digits="[6, 1]"/>
+                            <field name="state" readonly="1"/>
+                        </group>
+                        <group string="Documento">
+                            <field name="source_model" readonly="1"/>
+                            <field name="sale_order_id" readonly="1"
+                                   invisible="source_model != 'sale.order'"/>
+                            <field name="picking_id" readonly="1"
+                                   invisible="source_model != 'stock.picking'"/>
+                            <field name="stage_name" readonly="1"/>
+                            <field name="company_id" readonly="1"
+                                   groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Liberación">
+                            <field name="release_reason" readonly="1"/>
+                            <field name="released_by_id" readonly="1"/>
+                        </group>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_picking_claim_search" model="ir.ui.view">
+        <field name="name">sng.picking.claim.search</field>
+        <field name="model">sng.picking.claim</field>
+        <field name="arch" type="xml">
+            <search string="Reclamos de alistado">
+                <field name="source_reference"/>
+                <field name="partner_id"/>
+                <field name="device_id"/>
+                <filter name="filter_held" string="En curso" domain="[('state', '=', 'held')]"/>
+                <filter name="filter_released" string="Liberados" domain="[('state', '=', 'released')]"/>
+                <separator/>
+                <filter name="filter_bodega" string="Bodega" domain="[('role', '=', 'bodega')]"/>
+                <filter name="filter_revision" string="Revisión" domain="[('role', '=', 'revision')]"/>
+                <filter name="filter_cedi" string="CEDI" domain="[('role', '=', 'cedi')]"/>
+                <separator/>
+                <filter name="filter_today" string="Hoy"
+                        domain="[('claimed_at', '&gt;=', datetime.datetime.now().strftime('%Y-%m-%d 00:00:00'))]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_by_state" string="Estado" context="{'group_by': 'state'}"/>
+                    <filter name="group_by_partner" string="Operario" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_by_device" string="Dispositivo" context="{'group_by': 'device_id'}"/>
+                    <filter name="group_by_role" string="Rol" context="{'group_by': 'role'}"/>
+                    <filter name="group_by_date" string="Fecha" context="{'group_by': 'claimed_at:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_picking_claim" model="ir.actions.act_window">
+        <field name="name">Historial de alistado</field>
+        <field name="res_model">sng.picking.claim</field>
+        <field name="view_mode">list,form</field>
+        <field name="search_view_id" ref="view_picking_claim_search"/>
+        <field name="context">{'search_default_filter_held': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Todavía no hay reclamos registrados</p>
+            <p>
+                Cada vez que un operario toma una orden o un traslado desde la app
+                queda una línea aquí, con el equipo desde el que lo hizo y cuánto
+                tiempo lo tuvo.
+            </p>
+        </field>
+    </record>
+</odoo>

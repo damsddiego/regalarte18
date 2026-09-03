@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_picking_form_picking_claim" model="ir.ui.view">
+        <field name="name">stock.picking.form.picking.claim</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_force_release_claim" type="object"
+                        string="Liberar alistado"
+                        class="btn-secondary"
+                        invisible="not sng_is_claimed"
+                        groups="sng_picking_claim.group_picking_claim_manager"
+                        confirm="El operario que tenga este traslado abierto en su equipo va a perderlo. ¿Continuar?"/>
+            </xpath>
+
+            <xpath expr="//div[@name='button_box']" position="inside">
+                <button name="action_view_picking_claims" type="object"
+                        class="oe_stat_button" icon="fa-hand-paper-o"
+                        groups="sng_picking_claim.group_picking_claim_user">
+                    <field name="sng_claim_count" widget="statinfo" string="Alistado"/>
+                </button>
+            </xpath>
+
+            <xpath expr="//field[@name='partner_id']" position="after">
+                <field name="sng_is_claimed" invisible="1"/>
+                <field name="sng_claim_partner_id" readonly="1"
+                       invisible="not sng_is_claimed"
+                       groups="sng_picking_claim.group_picking_claim_user"/>
+                <field name="sng_claim_device_id" readonly="1"
+                       invisible="not sng_is_claimed"
+                       groups="sng_picking_claim.group_picking_claim_user"/>
+                <field name="sng_claimed_at" readonly="1"
+                       invisible="not sng_is_claimed"
+                       groups="sng_picking_claim.group_picking_claim_user"/>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="vpicktree_picking_claim" model="ir.ui.view">
+        <field name="name">stock.picking.list.picking.claim</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.vpicktree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list/field[@name='state']" position="after">
+                <field name="sng_claim_label" string="Tomado por" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

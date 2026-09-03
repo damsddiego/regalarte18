@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!--
+            Minutos tras los cuales un documento tomado se considera abandonado y
+            otro operario puede quedárselo. En 0 el vencimiento está desactivado,
+            que es lo recomendado: un alistado largo nunca debería poder ser
+            robado por el reloj. Para recuperar un documento cuya tableta se
+            perdió, usar el botón "Liberar alistado" desde Odoo.
+        -->
+        <record id="param_claim_timeout_minutes" model="ir.config_parameter">
+            <field name="key">sng_picking_claim.timeout_minutes</field>
+            <field name="value">0</field>
+        </record>
+    </data>
+</odoo>

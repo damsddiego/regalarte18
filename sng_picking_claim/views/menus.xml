@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_picking_claim_root"
+              name="Alistado móvil"
+              parent="stock.menu_stock_root"
+              sequence="90"
+              groups="sng_picking_claim.group_picking_claim_user"/>
+
+    <menuitem id="menu_picking_claim_history"
+              name="Historial de alistado"
+              parent="menu_picking_claim_root"
+              action="action_picking_claim"
+              sequence="10"/>
+
+    <menuitem id="menu_picking_claim_devices"
+              name="Dispositivos"
+              parent="menu_picking_claim_root"
+              action="action_picking_device"
+              sequence="20"/>
+</odoo>
