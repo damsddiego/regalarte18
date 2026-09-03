@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_account_journal_form_fe_disabled" model="ir.ui.view">
+        <field name="name">account.journal.form.fe.disabled</field>
+        <field name="model">account.journal</field>
+        <field name="inherit_id" ref="cr_electronic_invoice.view_account_journal_inherit_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='FEC_sequence_id']" position="before">
+                <field name="fe_disabled_journal"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
