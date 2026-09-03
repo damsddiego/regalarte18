@@ -25,6 +25,7 @@ El modelo `sng.envio.mercaderia` expone los siguientes métodos públicos por RP
 - `mobile_confirm(audit_id)`
 - `mobile_set_customer_default(audit_id, actor_partner_id)`
 - `mobile_register_print(audit_id, actor_partner_id)`
+- `mobile_get_pdf(audit_id)`
 
 `mobile_create_or_get` exige una clave única generada por la aplicación para que
 un reintento de red no duplique el documento.
@@ -33,4 +34,3 @@ un reintento de red no duplique el documento.
 
 Asignar al usuario técnico de la aplicación el grupo **Usuario auditoría de
 envíos**. Los registros confirmados no permiten modificar los datos auditados.
-

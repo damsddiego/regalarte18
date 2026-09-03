@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import base64
+
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError, ValidationError
 
@@ -612,6 +614,28 @@ class SngEnvioMercaderia(models.Model):
             raise AccessError(_("No se encontró la auditoría solicitada."))
         audit.action_register_print(actor_partner_id=actor_partner_id)
         return audit._mobile_payload()
+
+    @api.model
+    def mobile_get_pdf(self, audit_id):
+        audit = self.search([("id", "=", int(audit_id))], limit=1)
+        if not audit:
+            raise AccessError(_("No se encontró la auditoría solicitada."))
+        if audit.state != "confirmed":
+            raise UserError(_("El documento debe estar confirmado antes de generar el PDF."))
+
+        pdf_content, pdf_type = self.env["ir.actions.report"].with_context(
+            force_report_rendering=True
+        )._render_qweb_pdf(
+            "sng_envio_mercaderia.action_report_envio_mercaderia",
+            res_ids=audit.ids,
+        )
+        if pdf_type != "pdf" or not pdf_content.startswith(b"%PDF"):
+            raise UserError(_("Odoo no pudo generar un PDF válido para este envío."))
+
+        return {
+            "filename": "Envio_de_Mercaderia_%s.pdf" % audit.name.replace("/", "-"),
+            "content_base64": base64.b64encode(pdf_content).decode("ascii"),
+        }
 
     def _mobile_payload(self):
         self.ensure_one()
