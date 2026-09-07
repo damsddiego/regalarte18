@@ -1,3 +1,4 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_inventory_adjustment_history_user,sng.inventory.adjustment.history.user,model_sng_inventory_adjustment_history,stock.group_stock_user,1,0,0,0
-
+access_adjustment_request_user,sng.inventory.adjustment.request.user,model_sng_inventory_adjustment_request,stock.group_stock_user,1,1,1,0
+access_adjustment_conflict_approver,stock.inventory.conflict.approver,stock.model_stock_inventory_conflict,group_inventory_adjustment_approver,1,1,1,0

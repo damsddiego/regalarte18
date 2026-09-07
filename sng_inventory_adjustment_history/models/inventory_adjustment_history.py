@@ -14,6 +14,12 @@ class SngInventoryAdjustmentHistory(models.Model):
     _rec_name = "product_id"
     _check_company_auto = True
 
+    request_id = fields.Many2one(
+        "sng.inventory.adjustment.request", string="Solicitud aprobada",
+        readonly=True, index=True, ondelete="restrict",
+    )
+    reason = fields.Text(related="request_id.reason", string="Motivo justificado")
+
     adjustment_date = fields.Datetime(
         string="Fecha del ajuste",
         required=True,
@@ -179,7 +185,8 @@ class SngInventoryAdjustmentHistory(models.Model):
                             date=adjustment_date.strftime("%d/%m/%Y %H:%M"),
                         ),
                         "email_to": group.adjustment_notify_emails,
-                        "email_from": self.env.company.email_formatted
+                        "email_from": group.adjustment_sender_email
+                        or self.env.company.email_formatted
                         or self.env.user.email_formatted,
                         "body_html": body,
                         "auto_delete": True,
@@ -191,4 +198,3 @@ class SngInventoryAdjustmentHistory(models.Model):
                     "para el grupo %s",
                     group.name,
                 )
-

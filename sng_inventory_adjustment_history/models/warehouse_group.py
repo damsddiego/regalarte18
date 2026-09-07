@@ -16,6 +16,18 @@ class SngWarehouseGroup(models.Model):
         "apliquen ajustes de inventario en almacenes de este grupo se "
         "enviará un correo resumen a estas direcciones.",
     )
+    adjustment_sender_email = fields.Char(
+        string="Correo remitente de alertas",
+        help="Correo utilizado como remitente de las alertas de ajustes. "
+        "Si se deja vacío, se utilizará el correo de la compañía y, "
+        "como último respaldo, el correo del usuario que aplica el ajuste.",
+    )
+    adjustment_approval_emails = fields.Char(
+        string="Correos de Gerencia para aprobación",
+        help="Destinatarios de las solicitudes de aprobación, separados por comas. "
+        "Si está vacío, se usan los correos de alerta del grupo. "
+        "Recibir el correo no otorga permisos: Gerencia debe tener el permiso de aprobación.",
+    )
 
     def _compute_adjustment_history_count(self):
         history_model = self.env["sng.inventory.adjustment.history"]
@@ -34,4 +46,3 @@ class SngWarehouseGroup(models.Model):
             "search_default_group_by_warehouse": 1,
         }
         return action
-

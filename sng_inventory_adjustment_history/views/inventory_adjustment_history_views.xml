@@ -40,6 +40,8 @@
                             <field name="uom_id"/>
                         </group>
                         <group string="Responsable">
+                            <field name="request_id" invisible="not request_id"/>
+                            <field name="reason" invisible="not request_id"/>
                             <field name="adjusted_by_id" widget="many2one_avatar_user"/>
                             <field name="counted_by_id" widget="many2one_avatar_user" invisible="not counted_by_id"/>
                             <field name="company_id" groups="base.group_multi_company"/>

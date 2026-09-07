@@ -14,4 +14,12 @@ class StockMove(models.Model):
         index=True,
         ondelete="set null",
     )
+    sng_adjustment_request_id = fields.Many2one(
+        "sng.inventory.adjustment.request", string="Solicitud de ajuste",
+        readonly=True, copy=False, index=True, ondelete="restrict",
+    )
 
+    def _action_done(self, cancel_backorder=False):
+        if self.filtered("is_inventory"):
+            self.env["stock.quant"]._sng_check_inventory_approval_access()
+        return super()._action_done(cancel_backorder=cancel_backorder)

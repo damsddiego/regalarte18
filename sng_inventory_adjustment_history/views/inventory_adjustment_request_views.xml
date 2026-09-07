@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_adjustment_request_list" model="ir.ui.view">
+        <field name="name">sng.inventory.adjustment.request.list</field>
+        <field name="model">sng.inventory.adjustment.request</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="state == 'rejected'" decoration-success="state == 'approved'">
+                <field name="id" string="Solicitud"/>
+                <field name="create_date"/>
+                <field name="product_id"/>
+                <field name="location_id"/>
+                <field name="previous_quantity"/>
+                <field name="counted_quantity"/>
+                <field name="difference_quantity"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="estimated_cost" groups="custom_ui_security.group_view_product_cost"/>
+                <field name="requested_by_id"/>
+                <field name="state" widget="badge"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_adjustment_request_form" model="ir.ui.view">
+        <field name="name">sng.inventory.adjustment.request.form</field>
+        <field name="model">sng.inventory.adjustment.request</field>
+        <field name="arch" type="xml">
+            <form string="Solicitud de ajuste" delete="0" duplicate="0">
+                <header>
+                    <button name="action_submit" type="object" string="Solicitar aprobación" class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_approve" type="object" string="Aprobar y aplicar" class="oe_highlight" invisible="state != 'pending'" groups="sng_inventory_adjustment_history.group_inventory_adjustment_approver" confirm="Se aplicará el ajuste de existencias y su valoración. ¿Desea continuar?"/>
+                    <button name="action_reject" type="object" string="Rechazar" invisible="state != 'pending'" groups="sng_inventory_adjustment_history.group_inventory_adjustment_approver"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,pending,approved"/>
+                </header>
+                <sheet>
+                    <div class="alert alert-info" role="alert" invisible="state not in ['draft', 'pending']">
+                        El conteo no modifica existencias hasta que Gerencia apruebe la solicitud.
+                        El costo mostrado es una estimación al registrar el conteo.
+                    </div>
+                    <group>
+                        <group string="Existencias">
+                            <field name="id" invisible="1"/>
+                            <field name="quant_id" readonly="id" options="{'no_create': True}" context="{'inventory_mode': False}"/>
+                            <field name="product_id"/>
+                            <field name="location_id"/>
+                            <field name="lot_id" invisible="not lot_id"/>
+                            <field name="package_id" invisible="not package_id"/>
+                            <field name="owner_id" invisible="not owner_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Conteo físico">
+                            <field name="previous_quantity"/>
+                            <field name="counted_quantity" readonly="state != 'draft'"/>
+                            <field name="difference_quantity"/>
+                            <field name="uom_id"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="unit_cost" groups="custom_ui_security.group_view_product_cost"/>
+                            <field name="estimated_cost" groups="custom_ui_security.group_view_product_cost"/>
+                        </group>
+                    </group>
+                    <group string="Justificación">
+                        <field name="reason" readonly="state != 'draft'" placeholder="Explique la causa de la diferencia de inventario."/>
+                    </group>
+                    <group string="Revisión de Gerencia">
+                        <field name="requested_by_id"/>
+                        <field name="submitted_at"/>
+                        <field name="review_note" readonly="state not in ['draft', 'pending']" groups="sng_inventory_adjustment_history.group_inventory_adjustment_approver"/>
+                        <field name="reviewed_by_id"/>
+                        <field name="reviewed_at"/>
+                    </group>
+                    <group string="Trazabilidad" invisible="state != 'approved'">
+                        <field name="move_ids" widget="many2many_tags"/>
+                        <field name="history_ids"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="view_adjustment_request_search" model="ir.ui.view">
+        <field name="name">sng.inventory.adjustment.request.search</field>
+        <field name="model">sng.inventory.adjustment.request</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="product_id"/>
+                <field name="location_id"/>
+                <field name="requested_by_id"/>
+                <filter name="draft" string="Borradores" domain="[('state', '=', 'draft')]"/>
+                <filter name="pending" string="Por aprobar" domain="[('state', '=', 'pending')]"/>
+                <filter name="approved" string="Aplicados" domain="[('state', '=', 'approved')]"/>
+                <filter name="rejected" string="Rechazados" domain="[('state', '=', 'rejected')]"/>
+                <separator/>
+                <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
+            </search>
+        </field>
+    </record>
+    <record id="action_inventory_adjustment_requests" model="ir.actions.act_window">
+        <field name="name">Solicitudes de ajuste</field>
+        <field name="res_model">sng.inventory.adjustment.request</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html"><p>Registre el conteo físico y el motivo para solicitar aprobación a Gerencia.</p></field>
+    </record>
+    <menuitem id="menu_inventory_adjustment_requests" name="Solicitudes de ajuste" parent="stock.menu_stock_adjustments" action="action_inventory_adjustment_requests" sequence="15" groups="stock.group_stock_user"/>
+</odoo>

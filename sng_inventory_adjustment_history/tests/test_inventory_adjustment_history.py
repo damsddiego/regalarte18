@@ -94,8 +94,13 @@ class TestInventoryAdjustmentHistory(TransactionCase):
             )
 
     def test_adjustment_sends_notification_email(self):
-        self.warehouse_group.adjustment_notify_emails = (
-            "bodega@example.com, auditoria@example.com"
+        self.warehouse_group.write(
+            {
+                "adjustment_notify_emails": (
+                    "bodega@example.com, auditoria@example.com"
+                ),
+                "adjustment_sender_email": "inventario@example.com",
+            }
         )
         quant = self.env["stock.quant"].create(
             {
@@ -113,6 +118,7 @@ class TestInventoryAdjustmentHistory(TransactionCase):
         self.assertEqual(len(mail), 1)
         self.assertIn(self.warehouse_group.name, mail.subject)
         self.assertIn(self.product.display_name, mail.body_html)
+        self.assertEqual(mail.email_from, "inventario@example.com")
         self.assertEqual(mail.state, "outgoing")
 
     def test_adjustment_without_notify_emails_sends_nothing(self):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "SNG Inventory Adjustment History",
-    "version": "18.0.1.1.0",
+    "version": "18.0.2.0.0",
     "author": "SNG Cloud",
     "website": "https://sngcloud.com",
     "category": "Inventory/Inventory",
@@ -12,14 +12,16 @@
         "custom_ui_security",
     ],
     "data": [
+        "security/adjustment_approval_groups.xml",
         "security/inventory_adjustment_history_security.xml",
         "security/ir.model.access.csv",
         "data/mail_templates.xml",
         "views/inventory_adjustment_history_views.xml",
         "views/warehouse_group_views.xml",
+        "views/inventory_adjustment_request_views.xml",
+        "views/stock_quant_views.xml",
     ],
     "license": "LGPL-3",
     "application": False,
     "installable": True,
 }
-

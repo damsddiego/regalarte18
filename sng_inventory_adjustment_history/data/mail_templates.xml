@@ -1,5 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <template id="mail_adjustment_approval_request" name="Solicitud de aprobación de ajuste">
+        <div style="font-family:Arial,sans-serif;font-size:14px;">
+            <h2>Solicitud de aprobación de ajuste de inventario</h2>
+            <p>Gerencia General: se requiere su revisión y aprobación. Las existencias aún no se han modificado.</p>
+            <table border="1" cellpadding="6" style="border-collapse:collapse;">
+                <tr><th>Solicitud</th><td t-out="adjustment.id"/></tr>
+                <tr><th>Registrado por</th><td t-out="adjustment.requested_by_id.name"/></tr>
+                <tr><th>Producto</th><td t-out="adjustment.product_id.display_name"/></tr>
+                <tr><th>Ubicación</th><td t-out="adjustment.location_id.complete_name"/></tr>
+                <tr><th>Lote / Serie</th><td t-out="adjustment.lot_id.name or '-'"/></tr>
+                <tr><th>Cantidad anterior</th><td><span t-field="adjustment.previous_quantity"/> <span t-out="adjustment.uom_id.name"/></td></tr>
+                <tr><th>Conteo físico</th><td><span t-field="adjustment.counted_quantity"/></td></tr>
+                <tr><th>Unidades de discrepancia</th><td><span t-field="adjustment.difference_quantity"/></td></tr>
+                <tr><th>Costo estimado del ajuste</th><td><span t-field="adjustment.estimated_cost"/></td></tr>
+                <tr><th>Motivo justificado</th><td style="white-space:pre-wrap;" t-out="adjustment.reason"/></tr>
+            </table>
+            <p>El costo es una estimación al registrar el conteo. La valoración definitiva se determina al aplicar el ajuste.</p>
+            <p><a t-att-href="url" style="background:#714B67;color:white;padding:12px;text-decoration:none;">Revisar y aprobar en Odoo</a></p>
+            <p>El enlace requiere iniciar sesión con un usuario autorizado para aprobar ajustes.</p>
+        </div>
+    </template>
     <template id="mail_adjustment_notification" name="Alerta de ajustes de inventario">
         <div style="font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #333;">
             <p>

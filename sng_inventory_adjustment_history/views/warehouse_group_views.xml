@@ -19,9 +19,14 @@
             </xpath>
             <xpath expr="//group[field[@name='warehouse_ids']]" position="after">
                 <group string="Alertas de ajustes de inventario">
+                    <field name="adjustment_approval_emails" placeholder="Ej. gerencia@regalartecr.com"/>
                     <field
                         name="adjustment_notify_emails"
                         placeholder="Ej. bodega@sngstore.com, auditoria@sngstore.com"
+                    />
+                    <field
+                        name="adjustment_sender_email"
+                        placeholder="Ej. inventario@sngstore.com"
                     />
                 </group>
             </xpath>

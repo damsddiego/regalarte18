@@ -1,11 +1,102 @@
 # -*- coding: utf-8 -*-
 
-from odoo import fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import AccessError, UserError
 from odoo.tools import float_is_zero
 
 
 class StockQuant(models.Model):
     _inherit = "stock.quant"
+
+    sng_adjustment_reason = fields.Text(string="Motivo del ajuste")
+
+    def _sng_check_inventory_approval_access(self):
+        if not self.env.su and not self.env.user.has_group(
+            "sng_inventory_adjustment_history.group_inventory_adjustment_approver"
+        ):
+            raise AccessError(_(
+                "Solo Gerencia autorizada puede aplicar ajustes de inventario. "
+                "Registre el conteo y el motivo, y use Solicitar aprobación."
+            ))
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        # Check before native stock.quant.create() escalates to sudo in inventory mode.
+        if any({"inventory_quantity_auto_apply", "quantity"}.intersection(vals) for vals in vals_list):
+            self._sng_check_inventory_approval_access()
+        if not self._is_inventory_mode():
+            return super().create(vals_list)
+        quants = self.browse()
+        for vals in vals_list:
+            if {"inventory_quantity", "inventory_quantity_auto_apply"}.intersection(vals):
+                existing = self._gather(
+                    self.env["product.product"].browse(vals.get("product_id")),
+                    self.env["stock.location"].browse(vals.get("location_id")),
+                    lot_id=self.env["stock.lot"].browse(vals.get("lot_id")),
+                    package_id=self.env["stock.quant.package"].browse(vals.get("package_id")),
+                    owner_id=self.env["res.partner"].browse(vals.get("owner_id")),
+                    strict=True,
+                )
+                if not self.env.su:
+                    existing._sng_check_no_pending_request()
+            quant = super().create([dict(vals)])
+            if "sng_adjustment_reason" in vals:
+                quant.sng_adjustment_reason = vals["sng_adjustment_reason"]
+            quants |= quant
+        return quants
+
+    def _sng_check_no_pending_request(self):
+        if self.env["sng.inventory.adjustment.request"].sudo().search_count([
+            ("quant_id", "in", self.ids), ("state", "=", "pending"),
+        ]):
+            raise UserError(_("Existe una solicitud por aprobar. Gerencia debe aprobarla o rechazarla."))
+
+    def write(self, vals):
+        if {"inventory_quantity_auto_apply", "quantity"}.intersection(vals):
+            self._sng_check_inventory_approval_access()
+        if not self.env.su and {
+            "inventory_quantity", "inventory_quantity_auto_apply", "inventory_diff_quantity",
+            "inventory_quantity_set", "sng_adjustment_reason", "user_id",
+        }.intersection(vals):
+            self._sng_check_no_pending_request()
+        return super().write(vals)
+
+    @api.model
+    def _get_inventory_fields_write(self):
+        return super()._get_inventory_fields_write() + ["sng_adjustment_reason"]
+
+    def action_apply_inventory(self):
+        self._sng_check_inventory_approval_access()
+        return super().action_apply_inventory()
+
+    def action_apply_all(self):
+        self._sng_check_inventory_approval_access()
+        return super().action_apply_all()
+
+    def action_request_inventory_approval(self):
+        self.check_access("write")
+        if not self or any(not quant.inventory_quantity_set for quant in self):
+            raise UserError(_("Registre el conteo físico antes de solicitar aprobación."))
+        if any(quant.is_outdated for quant in self):
+            raise UserError(_("Las existencias cambiaron. Revise y registre nuevamente el conteo."))
+        requests = self.env["sng.inventory.adjustment.request"].create([
+            {"quant_id": quant.id, "counted_quantity": quant.inventory_quantity,
+             "reason": quant.sng_adjustment_reason}
+            for quant in self
+        ])
+        requests.action_submit()
+        return {
+            "type": "ir.actions.act_window", "name": _("Solicitudes de ajuste"),
+            "res_model": requests._name, "view_mode": "list,form",
+            "domain": [("id", "in", requests.ids)],
+        }
+
+    def unlink(self):
+        # Keep quants referenced by requests, including automatic cleanup of zero quants.
+        referenced = self.env["sng.inventory.adjustment.request"].sudo().search([
+            ("quant_id", "in", self.ids),
+        ]).quant_id
+        return super(StockQuant, self - referenced).unlink()
 
     def _sng_get_adjustment_unit_cost(self):
         self.ensure_one()
@@ -37,9 +128,15 @@ class StockQuant(models.Model):
             "unit_cost": unit_cost,
             "adjustment_cost": adjusted_quantity * unit_cost,
             "company_id": self.company_id.id or self.env.company.id,
+            "request_id": self.env.context.get("sng_adjustment_request_id"),
         }
 
     def _apply_inventory(self):
+        self._sng_check_inventory_approval_access()
+        if not self.env.su and self.env["sng.inventory.adjustment.request"].sudo().search_count([
+            ("quant_id", "in", self.ids), ("state", "=", "pending"),
+        ]):
+            raise UserError(_("Aplique el ajuste desde la solicitud pendiente de aprobación."))
         grouped_quants = self.filtered("location_id.warehouse_id")
         groups_by_warehouse = {}
         if grouped_quants:
@@ -109,4 +206,6 @@ class StockQuant(models.Model):
         ).get(self.id)
         if history_id:
             values["sng_inventory_adjustment_history_id"] = history_id
+        if self.env.context.get("sng_adjustment_request_id"):
+            values["sng_adjustment_request_id"] = self.env.context["sng_adjustment_request_id"]
         return values

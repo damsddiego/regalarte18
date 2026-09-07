@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_quant_inventory_approval" model="ir.ui.view">
+        <field name="name">stock.quant.inventory.approval</field>
+        <field name="model">stock.quant</field>
+        <field name="inherit_id" ref="stock.view_stock_quant_tree_inventory_editable"/>
+        <field name="arch" type="xml">
+            <xpath expr="//button[@name='action_apply_all']" position="attributes">
+                <attribute name="groups">sng_inventory_adjustment_history.group_inventory_adjustment_approver</attribute>
+            </xpath>
+            <xpath expr="//button[@name='stock.action_stock_inventory_adjustement_name']" position="attributes">
+                <attribute name="groups">sng_inventory_adjustment_history.group_inventory_adjustment_approver</attribute>
+            </xpath>
+            <xpath expr="//button[@name='action_apply_inventory']" position="attributes">
+                <attribute name="groups">sng_inventory_adjustment_history.group_inventory_adjustment_approver</attribute>
+            </xpath>
+            <xpath expr="//field[@name='inventory_quantity']" position="after">
+                <field name="sng_adjustment_reason" optional="show"/>
+            </xpath>
+            <xpath expr="//header" position="inside">
+                <button name="action_request_inventory_approval" type="object" string="Solicitar aprobación"/>
+            </xpath>
+            <xpath expr="//button[@name='action_apply_inventory']" position="after">
+                <button name="action_request_inventory_approval" type="object" string="Solicitar aprobación" icon="fa-paper-plane" invisible="not inventory_quantity_set"/>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_quant_auto_apply_approval" model="ir.ui.view">
+        <field name="name">stock.quant.auto.apply.approval</field>
+        <field name="model">stock.quant</field>
+        <field name="inherit_id" ref="stock.view_stock_quant_tree_editable"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='inventory_quantity_auto_apply']" position="attributes">
+                <attribute name="groups">sng_inventory_adjustment_history.group_inventory_adjustment_approver</attribute>
+            </xpath>
+            <xpath expr="//field[@name='inventory_quantity_auto_apply']" position="after">
+                <field name="quantity" string="Existencias" readonly="1" groups="!sng_inventory_adjustment_history.group_inventory_adjustment_approver"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
