@@ -374,3 +374,54 @@ class TestCycleCountApproval(TransactionCase):
                 count.ids,
                 {},
             )
+
+
+class TestNotificationSenderEmail(TransactionCase):
+    def _make_count(self):
+        warehouse = self.env["stock.warehouse"].search(
+            [("company_id", "=", self.env.company.id)], limit=1
+        )
+        product = self.env["product.product"].create(
+            {"name": "Sender Test", "is_storable": True, "standard_price": 1.0}
+        )
+        self.env["stock.quant"]._update_available_quantity(
+            product, warehouse.lot_stock_id, 3.0
+        )
+        quant = self.env["stock.quant"].search(
+            [
+                ("product_id", "=", product.id),
+                ("location_id", "=", warehouse.lot_stock_id.id),
+            ],
+            limit=1,
+        )
+        config = self.env["sng.cycle.count.config"].create(
+            {"name": "Sender Config", "daily_product_count": 1}
+        )
+        count = self.env["sng.cycle.count"].create(
+            {"config_id": config.id, "count_date": fields.Date.today()}
+        )
+        self.env["sng.cycle.count.line"].create(
+            {
+                "cycle_count_id": count.id,
+                "quant_id": quant.id,
+                "theoretical_qty": 3.0,
+            }
+        )
+        return count, warehouse
+
+    def test_sender_email_from_warehouse_group(self):
+        count, warehouse = self._make_count()
+        WarehouseGroup = self.env.get("sng.warehouse.group")
+        if WarehouseGroup is None or "adjustment_sender_email" not in WarehouseGroup._fields:
+            self.assertFalse(count._get_notification_sender_email())
+            return
+        WarehouseGroup.sudo().create(
+            {
+                "name": "Grupo Sender",
+                "warehouse_ids": [(6, 0, warehouse.ids)],
+                "adjustment_sender_email": " remitente@example.com ",
+            }
+        )
+        self.assertEqual(
+            count._get_notification_sender_email(), "remitente@example.com"
+        )

@@ -276,6 +276,28 @@
                             Este pago no tiene facturas conciliadas.
                         </td>
                     </tr>
+                    <t t-if="o.partner_id and o.partner_type == 'customer'">
+                        <!-- Reutilizar el estado de cuenta actual, sin guardar un
+                             asistente ni mezclar saldos de distintas monedas. -->
+                        <t t-set="statement" t-value="o.env['sng.customer.statement.client.wizard'].with_context(allowed_company_ids=[o.company_id.id]).with_company(o.company_id).new({'partner_id': o.partner_id.id, 'company_id': o.company_id.id})"/>
+                        <t t-set="statement_totals" t-value="statement._prepare_currency_groups(statement._get_open_moves())"/>
+                        <tr name="statement_total_balance">
+                            <td/>
+                            <td/>
+                            <td style="padding: 5px; text-align: right; font-weight: bold; font-size: 11px;">
+                                Saldo total facturas
+                            </td>
+                            <td style="padding: 5px; border-top: 1px solid #000; border-bottom: 1px solid #000; text-align: right; font-weight: bold; font-size: 11px;">
+                                <div t-foreach="statement_totals" t-as="total">
+                                    <span t-if="len(statement_totals) &gt; 1" t-out="total['currency'].name"/>
+                                    <span t-out="total['balance']"
+                                          t-options="{'widget': 'monetary', 'display_currency': total['currency']}">0.00</span>
+                                </div>
+                                <span t-if="not statement_totals" t-out="0.0"
+                                      t-options="{'widget': 'monetary', 'display_currency': o.company_id.currency_id}">0.00</span>
+                            </td>
+                        </tr>
+                    </t>
                 </tbody>
             </table>
         </div>

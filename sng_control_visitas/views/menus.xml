@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem id="menu_sng_televentas_seguimiento"
+              name="Seguimiento Televentas"
+              parent="sng_ruteros_pagos.menu_ruteros_root"
+              action="action_sng_televentas_seguimiento"
+              sequence="30"/>
+
+    <menuitem id="menu_sng_control_visitas_linea"
+              name="Matriz de Control"
+              parent="sng_ruteros_pagos.menu_ruteros_root"
+              action="action_sng_control_visitas_linea"
+              sequence="40"/>
+
+    <menuitem id="menu_sng_control_visitas_config"
+              name="Configuración"
+              parent="sng_ruteros_pagos.menu_ruteros_root"
+              sequence="90"
+              groups="sng_control_visitas.group_control_visitas_manager"/>
+
+    <menuitem id="menu_sng_visita_catalogo"
+              name="Catálogos de visitas"
+              parent="menu_sng_control_visitas_config"
+              action="action_sng_visita_catalogo"
+              sequence="10"/>
+
+    <menuitem id="menu_sng_control_visitas_rutas"
+              name="Rutas y frecuencias"
+              parent="menu_sng_control_visitas_config"
+              action="sng_sales_routes.action_sng_sales_route"
+              sequence="20"/>
+
+    <record id="action_sng_control_visitas_settings" model="ir.actions.act_window">
+        <field name="name">Ajustes</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{'module': 'sale'}</field>
+    </record>
+
+    <menuitem id="menu_sng_control_visitas_settings"
+              name="Ajustes"
+              parent="menu_sng_control_visitas_config"
+              action="action_sng_control_visitas_settings"
+              sequence="30"/>
+</odoo>

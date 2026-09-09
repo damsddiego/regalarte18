@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Conteos Cíclicos Diarios",
-    "version": "18.0.2.2.1",
+    "version": "18.0.2.3.1",
     "category": "Inventory",
     "summary": "Automatización de conteos cíclicos diarios con selección inteligente y conciliación en tiempo real",
     "author": "SNG",

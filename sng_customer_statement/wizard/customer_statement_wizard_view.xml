@@ -11,6 +11,9 @@
                     <strong>Estado de Cuenta de Clientes</strong> — Seleccione los filtros y
                     elija cómo desea ver el resultado.
                     Las facturas con estado de tributación <em>"Rechazado"</em> se excluyen automáticamente.
+                    <br/>
+                    Puede seleccionar varios clientes. En <strong>Detalle por cliente</strong>,
+                    el PDF inicia cada cliente en una página nueva y Excel genera una hoja por cliente.
                 </div>
 
                 <group string="Rango de Fechas">
@@ -23,7 +26,7 @@
                 <group string="Filtros de Entidades">
                     <group>
                         <field name="partner_ids" widget="many2many_tags"
-                               placeholder="Todos los clientes..."/>
+                               placeholder="Seleccione uno o varios clientes; vacío = todos..."/>
                         <field name="company_ids" widget="many2many_tags"
                                groups="base.group_multi_company"/>
                     </group>

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Estado de Cuenta de Clientes',
-    'version': '18.0.1.3.0',
+    'version': '18.0.1.3.1',
     'category': 'Accounting/Accounting',
     'summary': 'Reporte de estado de cuenta por cliente: facturas, pagos aplicados, saldos y aging.',
     'description': """

@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Estado de Cuenta para Cliente',
-    'version': '18.0.1.2.0',
+    'version': '18.0.1.3.0',
     'category': 'Accounting/Accounting',
-    'summary': 'Estado de cuenta individual, claro y multimoneda para enviar al cliente.',
+    'summary': 'Estados de cuenta por cliente, en páginas separadas y multimoneda.',
     'description': """
 Estado de Cuenta para Cliente
 =============================
 
 Salida paralela al reporte interno de estado de cuenta. Genera una vista previa
-HTML y un PDF individual por cliente, con documentos abiertos, vencimiento,
+HTML y un PDF con cada cliente en páginas separadas, con documentos abiertos, vencimiento,
 antigüedad y saldos separados por moneda.
     """,
     'author': 'SNG Cloud',

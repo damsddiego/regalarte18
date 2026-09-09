@@ -13,8 +13,16 @@ class CustomerStatementClientWizard(models.TransientModel):
     partner_id = fields.Many2one(
         'res.partner',
         string='Cliente',
-        required=True,
         domain="[('customer_rank', '>', 0)]",
+        help='Cliente individual utilizado por integraciones existentes.',
+    )
+    partner_ids = fields.Many2many(
+        'res.partner',
+        'sng_stmt_client_wizard_partner_rel',
+        'wizard_id', 'partner_id',
+        string='Clientes',
+        domain="[('customer_rank', '>', 0)]",
+        help='Seleccione uno o varios clientes. Cada estado comienza en una página nueva.',
     )
     company_id = fields.Many2one(
         'res.company',
@@ -40,17 +48,33 @@ class CustomerStatementClientWizard(models.TransientModel):
     @api.model
     def default_get(self, field_names):
         values = super().default_get(field_names)
+        if self.env.context.get('active_model') == 'res.partner':
+            active_ids = self.env.context.get('active_ids') or []
+            if not active_ids and self.env.context.get('active_id'):
+                active_ids = [self.env.context['active_id']]
+            partners = self.env['res.partner'].browse(active_ids).exists().filtered(
+                lambda partner: partner.customer_rank > 0
+            )
+            if partners:
+                if 'partner_ids' in field_names and 'partner_ids' not in values:
+                    values['partner_ids'] = [fields.Command.set(partners.ids)]
+                if 'partner_id' in field_names and 'partner_id' not in values:
+                    values['partner_id'] = partners[0].id
         if (
-            'partner_id' in field_names
-            and self.env.context.get('active_model') == 'res.partner'
-            and self.env.context.get('active_id')
+            'partner_ids' in field_names
+            and 'partner_ids' not in values
+            and self.env.context.get('default_partner_id')
         ):
-            partner = self.env['res.partner'].browse(
-                self.env.context['active_id']
-            ).exists()
-            if partner and partner.customer_rank > 0:
-                values['partner_id'] = partner.id
+            values['partner_ids'] = [fields.Command.set([
+                self.env.context['default_partner_id'],
+            ])]
         return values
+
+    @api.constrains('partner_id', 'partner_ids')
+    def _check_partners(self):
+        for wizard in self:
+            if not (wizard.partner_ids or wizard.partner_id):
+                raise ValidationError(_('Seleccione al menos un cliente.'))
 
     @api.constrains('company_id')
     def _check_company_access(self):
@@ -276,9 +300,9 @@ class CustomerStatementClientWizard(models.TransientModel):
         moves = wizard._get_open_moves()
         if not moves:
             raise UserError(_(
-                'El cliente seleccionado no tiene facturas ni notas de crédito '
+                'El cliente %s no tiene facturas ni notas de crédito '
                 'abiertas en la compañía %s.'
-            ) % self.company_id.display_name)
+            ) % (wizard.partner_id.display_name, self.company_id.display_name))
 
         partner = wizard.partner_id
         company_partner = wizard.company_id.partner_id
@@ -298,6 +322,24 @@ class CustomerStatementClientWizard(models.TransientModel):
             'draft_payment_groups': wizard._prepare_draft_payment_groups(),
             'bank_accounts': wizard._prepare_bank_accounts(),
         }
+
+    def _prepare_statements_data(self):
+        """Reutiliza el cálculo individual sin mezclar clientes ni monedas."""
+        self.ensure_one()
+        partners = self.partner_ids or self.partner_id
+        if not partners:
+            raise UserError(_('Seleccione al menos un cliente.'))
+        statements = []
+        for partner in partners:
+            individual = self.new({
+                'partner_id': partner.id,
+                'company_id': self.company_id.id,
+                'statement_date': self.statement_date,
+                'show_draft_payments': self.show_draft_payments,
+                'show_bank_accounts': self.show_bank_accounts,
+            })
+            statements.append(individual._prepare_statement_data())
+        return statements
 
     def _report_action(self, xml_id):
         self.ensure_one()

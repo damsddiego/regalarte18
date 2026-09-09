@@ -268,7 +268,7 @@ class CycleCountLine(models.Model):
         self.ensure_one()
         if float_is_zero(
             self.difference_qty,
-            precision_rounding=self.product_uom_id.rounding,
+            precision_rounding=self.product_uom_id.rounding or 0.01,
         ):
             return True
 

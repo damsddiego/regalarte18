@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="mail_template_regalia_created" model="mail.template">
+            <field name="name">Regalías: nueva solicitud</field>
+            <field name="model_id" ref="model_sng_regalia"/>
+            <field name="subject">Nueva solicitud de regalía {{ object.name }}</field>
+            <field name="email_from">{{ object.company_id.partner_id.email_formatted or user.email_formatted }}</field>
+            <field name="description">Aviso a los responsables al crear una regalía en borrador.</field>
+            <field name="body_html" type="html">
+                <div style="font-size: 14px;">
+                    <p>Se ha creado la solicitud de regalía <strong t-out="object.name"/> y está pendiente de validación.</p>
+                    <ul>
+                        <li>Solicitante: <t t-out="object.create_uid.name"/></li>
+                        <li>Compañía: <t t-out="object.company_id.name"/></li>
+                        <li>Cliente: <t t-out="object.partner_id.display_name"/></li>
+                        <li>Almacén: <t t-out="object.warehouse_id.name"/></li>
+                        <li>Fecha: <t t-out="format_date(object.date)"/></li>
+                    </ul>
+                    <table style="border-collapse: collapse;" cellpadding="6">
+                        <thead>
+                            <tr><th>Producto</th><th>Cantidad</th><th>Unidad</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="object.line_ids" t-as="line">
+                                <td t-out="line.product_id.display_name"/>
+                                <td t-out="line.quantity"/>
+                                <td t-out="line.product_uom_id.name"/>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p t-if="object.notes">Notas: <span t-out="object.notes" style="white-space: pre-wrap;"/></p>
+                    <p>La solicitud está en borrador. El inventario y el asiento contable se aplican al pulsar Validar.</p>
+                    <p>
+                        <a t-att-href="'%s/odoo/sng.regalia/%s?cids=%s' % (object.env['ir.config_parameter'].sudo().get_param('web.base.url', '').rstrip('/'), object.id, object.company_id.id)"
+                           style="background-color: #714B67; color: #fff; padding: 8px 16px; text-decoration: none;">
+                            Revisar regalía
+                        </a>
+                    </p>
+                </div>
+            </field>
+            <field name="auto_delete" eval="True"/>
+        </record>
+    </data>
+</odoo>

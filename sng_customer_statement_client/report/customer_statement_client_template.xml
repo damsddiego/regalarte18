@@ -2,8 +2,13 @@
 <odoo>
 <template id="report_customer_statement_client">
     <t t-call="web.html_container">
-        <t t-foreach="docs" t-as="wizard">
-            <div class="article page sng_corporate_statement"
+        <div class="article" lang="es">
+        <t t-foreach="statements" t-as="statement">
+            <t t-set="wizard" t-value="statement['wizard']"/>
+            <t t-set="data" t-value="statement['data']"/>
+            <t t-set="company" t-value="data['company']"/>
+            <div class="page sng_corporate_statement"
+                 t-att-style="'page-break-before: always;' if statement_index else ''"
                  lang="es"
                  t-att-data-oe-model="wizard._name"
                  t-att-data-oe-id="wizard.id"
@@ -463,6 +468,7 @@
                 </tr></table>
             </div>
         </t>
+        </div>
     </t>
 </template>
 </odoo>

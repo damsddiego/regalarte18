@@ -33,6 +33,6 @@
         <field name="name">Estado de Cuenta de Clientes</field>
         <field name="binding_model_id" ref="base.model_res_partner"/>
         <field name="binding_type">action</field>
-        <field name="binding_view_types">form</field>
+        <field name="binding_view_types">list,form</field>
     </record>
 </odoo>

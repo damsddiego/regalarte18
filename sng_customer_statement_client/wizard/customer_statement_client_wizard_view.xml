@@ -6,14 +6,15 @@
         <field name="arch" type="xml">
             <form string="Estado de Cuenta de Clientes">
                 <div class="alert alert-info" role="alert">
-                    <strong>Documento individual para enviar al cliente.</strong>
+                    <strong>Seleccione uno o varios clientes.</strong>
+                    Cada estado de cuenta comienza en una página nueva del PDF.
                     Los saldos en colones y dólares se muestran por separado y nunca se suman entre sí.
                 </div>
                 <group>
-                    <group string="Cliente">
-                        <field name="partner_id"
+                    <group string="Clientes">
+                        <field name="partner_ids" widget="many2many_tags" required="1"
                                options="{'no_create': True}"
-                               placeholder="Seleccione un cliente..."/>
+                               placeholder="Agregue uno o varios clientes..."/>
                         <field name="company_id"
                                options="{'no_create': True}"
                                groups="base.group_multi_company"/>

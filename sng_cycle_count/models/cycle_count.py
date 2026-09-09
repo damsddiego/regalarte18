@@ -138,7 +138,7 @@ class CycleCount(models.Model):
             discrepancies = completed_lines.filtered(
                 lambda line: not float_is_zero(
                     line.difference_qty,
-                    precision_rounding=line.product_uom_id.rounding,
+                    precision_rounding=line.product_uom_id.rounding or 0.01,
                 )
             )
             count.total_lines = len(count.line_ids)
@@ -285,7 +285,7 @@ class CycleCount(models.Model):
             for line in counted_lines:
                 if not float_is_zero(
                     line.difference_qty,
-                    precision_rounding=line.product_uom_id.rounding,
+                    precision_rounding=line.product_uom_id.rounding or 0.01,
                 ):
                     line.sudo()._apply_adjustment()
 
@@ -392,7 +392,7 @@ class CycleCount(models.Model):
             lambda line: float_compare(
                 line.quant_id.quantity,
                 line.theoretical_qty,
-                precision_rounding=line.product_uom_id.rounding,
+                precision_rounding=line.product_uom_id.rounding or 0.01,
             )
             != 0
         )
@@ -421,12 +421,36 @@ class CycleCount(models.Model):
             raise_if_not_found=False,
         )
         if template:
+            sender_email = self._get_notification_sender_email()
             for user in management_users.filtered("email"):
+                email_values = {"email_to": user.email}
+                if sender_email:
+                    email_values["email_from"] = sender_email
                 template.sudo().with_context(lang=user.lang or self.env.user.lang).send_mail(
                     self.id,
                     force_send=False,
-                    email_values={"email_to": user.email},
+                    email_values=email_values,
                 )
+
+    def _get_notification_sender_email(self):
+        """Remitente configurado en el grupo de almacenes de las ubicaciones del
+        conteo (campo de sng_inventory_adjustment_history). Si el módulo no está
+        instalado o ningún grupo tiene remitente, se usa el de la plantilla."""
+        self.ensure_one()
+        WarehouseGroup = self.env.get("sng.warehouse.group")
+        if WarehouseGroup is None or "adjustment_sender_email" not in WarehouseGroup._fields:
+            return False
+        warehouses = self.line_ids.location_id.warehouse_id
+        if not warehouses:
+            return False
+        group = WarehouseGroup.sudo().search(
+            [
+                ("warehouse_ids", "in", warehouses.ids),
+                ("adjustment_sender_email", "!=", False),
+            ],
+            limit=1,
+        )
+        return (group.adjustment_sender_email or "").strip() or False
 
     def _close_management_activities(self, feedback):
         self.ensure_one()

@@ -62,13 +62,18 @@ class CustomerStatementClientReport(models.AbstractModel):
         docs = self.env['sng.customer.statement.client.wizard'].browse(
             docids or []
         ).exists()
-        wizard = docs[:1]
-        statement = wizard._prepare_statement_data() if wizard else {}
+        statements = [
+            {'wizard': wizard, 'data': statement}
+            for wizard in docs
+            for statement in wizard._prepare_statements_data()
+        ]
+        statement = statements[0]['data'] if statements else {}
         company = statement.get('company') or self.env.company
         return {
             'doc_ids': docs.ids,
             'doc_model': 'sng.customer.statement.client.wizard',
             'docs': docs,
+            'statements': statements,
             'data': statement,
             'company': company,
             'fmt_date': self._format_date,

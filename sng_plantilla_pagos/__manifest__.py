@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "SNG Plantilla Pagos",
-    "version": "18.0.1.3.0",
+    "version": "18.0.1.4.0",
     "category": "Accounting",
     "summary": "Agrega logo e informacion de compania al recibo de pagos",
     "author": "SNG",
@@ -12,6 +12,7 @@
         "sales_commission_omax",
         "sng_custom_name_partner",
         "sng_sales_routes",
+        "sng_customer_statement_client",
     ],
     "data": [
         "report/payment_receipt_templates.xml",

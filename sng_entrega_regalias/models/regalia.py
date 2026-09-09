@@ -104,7 +104,35 @@ class SngRegalia(models.Model):
         for vals in vals_list:
             if vals.get("name", "New") == "New":
                 vals["name"] = self.env["ir.sequence"].next_by_code("sng.regalia") or "New"
-        return super().create(vals_list)
+        regalias = super().create(vals_list)
+        regalias.filtered(lambda regalia: regalia.state == "draft")._notify_managers()
+        return regalias
+
+    def _notify_managers(self):
+        """Queue the creation notice in the same transaction as the request."""
+        group = self.env.ref("sng_entrega_regalias.group_regalia_manager")
+        template = self.env.ref("sng_entrega_regalias.mail_template_regalia_created")
+        for regalia in self:
+            # A requesting user need not have access to manage other users.
+            managers = self.env["res.users"].sudo().search([
+                ("groups_id", "in", group.ids),
+                ("active", "=", True),
+                ("share", "=", False),
+                ("company_ids", "in", regalia.company_id.ids),
+                ("email", "!=", False),
+            ])
+            for manager in managers:
+                template.with_company(regalia.company_id).with_context(
+                    lang=manager.lang or self.env.user.lang,
+                ).send_mail(
+                    regalia.id,
+                    force_send=False,
+                    email_values={
+                        "email_to": manager.email_formatted,
+                        "email_cc": False,
+                        "recipient_ids": [Command.clear()],
+                    },
+                )
 
     def write(self, vals):
         protected_fields = set(vals) - {"state"}

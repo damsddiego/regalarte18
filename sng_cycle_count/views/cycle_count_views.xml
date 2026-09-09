@@ -80,7 +80,7 @@
                     <notebook>
                         <page string="Líneas de Conteo">
                             <field name="line_ids" readonly="state in ('pending_approval', 'done', 'cancelled')">
-                                <list editable="bottom" decoration-danger="difference_qty != 0" decoration-muted="state == 'cancelled'">
+                                <list editable="bottom" create="false" decoration-danger="difference_qty != 0" decoration-muted="state == 'cancelled'">
                                     <field name="product_id" readonly="1"/>
                                     <field name="location_id" readonly="1"/>
                                     <field name="lot_id" readonly="1" optional="show"/>

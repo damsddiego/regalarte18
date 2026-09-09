@@ -59,6 +59,22 @@ La hace un **Responsable regalías** antes de validar la primera entrega, en
 Mientras esté en borrador podés editarlo libremente: cambiar cliente, almacén,
 líneas o eliminarlo.
 
+### Aviso automático al responsable
+
+Al guardar una regalía nueva en borrador, Odoo prepara un correo para cada usuario
+activo con el permiso **Responsable regalías**, correo registrado y acceso a la
+compañía de la solicitud. El mensaje incluye quién la creó, cliente, almacén,
+fecha, productos, cantidades, notas y el enlace **Revisar regalía**.
+
+El responsable debe abrirla y pulsar **Validar** para aplicar la entrega. Recibir
+el correo no modifica inventario ni contabilidad. Las ediciones posteriores y
+volver a borrador no generan otro aviso.
+
+Para recibirlos, verificá el correo del responsable en **Ajustes → Usuarios** y
+que tenga el permiso indicado. El envío depende de la configuración del servidor
+saliente y del procesamiento de la cola de correo de Odoo, por lo que puede tardar
+unos minutos. Si no hay responsables con correo, el borrador se guarda igualmente.
+
 ## 5. Validar la entrega
 
 Solo el **Responsable regalías** ve el botón **Validar**. Al confirmarlo, en un

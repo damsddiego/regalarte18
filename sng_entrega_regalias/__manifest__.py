@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "SNG Entrega de Regalías",
-    "version": "18.0.1.0.0",
+    "version": "18.0.1.1.1",
     "author": "SNG Cloud",
     "website": "https://sngcloud.com",
     "category": "Inventory",
@@ -15,14 +15,16 @@ Documento para entregar productos de obsequio a clientes:
 - Rebaja inventario mediante una transferencia de salida desde el almacén elegido.
 - Genera y publica un asiento contable al costo del producto (débito gasto de regalías / crédito contrapartida de inventario), con cuentas y diario configurables en Ajustes de Contabilidad.
 - Imprime un comprobante PDF de entrega.
+- Notifica por correo a los responsables al crear una regalía en borrador.
 - Dos niveles de seguridad: Usuario regalías (borradores) y Responsable regalías (valida y configura).
 """,
-    "depends": ["stock", "account"],
+    "depends": ["stock", "account", "mail"],
     "data": [
         "security/groups.xml",
         "security/ir.model.access.csv",
         "data/sequence.xml",
         "data/stock_data.xml",
+        "data/mail_template_data.xml",
         "views/res_config_settings_views.xml",
         "views/regalia_views.xml",
         "report/regalia_report.xml",
