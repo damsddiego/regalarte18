@@ -109,6 +109,33 @@ class SngRuterosVisita(models.Model):
         check_company=True,
         help='Cobro registrado durante la visita (si aplica).',
     )
+
+    # Operaciones de consignación hechas durante la visita. Son independientes
+    # del `resultado` comercial: una misma visita puede tener venta, corte y
+    # entrega a la vez, por eso no se modelan como valores de `resultado`.
+    hubo_entrega_consignacion = fields.Boolean(
+        string='Entrega a consignación',
+        index=True,
+        help='Durante la visita se entregó mercadería en consignación.',
+    )
+    hubo_corte = fields.Boolean(
+        string='Corte de consignación',
+        index=True,
+        help='Durante la visita se hizo un corte (conteo) de consignación.',
+    )
+    hubo_devolucion = fields.Boolean(
+        string='Devolución de consignación',
+        index=True,
+        help='Durante la visita se registró una devolución de consignación.',
+    )
+    picking_ids = fields.Many2many(
+        'stock.picking',
+        'sng_ruteros_visita_picking_rel',
+        'visita_id',
+        'picking_id',
+        string='Movimientos de consignación',
+        help='Entregas y devoluciones de consignación hechas en la visita.',
+    )
     observaciones = fields.Text(string='Observaciones')
     sng_from_app = fields.Boolean(string='Desde app', default=True)
 
@@ -195,6 +222,37 @@ class SngRuterosVisita(models.Model):
             if vendedor and vendedor.is_salesperson:
                 vals['vendedor_id'] = vendedor.id
 
+    @api.model
+    def _sng_sanear_pickings(self, vals_list):
+        """Conserva solo los pickings que existen en este entorno.
+
+        La app manda los ids de Odoo de sus entregas/devoluciones de
+        consignación. Si alguno no existe (otro entorno, picking borrado), el
+        Many2many violaría la FK y se perdería la visita completa, igual que
+        con el vendedor. Se descartan los inválidos en vez de fallar.
+        """
+        Picking = self.env['stock.picking'].sudo()
+        for vals in vals_list:
+            comandos = vals.get('picking_ids')
+            if not comandos:
+                continue
+            ids = []
+            for cmd in comandos:
+                if isinstance(cmd, int):
+                    ids.append(cmd)
+                elif isinstance(cmd, (list, tuple)) and cmd:
+                    if cmd[0] == 6 and len(cmd) > 2:
+                        ids.extend(cmd[2] or [])
+                    elif cmd[0] == 4 and len(cmd) > 1:
+                        ids.append(cmd[1])
+            validos = Picking.browse(ids).exists().ids
+            if len(validos) < len(ids):
+                _logger.info(
+                    'sng.ruteros.visita: se descartaron pickings inexistentes '
+                    '%s (uuid %s)', sorted(set(ids) - set(validos)),
+                    vals.get('sng_uuid'))
+            vals['picking_ids'] = [(6, 0, validos)]
+
     @api.model_create_multi
     def create(self, vals_list):
         """Creación idempotente por sng_uuid: si la tableta reintenta el
@@ -226,6 +284,7 @@ class SngRuterosVisita(models.Model):
         nuevos_vals = [v for _, v in vals_a_crear]
         avisos = self._sng_sanear_vendedor(nuevos_vals)
         self._sng_completar_vendedor(nuevos_vals)
+        self._sng_sanear_pickings(nuevos_vals)
 
         nuevos = super().create(nuevos_vals)
         for indice, aviso in avisos:

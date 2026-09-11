@@ -22,6 +22,12 @@
                 <field name="duracion_min" optional="hide"/>
                 <field name="sale_order_id" optional="show"/>
                 <field name="payment_id" optional="show"/>
+                <field name="hubo_entrega_consignacion" widget="boolean_toggle"
+                       readonly="1" optional="show"/>
+                <field name="hubo_corte" widget="boolean_toggle"
+                       readonly="1" optional="show"/>
+                <field name="hubo_devolucion" widget="boolean_toggle"
+                       readonly="1" optional="hide"/>
                 <field name="company_id" groups="base.group_multi_company"/>
             </list>
         </field>
@@ -53,6 +59,14 @@
                         <field name="lng"/>
                         <field name="distancia_m"/>
                         <field name="en_sitio"/>
+                    </group>
+                    <group string="Consignación" col="4">
+                        <field name="hubo_entrega_consignacion"/>
+                        <field name="hubo_corte"/>
+                        <field name="hubo_devolucion"/>
+                        <field name="picking_ids" widget="many2many_tags"
+                               colspan="4"
+                               invisible="not picking_ids"/>
                     </group>
                     <group>
                         <field name="observaciones" colspan="2"/>
@@ -87,6 +101,13 @@
                 <separator/>
                 <filter name="fuera_sitio" string="Fuera de sitio"
                         domain="[('en_sitio', '=', False)]"/>
+                <separator/>
+                <filter name="con_entrega_consignacion" string="Con entrega a consignación"
+                        domain="[('hubo_entrega_consignacion', '=', True)]"/>
+                <filter name="con_corte" string="Con corte de consignación"
+                        domain="[('hubo_corte', '=', True)]"/>
+                <filter name="con_devolucion" string="Con devolución de consignación"
+                        domain="[('hubo_devolucion', '=', True)]"/>
                 <group expand="0" string="Agrupar por">
                     <filter name="group_vendedor" string="Vendedor"
                             context="{'group_by': 'vendedor_id'}"/>
