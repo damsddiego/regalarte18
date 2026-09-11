@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "SNG Notes on Sale Order Lines",
-    "version": "18.0.1.0.0",
+    "version": "18.0.1.1.0",
     "category": "Sales",
     "summary": "Agregar notas opcionales en las lineas de cotizaciones y pedidos",
     "description": """

@@ -33,7 +33,7 @@
         <li>Diferencia neta: <strong><t t-out="format_amount(object.total_difference_value, object.currency_id)"/></strong></li>
     </ul>
     <p>
-        <a t-att-href="'%s/odoo/sng.cycle.count/%s' % (object.get_base_url(), object.id)"
+        <a t-att-href="'%s/odoo/sng.cycle.count/%s' % (object.env['ir.config_parameter'].sudo().get_param('web.base.url'), object.id)"
            style="background-color: #714B67; padding: 8px 16px; text-decoration: none; color: #fff; border-radius: 4px;">
             Revisar conteo
         </a>
