@@ -8,6 +8,24 @@ _logger = logging.getLogger(__name__)
 LOGIN_TELEVENTAS = 'ventas1@regalartecr.com'
 LOGINS_GERENCIA = ('admin1@regalartecr.com', 'gerencia@regalartecr.com')
 
+# Clientes genéricos de tiquete: uno por agente/canal (OCASIONAL ALLAN
+# MAYORISTA TIQUETE...) más el cliente ocasional público.
+PATRONES_GENERICOS = ('ocasional %', 'cliente ocasional%', 'cliente ocacional%')
+
+
+def marcar_clientes_genericos(env):
+    """Marca los clientes genéricos para que no entren en la matriz."""
+    Partner = env['res.partner'].with_context(active_test=False)
+    dominio = ['|'] * (len(PATRONES_GENERICOS) - 1) + [
+        ('name', '=ilike', patron) for patron in PATRONES_GENERICOS]
+    genericos = Partner.search(
+        [('sng_excluir_matriz', '=', False)] + dominio)
+    genericos.write({'sng_excluir_matriz': True})
+    _logger.info(
+        'sng_control_visitas: %s clientes genéricos excluidos de la matriz: %s',
+        len(genericos), ', '.join(genericos.mapped('name')))
+    return genericos
+
 
 def post_init_hook(env):
     """Configuración inicial con los datos reales de Regalarte.
@@ -41,6 +59,8 @@ def post_init_hook(env):
             route.sng_tipo_atencion = 'oficina'
         elif 'INACTIVO' in nombre or 'INCOBRABLE' in nombre:
             route.sng_frecuencia_visita = 'sin_visita'
+
+    marcar_clientes_genericos(env)
 
     # Matriz del mes actual para que el menú no aparezca vacío.
     hoy = fields.Date.today()

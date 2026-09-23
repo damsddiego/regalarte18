@@ -205,8 +205,11 @@ class SngControlVisitasLinea(models.Model):
 
         Se excluyen los clientes con crédito bloqueado desde CxC (cerrados
         por mora): no se les puede vender, así que no deben aparecer como
-        pendientes de visita ni generar seguimientos de televentas."""
+        pendientes de visita ni generar seguimientos de televentas. Tampoco
+        entran los marcados para excluir (clientes genéricos de tiquete) ni
+        el contacto de las propias compañías."""
         Partner = self.env['res.partner']
+        companias = self.env['res.company'].sudo().search([]).partner_id
         partners = Partner.search([
             ('customer_rank', '>', 0),
             ('active', '=', True),
@@ -215,6 +218,8 @@ class SngControlVisitasLinea(models.Model):
             ('is_salesperson', '=', False),
             ('user_ids', '=', False),
             ('sng_credit_blocked', '=', False),
+            ('sng_excluir_matriz', '=', False),
+            ('id', 'not in', companias.ids),
             '|', ('company_id', '=', company.id), ('company_id', '=', False),
         ])
         if not partners:

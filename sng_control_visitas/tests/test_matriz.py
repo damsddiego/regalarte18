@@ -181,6 +181,28 @@ class TestMatriz(ControlVisitasCommon):
         self.assertFalse(self._linea(self.cliente2))
         self.assertTrue(self._linea(self.cliente))
 
+    def test_excluido_y_compania_fuera_de_matriz(self):
+        self.cliente2.sng_excluir_matriz = True
+        self.assertFalse(self._linea(self.cliente2))
+        self.assertFalse(self._linea(self.company.partner_id))
+        self.assertTrue(self._linea(self.cliente))
+
+    def test_marcar_clientes_genericos(self):
+        from ..hooks import marcar_clientes_genericos
+        Partner = self.env['res.partner']
+        tiquete = Partner.create({
+            'name': 'OCASIONAL AGENTE MAYORISTA TIQUETE', 'customer_rank': 1})
+        publico = Partner.create({
+            'name': 'Cliente ocacional Publico', 'customer_rank': 1})
+        # "ocasional" en medio del nombre no es un cliente genérico
+        normal = Partner.create({
+            'name': 'Tienda La Ocasional', 'customer_rank': 1})
+        marcar_clientes_genericos(self.env)
+        self.assertTrue(tiquete.sng_excluir_matriz)
+        self.assertTrue(publico.sng_excluir_matriz)
+        self.assertFalse(normal.sng_excluir_matriz)
+        self.assertFalse(self._linea(tiquete))
+
     def test_resumen_gerencial_publica(self):
         self.Linea._sng_cron_resumen_gerencial()
         channel = self.env.ref('sng_control_visitas.channel_control_visitas')

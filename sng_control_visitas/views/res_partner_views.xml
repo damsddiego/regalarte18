@@ -25,6 +25,7 @@
                         <group string="Atención">
                             <field name="sng_tipo_atencion"/>
                             <field name="sng_frecuencia_visita"/>
+                            <field name="sng_excluir_matriz"/>
                         </group>
                         <group string="Fechas">
                             <field name="sng_fecha_ultima_visita"/>

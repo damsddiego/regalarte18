@@ -38,6 +38,13 @@ class ResPartner(models.Model):
         help='Por defecto la de la ruta. Se puede fijar por cliente '
              '(por ejemplo "Bimensual").',
     )
+    sng_excluir_matriz = fields.Boolean(
+        string='Excluir de la matriz de visitas',
+        tracking=True,
+        help='Clientes genéricos (tiquetes OCASIONAL, cliente ocasional '
+             'público) u otros que no se atienden por ruta ni televentas: '
+             'no aparecen en la matriz ni generan pendientes de televentas.',
+    )
     sng_fecha_ultima_visita = fields.Date(
         string='Última visita',
         compute='_compute_sng_fechas_visita',
