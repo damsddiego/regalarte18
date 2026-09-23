@@ -60,7 +60,9 @@
                 <field name="requiere_seguimiento_televentas" optional="show" widget="boolean_toggle"/>
                 <field name="accion_cerrada" optional="hide"/>
                 <field name="sin_comentario" optional="hide"/>
-                <field name="sales_route_id" optional="hide"/>
+            </field>
+            <field name="partner_id" position="after">
+                <field name="sales_route_id" optional="show"/>
             </field>
         </field>
     </record>

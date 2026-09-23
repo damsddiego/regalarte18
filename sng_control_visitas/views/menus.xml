@@ -1,5 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Pantalla de entrada de la app Ruteros según el grupo. Sin acción
+         propia el menú abría Recibos, que para televentas y gerencia sale
+         vacío; cajeros y contabilidad siguen entrando a Recibos. -->
+    <record id="action_sng_ruteros_inicio" model="ir.actions.server">
+        <field name="name">Ruteros</field>
+        <field name="model_id" ref="base.model_res_users"/>
+        <field name="state">code</field>
+        <field name="groups_id" eval="[(6, 0, [
+            ref('account.group_account_invoice'),
+            ref('sng_control_visitas.group_control_visitas_user')])]"/>
+        <field name="code">
+if env.user.has_group('sng_control_visitas.group_control_visitas_manager'):
+    xmlid = 'sng_control_visitas.action_sng_control_visitas_linea'
+elif env.user.has_group('sng_control_visitas.group_control_visitas_user'):
+    xmlid = 'sng_control_visitas.action_sng_televentas_seguimiento'
+else:
+    xmlid = 'sng_ruteros_pagos.action_ruteros_recibos'
+action = env['ir.actions.act_window']._for_xml_id(xmlid)
+        </field>
+    </record>
+
+    <record id="sng_ruteros_pagos.menu_ruteros_root" model="ir.ui.menu">
+        <field name="action" ref="action_sng_ruteros_inicio"/>
+    </record>
+
     <menuitem id="menu_sng_televentas_seguimiento"
               name="Seguimiento Televentas"
               parent="sng_ruteros_pagos.menu_ruteros_root"

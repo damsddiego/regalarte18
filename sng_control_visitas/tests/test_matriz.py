@@ -174,6 +174,13 @@ class TestMatriz(ControlVisitasCommon):
         self.assertEqual(k0['pct_cobertura_visitas'], 0)
         self.assertEqual(k0['total_clientes'], 0)
 
+    def test_credito_bloqueado_fuera_de_matriz(self):
+        self.assertTrue(self._linea(self.cliente2))
+        self.cliente2.sng_credit_blocked = True
+        # la regeneración borra la línea que ya existía para el período
+        self.assertFalse(self._linea(self.cliente2))
+        self.assertTrue(self._linea(self.cliente))
+
     def test_resumen_gerencial_publica(self):
         self.Linea._sng_cron_resumen_gerencial()
         channel = self.env.ref('sng_control_visitas.channel_control_visitas')

@@ -201,7 +201,11 @@ class SngControlVisitasLinea(models.Model):
     def _sng_clientes_maestros(self, company):
         """Población de la matriz: clientes activos con ventas, misma base
         que el Reporte Clientes por Ruta pero sin excluir a los que también
-        son proveedores (varios clientes grandes lo son)."""
+        son proveedores (varios clientes grandes lo son).
+
+        Se excluyen los clientes con crédito bloqueado desde CxC (cerrados
+        por mora): no se les puede vender, así que no deben aparecer como
+        pendientes de visita ni generar seguimientos de televentas."""
         Partner = self.env['res.partner']
         partners = Partner.search([
             ('customer_rank', '>', 0),
@@ -210,6 +214,7 @@ class SngControlVisitasLinea(models.Model):
             ('parent_id', '=', False),
             ('is_salesperson', '=', False),
             ('user_ids', '=', False),
+            ('sng_credit_blocked', '=', False),
             '|', ('company_id', '=', company.id), ('company_id', '=', False),
         ])
         if not partners:
