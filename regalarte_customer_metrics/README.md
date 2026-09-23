@@ -247,6 +247,27 @@ El archivo exporta por compania:
 - cobranzas
 - fecha de ultima actualizacion
 
+## Reporte PDF por cliente
+
+Desde el formulario de una métrica en el dashboard, usar **Imprimir PDF**.
+También está disponible **Imprimir → Métricas del cliente** en el formulario
+y al seleccionar registros de la lista.
+
+El reporte incluye cliente, compañía, vendedor, país, moneda, DPP, última
+actualización y todos los indicadores de ventas y cobranza del formulario.
+Incluye el logo, nombre, dirección, identificación, teléfono, correo, sitio web
+y pie de página configurados en la compañía de cada registro, incluso al imprimir una selección
+de varias compañías. Los importes se presentan en la moneda de la métrica.
+El membrete se integra en el cuerpo del documento A4 para funcionar también
+con instalaciones de wkhtmltopdf que no admiten encabezados externos.
+
+La impresión utiliza las métricas guardadas, sin recalcularlas ni guardar un PDF
+en caché. Para obtener cifras actualizadas, usar primero **Actualizar Métricas**.
+
+Para habilitar esta opción en una base existente, actualizar el módulo
+`regalarte_customer_metrics`. El cambio agrega XML y no requiere reiniciar el
+servicio.
+
 ## Multi-compania
 
 Este fue el cambio mas importante de la fase final.

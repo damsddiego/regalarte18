@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Conteos Cíclicos Diarios",
-    "version": "18.0.2.3.2",
+    "version": "18.0.3.0.0",
     "category": "Inventory",
     "summary": "Automatización de conteos cíclicos diarios con selección inteligente y conciliación en tiempo real",
     "author": "SNG",
     "license": "AGPL-3",
-    "depends": ["stock", "product", "mail", "report_xlsx", "sng_analisis_compras"],
+    "depends": ["stock", "product", "mail", "report_xlsx", "sng_analisis_compras",
+                "resource", "sng_inventory_adjustment_history"],
     "data": [
         "security/security.xml",
         "security/ir.model.access.csv",
@@ -17,6 +18,7 @@
         "wizard/cycle_count_return_wizard_views.xml",
         "wizard/cycle_count_add_product_wizard_views.xml",
         "views/cycle_count_views.xml",
+        "views/cycle_control_views.xml",
         "report/report_discrepancy_pdf.xml",
         "report/report_actions.xml",
     ],

@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="paperformat_customer_metric" model="report.paperformat">
+        <field name="name">Métricas del cliente A4</field>
+        <field name="format">A4</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">15</field>
+        <field name="margin_bottom">15</field>
+        <field name="margin_left">12</field>
+        <field name="margin_right">12</field>
+        <field name="header_spacing">0</field>
+        <field name="dpi">90</field>
+    </record>
+    <record id="action_report_customer_metric" model="ir.actions.report">
+        <field name="name">Métricas del cliente</field>
+        <field name="model">regalarte.customer.metric</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">regalarte_customer_metrics.report_customer_metric</field>
+        <field name="report_file">regalarte_customer_metrics.report_customer_metric</field>
+        <field name="binding_model_id" ref="model_regalarte_customer_metric"/>
+        <field name="binding_type">report</field>
+        <field name="paperformat_id" ref="paperformat_customer_metric"/>
+        <field name="groups_id" eval="[(4, ref('account.group_account_readonly')), (4, ref('account.group_account_invoice'))]"/>
+        <field name="print_report_name">'Métricas - %s' % (object.partner_id.name or 'Cliente')</field>
+    </record>
+
+    <template id="report_customer_metric">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="regalarte_customer_metrics.report_customer_metric_document"/>
+            </t>
+        </t>
+    </template>
+
+    <template id="report_customer_metric_document">
+        <!-- Resolve the letterhead separately for each customer/company record. -->
+        <t t-set="company" t-value="o.company_id"/>
+        <!-- Keep the letterhead in the body: unpatched wkhtmltopdf ignores external headers. -->
+        <div class="article" t-att-data-oe-model="o._name" t-att-data-oe-id="o.id"
+             t-att-data-oe-lang="o.env.context.get('lang')">
+            <div class="page">
+                <table class="table table-borderless mb-4" style="page-break-inside: avoid;">
+                    <tbody>
+                        <tr>
+                            <td style="width: 30%; vertical-align: top;">
+                                <img t-if="company.logo" t-att-src="image_data_uri(company.logo)"
+                                     alt="Logo de la compañía" style="max-width: 170px; max-height: 100px;"/>
+                            </td>
+                            <td style="width: 70%; vertical-align: top;">
+                                <strong t-field="company.name"/>
+                                <div t-field="company.partner_id"
+                                     t-options='{"widget": "contact", "fields": ["address"], "no_marker": True}'/>
+                                <div t-if="company.vat">Identificación: <span t-field="company.vat"/></div>
+                                <div t-if="company.phone">Teléfono: <span t-field="company.phone"/></div>
+                                <div t-if="company.email"><span t-field="company.email"/></div>
+                                <div t-if="company.website"><span t-field="company.website"/></div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h2>Métricas del cliente</h2>
+                <h3 class="mb-3" t-field="o.partner_id.name"/>
+                <table class="table table-sm table-borderless mb-4">
+                    <tbody>
+                        <tr>
+                            <td><strong>Compañía</strong></td>
+                            <td><span t-field="o.company_id.name"/></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Vendedor</strong></td>
+                            <td>
+                                <span t-if="o.salesperson_partner_id" t-field="o.salesperson_partner_id.name"/>
+                                <span t-else="">—</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>País</strong></td>
+                            <td>
+                                <span t-if="o.country_id" t-field="o.country_id.name"/>
+                                <span t-else="">—</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Moneda</strong></td>
+                            <td><span t-field="o.currency_id.name"/></td>
+                        </tr>
+                        <tr>
+                            <td><strong>DPP (días promedio de pago)</strong></td>
+                            <td><span t-field="o.customer_dpp_days"/></td>
+                        </tr>
+                        <tr>
+                            <td><strong>Última actualización</strong></td>
+                            <td>
+                                <span t-if="o.customer_metrics_last_update" t-field="o.customer_metrics_last_update"/>
+                                <span t-else="">Sin actualización registrada</span>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4>Ventas</h4>
+                <table class="table table-sm mb-4" style="page-break-inside: avoid;">
+                    <tbody>
+                        <tr>
+                            <td>Venta mes anterior</td>
+                            <td class="text-end text-nowrap"><span t-field="o.customer_previous_month_sales"/></td>
+                        </tr>
+                        <tr>
+                            <td>Venta mes actual</td>
+                            <td class="text-end text-nowrap"><span t-field="o.customer_current_month_sales"/></td>
+                        </tr>
+                        <tr>
+                            <td>Promedio trimestral</td>
+                            <td class="text-end text-nowrap"><span t-field="o.customer_quarterly_avg_sales"/></td>
+                        </tr>
+                        <tr>
+                            <td>Promedio semestral</td>
+                            <td class="text-end text-nowrap"><span t-field="o.customer_semiannual_avg_sales"/></td>
+                        </tr>
+                        <tr>
+                            <td>Promedio anual</td>
+                            <td class="text-end text-nowrap"><span t-field="o.customer_annual_avg_sales"/></td>
+                        </tr>
+                        <tr class="fw-bold">
+                            <td>Venta acumulada</td>
+                            <td class="text-end text-nowrap"><span t-field="o.customer_total_sales"/></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h4>Cobranza</h4>
+                <table class="table table-sm" style="page-break-inside: avoid;">
+                    <tbody>
+                        <tr>
+                            <td>Promedio cobranza mensual</td>
+                            <td class="text-end text-nowrap"><span t-field="o.customer_monthly_collection_avg"/></td>
+                        </tr>
+                        <tr>
+                            <td>Promedio cobranza trimestral</td>
+                            <td class="text-end text-nowrap"><span t-field="o.customer_quarterly_collection_avg"/></td>
+                        </tr>
+                    </tbody>
+                </table>
+                <p class="text-muted small mt-3">
+                    Los indicadores corresponden a la última actualización registrada.
+                </p>
+                <div t-if="company.report_footer" class="text-muted small border-top pt-2 mt-4"
+                     t-field="company.report_footer"/>
+            </div>
+        </div>
+    </template>
+</odoo>

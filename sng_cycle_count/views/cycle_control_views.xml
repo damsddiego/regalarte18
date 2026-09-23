@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_cycle_control_form" model="ir.ui.view">
+        <field name="name">sng.cycle.count.control.form</field>
+        <field name="model">sng.cycle.count</field>
+        <field name="inherit_id" ref="view_cycle_count_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='config_id']" position="after">
+                <field name="warehouse_id" readonly="id" required="1"/>
+                <field name="wip_warehouse_ids" widget="many2many_tags" optional="hide"/>
+                <field name="wip_started"/>
+                <field name="cancellation_reason" groups="sng_cycle_count.group_cycle_count_management" readonly="state in ('done', 'cancelled')"/>
+            </xpath>
+            <xpath expr="//button[@name='action_copy_theoretical']" position="attributes">
+                <attribute name="groups">sng_cycle_count.group_cycle_count_supervisor</attribute>
+            </xpath>
+            <xpath expr="//button[@name='action_open_add_product_wizard']" position="attributes">
+                <attribute name="groups">sng_cycle_count.group_cycle_count_supervisor</attribute>
+            </xpath>
+            <xpath expr="//button[@name='action_cancel']" position="attributes">
+                <attribute name="groups">sng_cycle_count.group_cycle_count_management</attribute>
+                <attribute name="invisible">state in ('done', 'cancelled')</attribute>
+            </xpath>
+            <xpath expr="//button[@name='action_submit_for_approval']" position="attributes">
+                <attribute name="string">Enviar a Jefatura</attribute>
+                <attribute name="confirm">El conteo se enviará a revisión de Jefatura.</attribute>
+            </xpath>
+            <xpath expr="//button[@name='action_open_return_wizard']" position="attributes">
+                <attribute name="groups">sng_cycle_count.group_cycle_count_supervisor</attribute>
+                <attribute name="invisible">state not in ('pending_review', 'pending_approval')</attribute>
+            </xpath>
+            <xpath expr="//header/field[@name='state']" position="before">
+                <button name="action_send_management" string="Enviar a Gerencia" type="object" class="btn-primary"
+                        groups="sng_cycle_count.group_cycle_count_supervisor" invisible="state != 'pending_review'"/>
+            </xpath>
+            <xpath expr="//header/field[@name='state']" position="attributes">
+                <attribute name="statusbar_visible">draft,in_progress,pending_review,pending_approval,done</attribute>
+            </xpath>
+            <xpath expr="//field[@name='line_ids']/list" position="attributes">
+                <attribute name="decoration-danger">is_overdue</attribute>
+                <attribute name="decoration-warning">is_warning</attribute>
+            </xpath>
+            <xpath expr="//field[@name='line_ids']//field[@name='counted_qty']" position="attributes">
+                <attribute name="readonly">parent.state not in ('draft', 'in_progress')</attribute>
+            </xpath>
+            <xpath expr="//field[@name='line_ids']//field[@name='notes']" position="attributes">
+                <attribute name="readonly">parent.state not in ('draft', 'in_progress')</attribute>
+            </xpath>
+            <xpath expr="//field[@name='line_ids']//field[@name='state']" position="after">
+                <field name="review_state" widget="badge"/>
+                <field name="review_reason" groups="sng_cycle_count.group_cycle_count_supervisor"/>
+                <field name="deadline_at"/>
+                <field name="is_overdue" column_invisible="True"/>
+                <field name="is_warning" column_invisible="True"/>
+                <button name="action_review_approve" string="Visto bueno" type="object" icon="fa-check-square-o"
+                        groups="sng_cycle_count.group_cycle_count_supervisor" invisible="review_state != 'review' or state != 'counted'"/>
+                <button name="action_request_recount" string="Recontar" type="object" icon="fa-repeat"
+                        groups="sng_cycle_count.group_cycle_count_supervisor" invisible="state != 'counted'"/>
+                <button name="action_open_control" string="Detalle y auditoría" type="object" icon="fa-external-link"/>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_cycle_line_control_form" model="ir.ui.view">
+        <field name="name">sng.cycle.count.line.control.form</field>
+        <field name="model">sng.cycle.count.line</field>
+        <field name="arch" type="xml">
+            <form create="0" delete="0">
+                <header>
+                    <button name="action_send_for_review" string="Enviar a revisión" type="object" invisible="state != 'counted'"/>
+                    <button name="action_review_approve" string="Visto bueno" type="object" groups="sng_cycle_count.group_cycle_count_supervisor" invisible="state != 'counted' or review_state != 'review'"/>
+                    <button name="action_request_recount" string="Solicitar reconteo" type="object" groups="sng_cycle_count.group_cycle_count_supervisor" invisible="state != 'counted'"/>
+                    <field name="review_state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <group>
+                        <field name="cycle_count_id" readonly="1"/>
+                        <field name="cycle_state" invisible="1"/>
+                        <field name="state" readonly="1"/>
+                        <field name="product_id"/><field name="location_id"/>
+                        <field name="theoretical_qty" readonly="1"/>
+                        <field name="counted_qty" readonly="cycle_state not in ('draft', 'in_progress')"/>
+                        <field name="difference_qty"/>
+                        <field name="notes" readonly="cycle_state not in ('draft', 'in_progress')"/>
+                        <field name="review_reason" groups="sng_cycle_count.group_cycle_count_supervisor" readonly="cycle_state in ('done', 'cancelled')"/>
+                    </group>
+                    <group string="Seguimiento">
+                        <field name="first_difference_at"/><field name="deadline_at"/>
+                        <field name="is_warning"/><field name="is_overdue"/>
+                        <field name="counted_by_ids" widget="many2many_tags"/>
+                        <field name="reviewed_by_id"/><field name="reviewed_at"/>
+                        <field name="applied_by_id"/><field name="applied_at"/>
+                    </group>
+                    <field name="capture_ids">
+                        <list create="0" edit="0" delete="0">
+                            <field name="captured_at"/><field name="user_id"/><field name="event"/>
+                            <field name="theoretical_qty"/><field name="quantity"/><field name="reason"/>
+                        </list>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="view_cycle_control_search" model="ir.ui.view">
+        <field name="name">sng.cycle.count.control.search</field>
+        <field name="model">sng.cycle.count</field>
+        <field name="inherit_id" ref="view_cycle_count_search"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <field name="warehouse_id"/>
+                <separator/>
+                <filter name="pending_review" string="Revisión de Jefatura" domain="[('state', '=', 'pending_review')]"/>
+                <filter name="overdue" string="Conteos vencidos" domain="[('line_ids.is_overdue', '=', True)]"/>
+            </xpath>
+        </field>
+    </record>
+    <record id="action_cycle_jefatura" model="ir.actions.act_window">
+        <field name="name">Revisión de Jefatura</field>
+        <field name="res_model">sng.cycle.count</field>
+        <field name="view_mode">list,form</field>
+        <field name="domain">[('state', '=', 'pending_review')]</field>
+    </record>
+    <menuitem id="menu_cycle_jefatura" name="Revisión de Jefatura" parent="menu_cycle_count_root"
+              action="action_cycle_jefatura" sequence="12" groups="sng_cycle_count.group_cycle_count_supervisor"/>
+    <record id="view_quant_cycle_control" model="ir.ui.view">
+        <field name="name">stock.quant.cycle.control</field>
+        <field name="model">stock.quant</field>
+        <field name="inherit_id" ref="sng_inventory_adjustment_history.view_quant_inventory_approval"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="default_order">sng_cycle_deadline, location_id, product_id, id</attribute>
+                <attribute name="decoration-danger">sng_cycle_overdue</attribute>
+                <attribute name="decoration-warning">sng_cycle_warning or (not sng_cycle_line_id and is_outdated)</attribute>
+            </xpath>
+            <xpath expr="//field[@name='inventory_quantity']" position="after">
+                <field name="sng_cycle_line_id" column_invisible="True"/>
+                <field name="sng_cycle_overdue" column_invisible="True"/>
+                <field name="sng_cycle_warning" column_invisible="True"/>
+                <field name="sng_cycle_id" optional="show"/>
+                <field name="sng_cycle_difference" optional="show"/>
+                <field name="sng_cycle_review" widget="badge" optional="show"/>
+                <field name="sng_cycle_deadline" optional="show"/>
+                <button name="action_cycle_open_line" type="object" string="Revisar cíclico" icon="fa-external-link" invisible="not sng_cycle_line_id"/>
+            </xpath>
+            <xpath expr="//button[@name='action_apply_inventory']" position="attributes">
+                <attribute name="invisible">not inventory_quantity_set or sng_cycle_line_id</attribute>
+            </xpath>
+            <xpath expr="//list/button[@name='action_request_inventory_approval']" position="attributes">
+                <attribute name="invisible">not inventory_quantity_set or sng_cycle_line_id</attribute>
+            </xpath>
+            <xpath expr="//list/button[@name='action_set_inventory_quantity']" position="attributes">
+                <attribute name="groups">sng_cycle_count.group_cycle_count_supervisor</attribute>
+                <attribute name="invisible">inventory_quantity_set or sng_cycle_line_id</attribute>
+            </xpath>
+            <xpath expr="//list/button[@name='action_clear_inventory_quantity']" position="attributes">
+                <attribute name="invisible">not inventory_quantity_set or sng_cycle_line_id</attribute>
+            </xpath>
+            <xpath expr="//header" position="inside">
+                <button name="action_cycle_send_review" type="object" string="Enviar cíclicos a revisión" groups="sng_cycle_count.group_cycle_count_operator"/>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_quant_cycle_search" model="ir.ui.view">
+        <field name="name">stock.quant.cycle.search</field>
+        <field name="model">stock.quant</field>
+        <field name="inherit_id" ref="stock.quant_search_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//search" position="inside">
+                <separator/>
+                <filter name="cycle_pending" string="Cíclicos con Diferencia Pendiente" domain="[('sng_cycle_pending', '=', True)]"/>
+                <separator/>
+                <filter name="cycle_overdue" string="Conteos Vencidos" domain="[('sng_cycle_line_id.is_overdue', '=', True)]"/>
+            </xpath>
+        </field>
+    </record>
+    <record id="view_warehouse_cycle_control" model="ir.ui.view">
+        <field name="name">stock.warehouse.cycle.control</field>
+        <field name="model">stock.warehouse</field>
+        <field name="inherit_id" ref="stock.view_warehouse"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet" position="inside">
+                <group string="Control de conteos cíclicos" groups="stock.group_stock_manager">
+                    <field name="cycle_supervisor_id"/>
+                    <field name="cycle_calendar_id"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

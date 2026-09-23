@@ -29,8 +29,10 @@ al aplicar, para almacenes incluidos en grupos, como en el módulo original.
 - **Gerencia: aprobar y aplicar ajustes de inventario**: consulta todas las
   solicitudes de sus compañías, ve costos, aprueba, rechaza y puede aplicar
   ajustes manuales. Es un permiso independiente; ser administrador de Inventario
-  no lo concede automáticamente. Puede aprobar solicitudes propias, según el
-  criterio de separación únicamente por permisos.
+  no lo concede automáticamente. No puede aprobar ni aplicar conteos en los que
+  participó. Se conserva al capturador real aunque cambie el responsable asignado.
+  La edición con aplicación automática requiere usar cantidad contada y aprobación
+  independiente; no permite capturar y aplicar en una sola operación.
 
 El control de aplicación manual cubre todos los almacenes, aunque no tengan
 grupo. Se mantienen las operaciones internas con `sudo()`: por ejemplo,
@@ -64,7 +66,7 @@ no aplica el ajuste directamente: requiere autenticación y permiso de Gerencia.
 
 ## Activación
 
-Actualizar `sng_inventory_adjustment_history` a **18.0.2.0.0** y cargar el nuevo
+Actualizar `sng_inventory_adjustment_history` a **18.0.2.1.0** y cargar el nuevo
 código en los procesos de Odoo. Coordinar con Diego cualquier reinicio del
 servicio. Asignar el permiso de Gerencia a los usuarios aprobadores; el módulo
 no concede ese permiso a ningún usuario de producción automáticamente.

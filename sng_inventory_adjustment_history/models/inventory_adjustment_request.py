@@ -66,6 +66,11 @@ class InventoryAdjustmentRequest(models.Model):
         "res.users", string="Registrado por", required=True, readonly=True,
         default=lambda self: self.env.user,
     )
+    counted_by_ids = fields.Many2many(
+        "res.users", "sng_request_counter_rel", "request_id", "user_id",
+        string="Participantes del conteo", readonly=True, copy=False,
+    )
+    last_counted_by_id = fields.Many2one("res.users", string="Último capturador", readonly=True, copy=False)
     submitted_at = fields.Datetime(string="Solicitado el", readonly=True)
     reviewed_by_id = fields.Many2one("res.users", string="Revisado por", readonly=True)
     reviewed_at = fields.Datetime(string="Revisado el", readonly=True)
@@ -122,6 +127,8 @@ class InventoryAdjustmentRequest(models.Model):
                 previous_quantity=quant.quantity,
                 unit_cost=quant.sudo()._sng_get_adjustment_unit_cost(),
                 requested_by_id=self.env.uid,
+                counted_by_ids=[fields.Command.set((quant.sng_counted_by_ids | self.env.user).ids)],
+                last_counted_by_id=self.env.uid,
                 state="draft",
                 submitted_at=False,
                 reviewed_by_id=False,
@@ -139,6 +146,7 @@ class InventoryAdjustmentRequest(models.Model):
             "product_id", "location_id", "warehouse_id", "difference_quantity",
             "estimated_cost", "move_ids", "history_ids", "currency_id", "uom_id",
             "lot_id", "package_id", "owner_id",
+            "counted_by_ids", "last_counted_by_id",
         }
         if protected.intersection(vals):
             raise AccessError(_("Use las acciones de la solicitud para cambiar su estado."))
@@ -149,7 +157,30 @@ class InventoryAdjustmentRequest(models.Model):
             self._check_approver()
             if any(request.state not in ("draft", "pending") for request in self):
                 raise UserError(_("La revisión finalizada no puede modificarse."))
-        return super().write(vals)
+        result = super().write(vals)
+        if "counted_quantity" in vals:
+            super(InventoryAdjustmentRequest, self.sudo()).write({
+                "counted_by_ids": [fields.Command.link(self.env.uid)],
+                "last_counted_by_id": self.env.uid,
+            })
+        return result
+
+    @api.model
+    def _create_from_quants(self, quants):
+        """Preserve physical capturers when another user merely submits the request."""
+        quants.check_access("write")
+        requests = self.browse()
+        for quant in quants:
+            if not quant.sng_counted_by_ids:
+                raise UserError(_("Registre nuevamente la cantidad para identificar al capturador."))
+            request = self.create({"quant_id": quant.id, "counted_quantity": quant.inventory_quantity,
+                                   "reason": quant.sng_adjustment_reason})
+            super(InventoryAdjustmentRequest, request.sudo()).write({
+                "counted_by_ids": [fields.Command.set(quant.sng_counted_by_ids.ids)],
+                "last_counted_by_id": quant.sng_last_counted_by_id.id,
+            })
+            requests |= request
+        return requests
 
     def _check_approver(self):
         self.env["stock.quant"]._sng_check_inventory_approval_access()
@@ -205,6 +236,8 @@ class InventoryAdjustmentRequest(models.Model):
     def action_approve(self):
         self._check_approver()
         self._lock()
+        if any(self.env.user in (request.counted_by_ids or request.requested_by_id) for request in self):
+            raise AccessError(_("Quien contó o recontó no puede aprobar ese mismo ajuste."))
         self._check_stock_unchanged()
         if any(request.state != "pending" for request in self):
             raise UserError(_("Solo puede aprobar solicitudes pendientes."))
@@ -219,7 +252,8 @@ class InventoryAdjustmentRequest(models.Model):
             )
             quant.write({
                 "inventory_quantity": request.counted_quantity,
-                "user_id": request.requested_by_id.id,
+                "user_id": request.last_counted_by_id.id or request.requested_by_id.id,
+                "sng_last_counted_by_id": request.last_counted_by_id.id or request.requested_by_id.id,
             })
             quant._apply_inventory()
             super(InventoryAdjustmentRequest, request).write({

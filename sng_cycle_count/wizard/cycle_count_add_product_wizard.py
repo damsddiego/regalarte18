@@ -82,6 +82,8 @@ class CycleCountAddProductWizard(models.TransientModel):
     def action_confirm(self):
         self.ensure_one()
         count = self.cycle_count_id
+        count._check_supervisor()
+        count._check_capacity(count.wip_warehouse_ids)
         if count.state not in ("draft", "in_progress"):
             raise UserError(_("Solo puede agregar productos a un conteo en borrador o en progreso."))
         if self.allowed_location_ids and self.location_id not in self.allowed_location_ids:
@@ -103,7 +105,7 @@ class CycleCountAddProductWizard(models.TransientModel):
             [
                 ("quant_id", "=", quant.id),
                 ("cycle_count_id", "!=", count.id),
-                ("cycle_count_id.state", "in", ("draft", "in_progress", "pending_approval")),
+                ("cycle_count_id.state", "in", ("draft", "in_progress", "pending_review", "pending_approval")),
             ],
             limit=1,
         )
@@ -118,8 +120,6 @@ class CycleCountAddProductWizard(models.TransientModel):
                 "quant_id": quant.id,
                 "theoretical_qty": quant.quantity,
                 "counted_qty": self.counted_qty,
-                "state": "counted",
-                "count_date": fields.Datetime.now(),
                 "is_manual": True,
                 "notes": self.notes,
             }

@@ -9,6 +9,25 @@ class StockQuant(models.Model):
     _inherit = "stock.quant"
 
     sng_adjustment_reason = fields.Text(string="Motivo del ajuste")
+    sng_counted_by_ids = fields.Many2many(
+        "res.users", "sng_quant_counter_rel", "quant_id", "user_id",
+        string="Participantes del conteo manual", readonly=True, copy=False,
+    )
+    sng_last_counted_by_id = fields.Many2one("res.users", readonly=True, copy=False)
+
+    def _sng_record_capture(self):
+        for quant in self:
+            super(StockQuant, quant.sudo()).write({
+                "sng_counted_by_ids": [fields.Command.link(self.env.uid)],
+                "sng_last_counted_by_id": self.env.uid,
+            })
+
+    def _sng_check_independent_capture(self):
+        for quant in self:
+            if not quant.sng_counted_by_ids:
+                raise UserError(_("Registre nuevamente la cantidad para identificar al capturador."))
+            if self.env.user in quant.sng_counted_by_ids:
+                raise AccessError(_("Quien contó o recontó no puede aplicar ese mismo ajuste."))
 
     def _sng_check_inventory_approval_access(self):
         if not self.env.su and not self.env.user.has_group(
@@ -21,9 +40,15 @@ class StockQuant(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        if not self.env.su and any("inventory_diff_quantity" in vals for vals in vals_list):
+            raise AccessError(_("La diferencia de inventario la calcula el servidor."))
+        if not self.env.su and any({"sng_counted_by_ids", "sng_last_counted_by_id"}.intersection(v) for v in vals_list):
+            raise AccessError(_("La identidad del capturador la registra el servidor."))
         # Check before native stock.quant.create() escalates to sudo in inventory mode.
         if any({"inventory_quantity_auto_apply", "quantity"}.intersection(vals) for vals in vals_list):
             self._sng_check_inventory_approval_access()
+            if not self.env.su:
+                raise UserError(_("Registre la cantidad contada y solicite aprobación a otro usuario."))
         if not self._is_inventory_mode():
             return super().create(vals_list)
         quants = self.browse()
@@ -40,6 +65,8 @@ class StockQuant(models.Model):
                 if not self.env.su:
                     existing._sng_check_no_pending_request()
             quant = super().create([dict(vals)])
+            if "inventory_quantity" in vals and not self.env.su:
+                quant.with_env(self.env)._sng_record_capture()
             if "sng_adjustment_reason" in vals:
                 quant.sng_adjustment_reason = vals["sng_adjustment_reason"]
             quants |= quant
@@ -52,14 +79,23 @@ class StockQuant(models.Model):
             raise UserError(_("Existe una solicitud por aprobar. Gerencia debe aprobarla o rechazarla."))
 
     def write(self, vals):
+        if not self.env.su and "inventory_diff_quantity" in vals:
+            raise AccessError(_("La diferencia de inventario la calcula el servidor."))
+        if not self.env.su and {"sng_counted_by_ids", "sng_last_counted_by_id"}.intersection(vals):
+            raise AccessError(_("La identidad del capturador la registra el servidor."))
         if {"inventory_quantity_auto_apply", "quantity"}.intersection(vals):
             self._sng_check_inventory_approval_access()
+            if not self.env.su:
+                raise UserError(_("Registre la cantidad contada y solicite aprobación a otro usuario."))
         if not self.env.su and {
             "inventory_quantity", "inventory_quantity_auto_apply", "inventory_diff_quantity",
             "inventory_quantity_set", "sng_adjustment_reason", "user_id",
         }.intersection(vals):
             self._sng_check_no_pending_request()
-        return super().write(vals)
+        result = super().write(vals)
+        if "inventory_quantity" in vals and not self.env.su:
+            self._sng_record_capture()
+        return result
 
     @api.model
     def _get_inventory_fields_write(self):
@@ -73,17 +109,22 @@ class StockQuant(models.Model):
         self._sng_check_inventory_approval_access()
         return super().action_apply_all()
 
+    def action_clear_inventory_quantity(self):
+        self.check_access("write")
+        if not self.env.su:
+            self._sng_check_no_pending_request()
+        # Native clearing resets the computed difference explicitly. It is not
+        # a new physical capture and must not register the approver as a counter.
+        # Keep the participants until an adjustment has actually been applied.
+        return super(StockQuant, self.sudo()).action_clear_inventory_quantity()
+
     def action_request_inventory_approval(self):
         self.check_access("write")
         if not self or any(not quant.inventory_quantity_set for quant in self):
             raise UserError(_("Registre el conteo físico antes de solicitar aprobación."))
         if any(quant.is_outdated for quant in self):
             raise UserError(_("Las existencias cambiaron. Revise y registre nuevamente el conteo."))
-        requests = self.env["sng.inventory.adjustment.request"].create([
-            {"quant_id": quant.id, "counted_quantity": quant.inventory_quantity,
-             "reason": quant.sng_adjustment_reason}
-            for quant in self
-        ])
+        requests = self.env["sng.inventory.adjustment.request"]._create_from_quants(self)
         requests.action_submit()
         return {
             "type": "ir.actions.act_window", "name": _("Solicitudes de ajuste"),
@@ -124,7 +165,7 @@ class StockQuant(models.Model):
             "adjusted_quantity": adjusted_quantity,
             "new_quantity": self.inventory_quantity,
             "adjusted_by_id": self.env.user.id,
-            "counted_by_id": self.user_id.id,
+            "counted_by_id": self.sng_last_counted_by_id.id or self.user_id.id,
             "unit_cost": unit_cost,
             "adjustment_cost": adjusted_quantity * unit_cost,
             "company_id": self.company_id.id or self.env.company.id,
@@ -133,6 +174,8 @@ class StockQuant(models.Model):
 
     def _apply_inventory(self):
         self._sng_check_inventory_approval_access()
+        if not self.env.su:
+            self._sng_check_independent_capture()
         if not self.env.su and self.env["sng.inventory.adjustment.request"].sudo().search_count([
             ("quant_id", "in", self.ids), ("state", "=", "pending"),
         ]):
@@ -184,6 +227,9 @@ class StockQuant(models.Model):
                 }
             )
         histories._sng_send_adjustment_notifications()
+        super(StockQuant, self.sudo()).write({
+            "sng_counted_by_ids": [fields.Command.clear()], "sng_last_counted_by_id": False,
+        })
         return result
 
     def _get_inventory_move_values(

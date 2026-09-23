@@ -15,45 +15,25 @@ class CycleCountReturnWizard(models.TransientModel):
     )
     reason = fields.Text(string="Motivo de devolución", required=True)
 
+    line_ids = fields.Many2many(
+        "sng.cycle.count.line", string="Líneas a recontar",
+        domain="[('cycle_count_id', '=', cycle_count_id)]",
+        help="Sin selección, se devolverán todas las líneas del conteo.",
+    )
+
     def action_confirm(self):
         self.ensure_one()
         count = self.cycle_count_id
-        count._check_management_access()
-        if count.state != "pending_approval":
-            raise UserError(_("El conteo ya no está pendiente de aprobación."))
-
+        count._check_supervisor()
+        count._lock_sessions()
+        if count.state not in ("pending_review", "pending_approval"):
+            raise UserError(_("La sesión debe estar pendiente de revisión o aprobación."))
         reason = (self.reason or "").strip()
         if not reason:
             raise UserError(_("Debe indicar el motivo de la devolución."))
-
-        count._lock_quants()
-        changed_lines = count._get_lines_with_changed_stock()
-        reset_details = []
-        for line in changed_lines:
-            new_theoretical = line.quant_id.quantity
-            reset_details.append(
-                {
-                    "product": line.product_id.display_name,
-                    "location": line.location_id.display_name,
-                    "old_theo": line.theoretical_qty,
-                    "new_theo": new_theoretical,
-                    "old_counted": line.counted_qty,
-                }
-            )
-            line.sudo().write(
-                {
-                    "previous_theoretical_qty": line.theoretical_qty,
-                    "previous_counted_qty": line.counted_qty,
-                    "theoretical_qty": new_theoretical,
-                    "counted_qty": 0.0,
-                    "state": "pending",
-                    "count_date": False,
-                }
-            )
-
-        count._close_management_activities(
-            _("Conteo devuelto por %s.") % self.env.user.display_name
-        )
-        count.sudo().write({"state": "in_progress"})
-        count._notify_operator_recount(reason, changed_lines, reset_details)
+        lines = self.line_ids or count.line_ids
+        if any(line.cycle_count_id != count for line in lines):
+            raise UserError(_("Las líneas deben pertenecer a esta sesión."))
+        lines._check_independent_reviewer()
+        lines._return_for_recount(reason)
         return {"type": "ir.actions.act_window_close"}

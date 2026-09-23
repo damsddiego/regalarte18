@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
+        <record id="mail_activity_cycle_count_overdue" model="mail.activity.type">
+            <field name="name">Resolver conteo cíclico vencido</field>
+            <field name="icon">fa-exclamation-triangle</field>
+            <field name="res_model">sng.cycle.count</field>
+        </record>
         <record id="mail_activity_cycle_count_approval" model="mail.activity.type">
             <field name="name">Aprobación de conteo cíclico</field>
             <field name="icon">fa-check-square-o</field>

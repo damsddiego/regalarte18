@@ -115,6 +115,13 @@ class TestCycleCountApproval(TransactionCase):
         self.env["sng.cycle.count.line"].create(line_values)
         return count
 
+    def _submit_reviewed(self, count):
+        count.with_user(self.operator).action_submit_for_approval()
+        for line in count.line_ids:
+            line.with_user(self.supervisor).write({"review_reason": "Diferencia revisada físicamente."})
+            line.with_user(self.supervisor).action_review_approve()
+        count.with_user(self.supervisor).action_send_management()
+
     def _disable_quantity_reports(self):
         model_class = self.env.registry["sng.cycle.count"]
         self.patch(model_class, "_generate_discrepancy_reports", lambda records: True)
@@ -165,10 +172,10 @@ class TestCycleCountApproval(TransactionCase):
         self.product_gain.standard_price = 99.0
 
         gain_line.with_user(self.operator).write(
-            {"counted_qty": 12.0, "state": "counted", "count_date": fields.Datetime.now()}
+            {"counted_qty": 12.0}
         )
         shortage_line.with_user(self.operator).write(
-            {"counted_qty": 4.0, "state": "counted", "count_date": fields.Datetime.now()}
+            {"counted_qty": 4.0}
         )
 
         self.assertEqual(gain_line.unit_cost, 10.0)
@@ -183,15 +190,15 @@ class TestCycleCountApproval(TransactionCase):
     def test_submit_requires_all_lines_and_does_not_adjust_stock(self):
         count = self._create_count()
         with self.assertRaises(UserError):
-            count.with_user(self.operator).action_submit_for_approval()
+            self._submit_reviewed(count)
 
         self._disable_quantity_reports()
         count.line_ids.with_user(self.operator).write(
-            {"counted_qty": 8.0, "state": "counted", "count_date": fields.Datetime.now()}
+            {"counted_qty": 8.0}
         )
-        count.with_user(self.operator).action_submit_for_approval()
+        self._submit_reviewed(count)
 
-        with self.assertRaises(UserError):
+        with self.assertRaises(AccessError):
             self.env["sng.cycle.count.line"].with_user(self.operator).create(
                 {
                     "cycle_count_id": count.id,
@@ -225,9 +232,9 @@ class TestCycleCountApproval(TransactionCase):
         self._disable_quantity_reports()
         count = self._create_count()
         count.line_ids.with_user(self.operator).write(
-            {"counted_qty": 8.0, "state": "counted", "count_date": fields.Datetime.now()}
+            {"counted_qty": 8.0}
         )
-        count.with_user(self.operator).action_submit_for_approval()
+        self._submit_reviewed(count)
 
         with self.assertRaises(AccessError):
             count.with_user(self.operator).action_approve()
@@ -249,16 +256,14 @@ class TestCycleCountApproval(TransactionCase):
     def test_stock_change_blocks_approval_and_return_resets_changed_lines(self):
         self._disable_quantity_reports()
         count = self._create_count(include_shortage=True)
-        count.line_ids.with_user(self.operator).write(
-            {"state": "counted", "count_date": fields.Datetime.now()}
-        )
+        count.line_ids.with_user(self.operator).action_set_counted()
         count.line_ids.filtered(lambda line: line.product_id == self.product_gain).with_user(
             self.operator
         ).write({"counted_qty": 9.0})
         count.line_ids.filtered(
             lambda line: line.product_id == self.product_shortage
         ).with_user(self.operator).write({"counted_qty": 5.0})
-        count.with_user(self.operator).action_submit_for_approval()
+        self._submit_reviewed(count)
 
         self.env["stock.quant"]._update_available_quantity(
             self.product_gain,
@@ -270,7 +275,7 @@ class TestCycleCountApproval(TransactionCase):
         self.assertEqual(count.state, "pending_approval")
 
         wizard = self.env["sng.cycle.count.return.wizard"].with_user(self.manager).create(
-            {"cycle_count_id": count.id, "reason": "El stock cambió durante la revisión."}
+            {"cycle_count_id": count.id, "line_ids": [(6, 0, count.line_ids.filtered(lambda l: l.product_id == self.product_gain).ids)], "reason": "El stock cambió durante la revisión."}
         )
         wizard.action_confirm()
 
@@ -281,7 +286,7 @@ class TestCycleCountApproval(TransactionCase):
         self.assertEqual(count.state, "in_progress")
         self.assertEqual(gain_line.state, "pending")
         self.assertEqual(gain_line.theoretical_qty, 11.0)
-        self.assertEqual(gain_line.counted_qty, 0.0)
+        self.assertEqual(gain_line.counted_qty, 9.0)
         self.assertEqual(unchanged_line.state, "counted")
         self.assertEqual(unchanged_line.counted_qty, 5.0)
         recount_type = self.env.ref("sng_cycle_count.mail_activity_cycle_count_recount")
@@ -319,14 +324,15 @@ class TestCycleCountApproval(TransactionCase):
 
     def test_resubmission_replaces_management_activity(self):
         count = self._create_count()
-        count.line_ids.with_user(self.operator).action_copy_theoretical()
-        count.with_user(self.operator).action_submit_for_approval()
+        count.line_ids.with_user(self.operator).write({"counted_qty": count.line_ids.theoretical_qty})
+        self._submit_reviewed(count)
 
         wizard = self.env["sng.cycle.count.return.wizard"].with_user(self.manager).create(
             {"cycle_count_id": count.id, "reason": "Confirmar nuevamente el conteo."}
         )
         wizard.action_confirm()
-        count.with_user(self.operator).action_submit_for_approval()
+        count.line_ids.with_user(self.operator).action_set_counted()
+        self._submit_reviewed(count)
 
         approval_type = self.env.ref("sng_cycle_count.mail_activity_cycle_count_approval")
         self.assertEqual(
@@ -344,7 +350,7 @@ class TestCycleCountApproval(TransactionCase):
     def test_valued_reports_are_restricted_and_render(self):
         count = self._create_count()
         count.line_ids.with_user(self.operator).write(
-            {"counted_qty": 8.0, "state": "counted", "count_date": fields.Datetime.now()}
+            {"counted_qty": 8.0}
         )
 
         report_model = self.env["ir.actions.report"]

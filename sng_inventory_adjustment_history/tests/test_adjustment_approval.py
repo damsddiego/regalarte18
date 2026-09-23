@@ -93,11 +93,48 @@ class TestAdjustmentApproval(TransactionCase):
             request.with_user(self.approver).action_approve()
         self.assertEqual(self.quant.quantity, 8.0)
 
-    def test_permissions_allow_approver_to_approve_own_request(self):
+    def test_approver_cannot_approve_own_request(self):
         request = self._request(user=self.approver, quantity=12.0)
         request.action_submit()
-        request.action_approve()
-        self.assertEqual(self.quant.quantity, 12.0)
+        with self.assertRaises(AccessError):
+            request.action_approve()
+        self.assertEqual(self.quant.quantity, 10.0)
+
+    def test_native_capture_cannot_be_self_applied_or_reassigned_to_hide_actor(self):
+        quant = self.quant.with_user(self.approver)
+        quant.write({"inventory_quantity": 8})
+        quant.write({"user_id": self.operator.id})
+        with self.assertRaises(AccessError):
+            quant.action_apply_inventory()
+        with self.assertRaises(AccessError):
+            quant.write({"sng_counted_by_ids": [(5, 0, 0)]})
+        with self.assertRaises(UserError):
+            quant.write({"inventory_quantity_auto_apply": 8})
+        request = self._request(user=self.operator)
+        request.action_submit()
+        with self.assertRaises(AccessError):
+            request.with_user(self.approver).action_approve()
+
+    def test_independent_manager_can_apply_native_count(self):
+        self.quant.with_user(self.operator).write({"inventory_quantity": 8})
+        self.quant.with_user(self.approver).action_apply_inventory()
+        self.assertEqual(self.quant.quantity, 8)
+        self.assertFalse(self.quant.sng_counted_by_ids)
+
+    def test_submitting_native_capture_preserves_actual_counter(self):
+        self.quant.with_user(self.operator).write({"inventory_quantity": 8, "sng_adjustment_reason": "Conteo físico"})
+        action = self.quant.with_user(self.approver).action_request_inventory_approval()
+        request = self.env["sng.inventory.adjustment.request"].search(action["domain"])
+        self.assertEqual(request.counted_by_ids, self.operator)
+        self.assertEqual(request.requested_by_id, self.approver)
+        request.with_user(self.approver).action_approve()
+        self.assertEqual(request.history_ids.counted_by_id, self.operator)
+
+    def test_inventory_difference_cannot_be_forged(self):
+        self.quant.with_user(self.operator).write({"inventory_quantity": 8})
+        with self.assertRaises(AccessError):
+            self.quant.with_user(self.operator).write({"inventory_diff_quantity": -9})
+        self.assertEqual(self.quant.inventory_diff_quantity, -2)
 
     def test_native_count_remains_pending_and_direct_routes_are_denied(self):
         quant = self.quant.with_user(self.operator).with_context(inventory_mode=True)

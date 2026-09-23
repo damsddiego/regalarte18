@@ -135,7 +135,7 @@ class CycleCountConfig(models.Model):
             (
                 "cycle_count_id.state",
                 "in",
-                ["draft", "in_progress", "pending_approval"],
+                ["draft", "in_progress", "pending_review", "pending_approval"],
             ),
         ])
         excluded_quant_ids = set(open_lines.mapped("quant_id.id"))

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "SNG Inventory Adjustment History",
-    "version": "18.0.2.0.0",
+    "version": "18.0.2.1.0",
     "author": "SNG Cloud",
     "website": "https://sngcloud.com",
     "category": "Inventory/Inventory",

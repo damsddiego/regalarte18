@@ -273,6 +273,8 @@ class CycleCountLine(models.Model):
             return True
 
         quant = self.quant_id.sudo().with_context(inventory_mode=True)
+        quant.write({"sng_last_counted_by_id": self.last_counted_by_id.id,
+                     "user_id": self.last_counted_by_id.id})
         quant.inventory_quantity = self.counted_qty
         quant._apply_inventory()
         return True

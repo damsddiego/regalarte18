@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Regalarte Customer Metrics",
-    "version": "18.0.1.2.0",
+    "version": "18.0.1.3.0",
     "category": "Accounting",
     "summary": "Indicadores comerciales y financieros en la ficha del cliente",
     "author": "SNG",
@@ -18,6 +18,7 @@
         "data/ir_cron.xml",
         "security/ir.model.access.csv",
         "security/regalarte_customer_metrics_security.xml",
+        "report/customer_metric_report.xml",
         "views/customer_metric_views.xml",
         "views/res_partner_views.xml",
     ],

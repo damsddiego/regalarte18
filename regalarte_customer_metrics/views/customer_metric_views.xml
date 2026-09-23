@@ -93,6 +93,13 @@
         <field name="model">regalarte.customer.metric</field>
         <field name="arch" type="xml">
             <form string="Metrica de Cliente">
+                <header>
+                    <button name="%(action_report_customer_metric)d"
+                            type="action"
+                            string="Imprimir PDF"
+                            class="btn-primary"
+                            groups="account.group_account_readonly,account.group_account_invoice"/>
+                </header>
                 <sheet>
                     <group>
                         <group>

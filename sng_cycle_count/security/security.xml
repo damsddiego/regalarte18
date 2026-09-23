@@ -21,6 +21,23 @@
     </record>
 
     <!-- Reglas de registro -->
+    <record id="rule_cycle_capture_company" model="ir.rule">
+        <field name="name">Auditoría: compañías permitidas</field>
+        <field name="model_id" ref="model_sng_cycle_count_capture"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_cycle_capture_operator" model="ir.rule">
+        <field name="name">Auditoría: sesiones del operador</field>
+        <field name="model_id" ref="model_sng_cycle_count_capture"/>
+        <field name="groups" eval="[(4, ref('group_cycle_count_operator'))]"/>
+        <field name="domain_force">['|', ('line_id.cycle_count_id.user_id', '=', user.id), ('line_id.cycle_count_id.user_id', '=', False)]</field>
+    </record>
+    <record id="rule_cycle_capture_supervisor" model="ir.rule">
+        <field name="name">Auditoría: Jefatura</field>
+        <field name="model_id" ref="model_sng_cycle_count_capture"/>
+        <field name="groups" eval="[(4, ref('group_cycle_count_supervisor'))]"/>
+        <field name="domain_force">[(1, '=', 1)]</field>
+    </record>
     <record id="rule_cycle_count_operator_own" model="ir.rule">
         <field name="name">Conteo Cíclico: Operador solo ve sus conteos</field>
         <field name="model_id" ref="model_sng_cycle_count"/>

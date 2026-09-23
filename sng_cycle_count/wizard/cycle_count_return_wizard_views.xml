@@ -7,6 +7,7 @@
             <form string="Devolver para reconteo">
                 <group>
                     <field name="cycle_count_id"/>
+                    <field name="line_ids" widget="many2many_tags" options="{'no_create': True}"/>
                     <field name="reason" placeholder="Explique qué debe revisar o volver a contar el operador..."/>
                 </group>
                 <footer>
