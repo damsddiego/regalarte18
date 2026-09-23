@@ -30,6 +30,18 @@ class RegalarteCustomerMetric(models.Model):
         domain=[("is_company", "=", True)],
     )
     partner_name = fields.Char(string="Cliente", readonly=True, index=True)
+    partner_code = fields.Char(
+        related="partner_id.unique_id",
+        string="Codigo Cliente",
+        store=True,
+        index=True,
+    )
+    sales_route_id = fields.Many2one(
+        related="partner_id.sales_route_id",
+        string="Ruta",
+        store=True,
+        index=True,
+    )
     salesperson_user_id = fields.Many2one(
         "res.users",
         string="Vendedor Odoo",
@@ -121,6 +133,23 @@ class RegalarteCustomerMetric(models.Model):
         string="Ultima actualizacion",
         readonly=True,
     )
+    # Cobranza al momento de consultar (no dependen del cron de metricas).
+    customer_receivable_balance = fields.Monetary(
+        string="Saldo Pendiente",
+        currency_field="currency_id",
+        compute="_compute_customer_receivable_balance",
+        help="Saldo por cobrar del cliente en la compania a la fecha de consulta.",
+    )
+    customer_credit_check = fields.Boolean(
+        related="partner_id.credit_check",
+        string="Control de Credito",
+    )
+    customer_credit_blocking = fields.Monetary(
+        related="partner_id.credit_blocking",
+        string="Limite Asignado",
+        currency_field="currency_id",
+        help="Monto de bloqueo de ventas del cliente (aprobacion de credito).",
+    )
 
     _sql_constraints = [
         (
@@ -129,6 +158,47 @@ class RegalarteCustomerMetric(models.Model):
             "Ya existe una metrica para este cliente y compania.",
         ),
     ]
+
+    def _compute_customer_receivable_balance(self):
+        balances = {}
+        for company in self.company_id:
+            metrics = self.filtered(lambda metric: metric.company_id == company)
+            balances.update(
+                self._get_receivable_balances(metrics.partner_id.ids, company)
+            )
+        for metric in self:
+            metric.customer_receivable_balance = balances.get(metric.partner_id.id, 0.0)
+
+    @api.model
+    def _get_receivable_balances(self, partner_ids, company):
+        if not partner_ids:
+            return {}
+        self.env["account.move.line"].flush_model(
+            ["move_id", "account_id", "amount_residual", "company_id", "parent_state"]
+        )
+        self.env["account.move"].flush_model(["commercial_partner_id"])
+        self.env.cr.execute(
+            """
+                SELECT
+                    move.commercial_partner_id AS partner_id,
+                    COALESCE(SUM(line.amount_residual), 0.0) AS balance
+                FROM account_move_line line
+                JOIN account_move move
+                    ON move.id = line.move_id
+                JOIN account_account account
+                    ON account.id = line.account_id
+                WHERE line.parent_state = 'posted'
+                  AND account.account_type = 'asset_receivable'
+                  AND line.company_id = %s
+                  AND move.commercial_partner_id IN %s
+                GROUP BY move.commercial_partner_id
+            """,
+            (company.id, tuple(partner_ids)),
+        )
+        return {
+            row["partner_id"]: row["balance"] or 0.0
+            for row in self.env.cr.dictfetchall()
+        }
 
     @api.model
     def cron_recompute_customer_metrics(self):
@@ -698,7 +768,9 @@ class RegalarteCustomerMetric(models.Model):
 
         columns = [
             ("Compania", 24, lambda m: m.company_id.display_name or "", text_format),
+            ("Codigo", 12, lambda m: m.partner_code or "", text_format),
             ("Cliente", 30, lambda m: m.partner_name or "", text_format),
+            ("Ruta", 16, lambda m: m.sales_route_id.display_name or "", text_format),
             ("Vendedor", 24, lambda m: m.salesperson_partner_id.display_name or "", text_format),
             ("DPP", 12, lambda m: m.customer_dpp_days, amount_format),
             ("Venta Acumulada", 18, lambda m: m.customer_total_sales, amount_format),
@@ -709,6 +781,8 @@ class RegalarteCustomerMetric(models.Model):
             ("Promedio Anual", 16, lambda m: m.customer_annual_avg_sales, amount_format),
             ("Cobranza Mensual", 18, lambda m: m.customer_monthly_collection_avg, amount_format),
             ("Cobranza Trimestral", 18, lambda m: m.customer_quarterly_collection_avg, amount_format),
+            ("Saldo Pendiente", 18, lambda m: m.customer_receivable_balance, amount_format),
+            ("Limite Asignado", 16, lambda m: m.customer_credit_blocking if m.customer_credit_check else "", amount_format),
             ("Ultima Actualizacion", 22, lambda m: m.customer_metrics_last_update, date_format),
         ]
 

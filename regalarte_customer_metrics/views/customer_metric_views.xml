@@ -6,6 +6,8 @@
         <field name="arch" type="xml">
             <search string="Metricas de Clientes">
                 <field name="partner_id"/>
+                <field name="partner_code"/>
+                <field name="sales_route_id"/>
                 <field name="salesperson_partner_id"/>
                 <field name="company_id"/>
                 <field name="country_id"/>
@@ -29,6 +31,7 @@
                 <group expand="0" string="Agrupar Por">
                     <filter name="group_by_company" string="Compania" context="{'group_by': 'company_id'}"/>
                     <filter name="group_by_salesperson" string="Vendedor" context="{'group_by': 'salesperson_partner_id'}"/>
+                    <filter name="group_by_route" string="Ruta" context="{'group_by': 'sales_route_id'}"/>
                     <filter name="group_by_country" string="Pais" context="{'group_by': 'country_id'}"/>
                 </group>
             </search>
@@ -41,7 +44,9 @@
         <field name="arch" type="xml">
             <list string="Dashboard Métricas Clientes" default_order="customer_dpp_days desc">
                 <field name="company_id"/>
+                <field name="partner_code" optional="show"/>
                 <field name="partner_id"/>
+                <field name="sales_route_id" optional="show"/>
                 <field name="salesperson_partner_id" optional="show"/>
                 <field name="customer_dpp_days"/>
                 <field name="customer_total_sales"/>
@@ -51,6 +56,10 @@
                 <field name="customer_annual_avg_sales"/>
                 <field name="customer_monthly_collection_avg"/>
                 <field name="customer_quarterly_collection_avg" optional="show"/>
+                <field name="customer_receivable_balance" optional="show"/>
+                <field name="customer_credit_check" column_invisible="1"/>
+                <field name="customer_credit_blocking" optional="show"
+                       invisible="not customer_credit_check"/>
                 <field name="customer_metrics_last_update" optional="show"/>
             </list>
         </field>
@@ -105,6 +114,8 @@
                         <group>
                             <field name="company_id" readonly="1"/>
                             <field name="partner_id" readonly="1"/>
+                            <field name="partner_code" readonly="1"/>
+                            <field name="sales_route_id" readonly="1"/>
                             <field name="salesperson_partner_id" readonly="1"/>
                             <field name="country_id" readonly="1"/>
                         </group>
@@ -125,6 +136,10 @@
                         <group string="Cobranza">
                             <field name="customer_monthly_collection_avg" readonly="1"/>
                             <field name="customer_quarterly_collection_avg" readonly="1"/>
+                            <field name="customer_receivable_balance"/>
+                            <field name="customer_credit_check" invisible="1"/>
+                            <field name="customer_credit_blocking" readonly="1"
+                                   invisible="not customer_credit_check"/>
                         </group>
                     </group>
                 </sheet>

@@ -63,6 +63,20 @@
                 <table class="table table-sm table-borderless mb-4">
                     <tbody>
                         <tr>
+                            <td><strong>Código cliente</strong></td>
+                            <td>
+                                <span t-if="o.partner_code" t-field="o.partner_code"/>
+                                <span t-else="">—</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ruta</strong></td>
+                            <td>
+                                <span t-if="o.sales_route_id" t-field="o.sales_route_id.display_name"/>
+                                <span t-else="">—</span>
+                            </td>
+                        </tr>
+                        <tr>
                             <td><strong>Compañía</strong></td>
                             <td><span t-field="o.company_id.name"/></td>
                         </tr>
@@ -139,10 +153,22 @@
                             <td>Promedio cobranza trimestral</td>
                             <td class="text-end text-nowrap"><span t-field="o.customer_quarterly_collection_avg"/></td>
                         </tr>
+                        <tr class="fw-bold">
+                            <td>Saldo pendiente a la fecha</td>
+                            <td class="text-end text-nowrap"><span t-field="o.customer_receivable_balance"/></td>
+                        </tr>
+                        <tr class="fw-bold">
+                            <td>Límite de crédito asignado</td>
+                            <td class="text-end text-nowrap">
+                                <span t-if="o.customer_credit_check" t-field="o.customer_credit_blocking"/>
+                                <span t-else="">Sin control de crédito</span>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
                 <p class="text-muted small mt-3">
-                    Los indicadores corresponden a la última actualización registrada.
+                    Los indicadores de ventas y cobranza promedio corresponden a la última
+                    actualización registrada; el saldo pendiente y el límite, a la fecha de impresión.
                 </p>
                 <div t-if="company.report_footer" class="text-muted small border-top pt-2 mt-4"
                      t-field="company.report_footer"/>

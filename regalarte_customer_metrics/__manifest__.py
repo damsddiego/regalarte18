@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "Regalarte Customer Metrics",
-    "version": "18.0.1.3.0",
+    "version": "18.0.1.4.0",
     "category": "Accounting",
     "summary": "Indicadores comerciales y financieros en la ficha del cliente",
     "author": "SNG",
@@ -12,6 +12,9 @@
         "account",
         "sales_commission_omax",
         "web",
+        "customer_sequence",
+        "sng_sales_routes",
+        "sale_account_manager_customer_credit_limit_approval",
     ],
     "data": [
         "data/ir_actions_server.xml",
