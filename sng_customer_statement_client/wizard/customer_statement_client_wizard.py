@@ -125,6 +125,35 @@ class CustomerStatementClientWizard(models.TransientModel):
             lambda move: not move.currency_id.is_zero(move.amount_residual)
         )
 
+    @staticmethod
+    def _line_in_company_currency(line):
+        return line.currency_id == line.company_currency_id
+
+    def _line_amount(self, line):
+        return line.balance if self._line_in_company_currency(line) else line.amount_currency
+
+    def _line_residual(self, line):
+        if self._line_in_company_currency(line):
+            return line.amount_residual
+        return line.amount_residual_currency
+
+    def _get_open_credit_lines(self):
+        """Apuntes por cobrar abiertos que no son facturas ni notas de
+        crédito: pagos no aplicados (saldo a favor) y asientos manuales."""
+        self.ensure_one()
+        lines = self.env['account.move.line'].search([
+            ('partner_id', '=', self.partner_id.id),
+            ('company_id', '=', self.company_id.id),
+            ('account_id.account_type', '=', 'asset_receivable'),
+            ('parent_state', '=', 'posted'),
+            ('move_id.move_type', '=', 'entry'),
+            ('reconciled', '=', False),
+            ('date', '<=', self.statement_date),
+        ])
+        return lines.filtered(
+            lambda line: not line.currency_id.is_zero(self._line_residual(line))
+        )
+
     def _status_for_move(self, move):
         if move.move_type == 'out_refund':
             return {
@@ -132,8 +161,9 @@ class CustomerStatementClientWizard(models.TransientModel):
                 'label': _('Crédito disponible'),
                 'days_overdue': 0,
             }
+        return self._status_for_due_date(move.invoice_date_due or move.invoice_date)
 
-        due_date = move.invoice_date_due or move.invoice_date
+    def _status_for_due_date(self, due_date):
         delta = (due_date - self.statement_date).days if due_date else 0
         if delta > 0:
             return {
@@ -166,28 +196,31 @@ class CustomerStatementClientWizard(models.TransientModel):
             return '61_90'
         return '91_plus'
 
-    def _prepare_currency_groups(self, moves):
+    @staticmethod
+    def _get_currency_group(groups, currency):
+        if currency.id not in groups:
+            groups[currency.id] = {
+                'currency': currency,
+                'rows': [],
+                'balance': 0.0,
+                'overdue': 0.0,
+                'not_due': 0.0,
+                'credit_available': 0.0,
+                'aging': {
+                    'not_due': 0.0,
+                    '1_30': 0.0,
+                    '31_60': 0.0,
+                    '61_90': 0.0,
+                    '91_plus': 0.0,
+                },
+            }
+        return groups[currency.id]
+
+    def _prepare_currency_groups(self, moves, credit_lines=None):
         groups = {}
         for move in moves:
             currency = move.currency_id
-            if currency.id not in groups:
-                groups[currency.id] = {
-                    'currency': currency,
-                    'rows': [],
-                    'balance': 0.0,
-                    'overdue': 0.0,
-                    'not_due': 0.0,
-                    'credit_available': 0.0,
-                    'aging': {
-                        'not_due': 0.0,
-                        '1_30': 0.0,
-                        '31_60': 0.0,
-                        '61_90': 0.0,
-                        '91_plus': 0.0,
-                    },
-                }
-
-            group = groups[currency.id]
+            group = self._get_currency_group(groups, currency)
             original = self._signed_amount(move, move.amount_total)
             balance = self._signed_amount(move, move.amount_residual)
             applied = self._signed_amount(
@@ -219,6 +252,43 @@ class CustomerStatementClientWizard(models.TransientModel):
                 'currency': currency,
                 'original': original,
                 'applied': applied,
+                'balance': balance,
+                'status_key': status['key'],
+                'status_label': status['label'],
+            })
+
+        # Pagos no aplicados y asientos: el saldo a favor resta del saldo
+        # por pagar igual que una nota de crédito abierta.
+        for line in credit_lines or []:
+            currency = line.currency_id
+            group = self._get_currency_group(groups, currency)
+            original = self._line_amount(line)
+            balance = self._line_residual(line)
+            group['balance'] += balance
+            if balance < 0:
+                group['credit_available'] += abs(balance)
+                status = {'key': 'credit', 'label': _('Saldo a favor')}
+                document_type = (
+                    _('Pago no aplicado') if line.payment_id else _('Saldo a favor')
+                )
+            else:
+                status = self._status_for_due_date(line.date_maturity or line.date)
+                aging_key = self._aging_key(status['days_overdue'])
+                group['aging'][aging_key] += balance
+                if aging_key == 'not_due':
+                    group['not_due'] += balance
+                else:
+                    group['overdue'] += balance
+                document_type = _('Cargo')
+
+            group['rows'].append({
+                'document': line.move_id.name or line.name or '',
+                'document_type': document_type,
+                'invoice_date': line.date,
+                'date_due': line.date_maturity or line.date,
+                'currency': currency,
+                'original': original,
+                'applied': original - balance,
                 'balance': balance,
                 'status_key': status['key'],
                 'status_label': status['label'],
@@ -298,10 +368,11 @@ class CustomerStatementClientWizard(models.TransientModel):
         context = self._report_context()
         wizard = self.with_context(**context).with_company(self.company_id)
         moves = wizard._get_open_moves()
-        if not moves:
+        credit_lines = wizard._get_open_credit_lines()
+        if not moves and not credit_lines:
             raise UserError(_(
-                'El cliente %s no tiene facturas ni notas de crédito '
-                'abiertas en la compañía %s.'
+                'El cliente %s no tiene facturas, notas de crédito ni saldos '
+                'a favor abiertos en la compañía %s.'
             ) % (wizard.partner_id.display_name, self.company_id.display_name))
 
         partner = wizard.partner_id
@@ -317,11 +388,18 @@ class CustomerStatementClientWizard(models.TransientModel):
             'commercial_name': partner.commercial_name or '',
             'customer_code': partner.unique_id or '',
             'payment_term': partner.property_payment_term_id.display_name or '',
-            'currency_groups': wizard._prepare_currency_groups(moves),
-            'document_count': len(moves),
+            'currency_groups': wizard._prepare_currency_groups(moves, credit_lines),
+            'document_count': len(moves) + len(credit_lines),
             'draft_payment_groups': wizard._prepare_draft_payment_groups(),
             'bank_accounts': wizard._prepare_bank_accounts(),
         }
+
+    def _prepare_open_currency_groups(self):
+        """Saldos abiertos por moneda (facturas, notas y saldos a favor)."""
+        self.ensure_one()
+        return self._prepare_currency_groups(
+            self._get_open_moves(), self._get_open_credit_lines()
+        )
 
     def _prepare_statements_data(self):
         """Reutiliza el cálculo individual sin mezclar clientes ni monedas."""

@@ -423,7 +423,7 @@
                             <span t-esc="fmt_money(group.get('credit_available'), group.get('currency'))"/><t t-if="not group_last"> &#183; </t>
                         </t>
                     </t>
-                    Las notas de cr&#233;dito abiertas ya est&#225;n consideradas en el saldo por pagar.
+                    Las notas de cr&#233;dito y los saldos a favor abiertos ya est&#225;n considerados en el saldo por pagar.
                 </div>
 
                 <div t-if="data.get('draft_payment_groups')" class="pending_payment">

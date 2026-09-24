@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Estado de Cuenta para Cliente',
-    'version': '18.0.1.3.0',
+    'version': '18.0.1.4.0',
     'category': 'Accounting/Accounting',
     'summary': 'Estados de cuenta por cliente, en páginas separadas y multimoneda.',
     'description': """

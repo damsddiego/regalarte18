@@ -276,16 +276,30 @@
                             Este pago no tiene facturas conciliadas.
                         </td>
                     </tr>
+                    <!-- Parte de este pago que no se aplicó a facturas. -->
+                    <t t-set="unapplied_lines" t-value="o.move_id.line_ids.filtered(lambda line: line.parent_state == 'posted' and line.account_id.account_type == 'asset_receivable' and not line.reconciled)"/>
+                    <t t-set="unapplied_amount" t-value="sum(unapplied_lines.mapped('amount_residual'))"/>
+                    <tr t-if="o.partner_type == 'customer' and not o.company_id.currency_id.is_zero(unapplied_amount)" name="payment_unapplied_balance">
+                        <td/>
+                        <td/>
+                        <td style="padding: 5px; text-align: right; font-weight: bold; font-size: 11px;">
+                            Saldo a favor de este pago
+                        </td>
+                        <td style="padding: 5px; border-bottom: 1px solid #00658b; text-align: right; font-weight: bold; font-size: 11px; color: #00658b;">
+                            <span t-out="unapplied_amount"
+                                  t-options="{'widget': 'monetary', 'display_currency': o.company_id.currency_id}">0.00</span>
+                        </td>
+                    </tr>
                     <t t-if="o.partner_id and o.partner_type == 'customer'">
                         <!-- Reutilizar el estado de cuenta actual, sin guardar un
                              asistente ni mezclar saldos de distintas monedas. -->
                         <t t-set="statement" t-value="o.env['sng.customer.statement.client.wizard'].with_context(allowed_company_ids=[o.company_id.id]).with_company(o.company_id).new({'partner_id': o.partner_id.id, 'company_id': o.company_id.id})"/>
-                        <t t-set="statement_totals" t-value="statement._prepare_currency_groups(statement._get_open_moves())"/>
+                        <t t-set="statement_totals" t-value="statement._prepare_open_currency_groups()"/>
                         <tr name="statement_total_balance">
                             <td/>
                             <td/>
                             <td style="padding: 5px; text-align: right; font-weight: bold; font-size: 11px;">
-                                Saldo total facturas
+                                Saldo total pendiente (incluye saldos a favor)
                             </td>
                             <td style="padding: 5px; border-top: 1px solid #000; border-bottom: 1px solid #000; text-align: right; font-weight: bold; font-size: 11px;">
                                 <div t-foreach="statement_totals" t-as="total">
