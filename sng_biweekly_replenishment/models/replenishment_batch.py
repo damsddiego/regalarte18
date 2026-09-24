@@ -230,16 +230,17 @@ class SngBiweeklyReplenishmentBatch(models.Model):
         )
         line_values = []
         for product in products.sorted(lambda p: (p.default_code or "", p.name, p.id)):
+            rounding = config._get_qty_rounding(product.uom_id)
             demand_qty = demand_map.get(product.id, 0.0)
             daily_demand = demand_qty / config.demand_window_days
             target_stock = float_round(
                 daily_demand * (config.coverage_days + config.safety_days),
-                precision_rounding=product.uom_id.rounding,
+                precision_rounding=rounding,
                 rounding_method="UP",
             )
             reorder_point = float_round(
                 daily_demand * (config.lead_time_days + config.safety_days),
-                precision_rounding=product.uom_id.rounding,
+                precision_rounding=rounding,
                 rounding_method="UP",
             )
             quantity_values = main_quantities.get(product.id, {})
@@ -250,7 +251,7 @@ class SngBiweeklyReplenishmentBatch(models.Model):
             projected_qty = forecast_qty + draft_in_qty - draft_out_qty
             suggested_qty = float_round(
                 max(0.0, target_stock - projected_qty),
-                precision_rounding=product.uom_id.rounding,
+                precision_rounding=rounding,
                 rounding_method="UP",
             )
             line_values.append(
@@ -312,21 +313,19 @@ class SngBiweeklyReplenishmentBatch(models.Model):
         allocation_values = []
         for line in lines:
             remaining = line.suggested_qty
-            rounding = line.uom_id.rounding
+            # Del CEDIS solo se toman unidades completas; la fracción de un
+            # stock libre fraccionado (p. ej. 29.5) no se traslada.
+            rounding = self.config_id._get_qty_rounding(line.uom_id)
             for source in source_lines:
                 available = availability[source.id].get(line.product_id.id, 0.0)
                 if float_compare(remaining, 0.0, precision_rounding=rounding) <= 0:
                     break
-                if float_compare(available, 0.0, precision_rounding=rounding) <= 0:
-                    continue
-                if float_compare(available, remaining, precision_rounding=rounding) >= 0:
-                    allocated = remaining
-                else:
-                    allocated = float_round(
-                        available,
-                        precision_rounding=rounding,
-                        rounding_method="DOWN",
-                    )
+                usable = float_round(
+                    available,
+                    precision_rounding=rounding,
+                    rounding_method="DOWN",
+                )
+                allocated = min(usable, remaining)
                 if float_compare(allocated, 0.0, precision_rounding=rounding) <= 0:
                     continue
                 allocation_values.append(

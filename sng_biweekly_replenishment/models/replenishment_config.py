@@ -295,6 +295,16 @@ class SngBiweeklyReplenishmentConfig(models.Model):
             )
         return dict(demand)
 
+    @api.model
+    def _get_qty_rounding(self, uom):
+        """Paso de redondeo de las cantidades sugeridas: unidades enteras.
+
+        La UdM "Unidad" permite centésimas (rounding 0.01) y el cálculo por
+        demanda diaria da fracciones (4.2, 15.5), pero la mercadería se
+        traslada por unidad completa.
+        """
+        return max(uom.rounding or 1.0, 1.0)
+
     def _get_quantity_map(self, products, warehouse):
         self.ensure_one()
         if not products:

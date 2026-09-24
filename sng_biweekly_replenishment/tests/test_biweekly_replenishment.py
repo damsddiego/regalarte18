@@ -223,6 +223,32 @@ class TestBiweeklyReplenishment(TransactionCase):
         )
         self.assertAlmostEqual(line.shortage_qty, 0.0)
 
+    def test_suggested_quantities_are_whole_units(self):
+        # 143 salidas / 14 días = 10.214 diarias: sin redondeo a unidades el
+        # objetivo sería 163.43 y el sugerido 126.43.
+        self._create_done_move(
+            self.product,
+            3.0,
+            self.main_warehouse.lot_stock_id,
+            self.env.ref("stock.stock_location_customers"),
+            self.main_warehouse.out_type_id,
+        )
+        # Stock libre fraccionado en el CEDIS 2: solo se trasladan 29.
+        self.env["stock.quant"]._update_available_quantity(
+            self.product, self.source_2.lot_stock_id, -0.5
+        )
+        batch = self._new_batch()
+        line = batch.line_ids
+        self.assertAlmostEqual(line.target_stock, 164.0)
+        self.assertAlmostEqual(line.reorder_point, 31.0)
+        self.assertAlmostEqual(line.projected_qty, 37.0)
+        self.assertAlmostEqual(line.suggested_qty, 127.0)
+        self.assertEqual(
+            line.allocation_ids.sorted("priority").mapped("allocated_qty"),
+            [70.0, 29.0, 28.0],
+        )
+        self.assertAlmostEqual(line.shortage_qty, 0.0)
+
     def test_pickings_are_draft_and_idempotent(self):
         batch = self._new_batch()
         batch.action_generate_pickings()

@@ -152,7 +152,7 @@ class SngBiweeklyReplenishmentConfigAlert(models.Model):
             daily_demand = demand_qty / self.demand_window_days
             reorder_point = float_round(
                 daily_demand * (self.lead_time_days + self.safety_days),
-                precision_rounding=product.uom_id.rounding,
+                precision_rounding=self._get_qty_rounding(product.uom_id),
                 rounding_method="UP",
             )
             free_qty = quantities.get(product.id, {}).get("free_qty", 0.0)
