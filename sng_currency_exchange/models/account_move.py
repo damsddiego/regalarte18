@@ -262,15 +262,12 @@ class AccountMoveLine(models.Model):
 
         return product_price_unit / move.sng_custom_exchange_rate
 
-    @api.depends(
-        'product_id',
-        'product_uom_id',
-        'move_id.sng_use_custom_rate',
-        'move_id.sng_custom_exchange_rate',
-        'move_id.currency_id',
-        'move_id.company_id',
-        'move_id.fiscal_position_id',
-    )
+    # Mismas dependencias que Odoo. Depender de campos de la factura (moneda,
+    # compañía, posición fiscal) hacía que cambiar diario o proveedor recalculara
+    # el precio de todas las líneas con el precio/costo del producto (p. ej. 0 en
+    # servicios). La tasa personalizada ya re-precia las líneas explícitamente
+    # vía _sng_recompute_custom_rate_invoice_lines (create, write y onchange).
+    @api.depends('product_id', 'product_uom_id')
     def _compute_price_unit(self):
         super()._compute_price_unit()
         for line in self:
