@@ -63,6 +63,11 @@
                             <field name="automation_active"/>
                             <field name="last_alert_check_date" readonly="1"/>
                         </group>
+                        <group string="Cajas">
+                            <field name="box_packaging_name"/>
+                            <field name="box_round_up_percent"/>
+                            <field name="allow_loose_units"/>
+                        </group>
                     </group>
                     <notebook>
                         <page string="CEDIS y prioridad">

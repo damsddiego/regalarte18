@@ -228,6 +228,7 @@ class SngBiweeklyReplenishmentBatch(models.Model):
         draft_out = config._get_open_draft_quantity(
             products, config.main_warehouse_id, "out"
         )
+        box_packagings = config._get_box_packagings(products)
         line_values = []
         for product in products.sorted(lambda p: (p.default_code or "", p.name, p.id)):
             rounding = config._get_qty_rounding(product.uom_id)
@@ -249,11 +250,18 @@ class SngBiweeklyReplenishmentBatch(models.Model):
             draft_in_qty = draft_in.get(product.id, 0.0)
             draft_out_qty = draft_out.get(product.id, 0.0)
             projected_qty = forecast_qty + draft_in_qty - draft_out_qty
-            suggested_qty = float_round(
+            need_qty = float_round(
                 max(0.0, target_stock - projected_qty),
                 precision_rounding=rounding,
                 rounding_method="UP",
             )
+            # Con empaque "Caja" se sugieren solo cajas completas; sin él, unidades.
+            packaging = box_packagings.get(product.id)
+            box_qty = packaging.qty if packaging else 0.0
+            suggested_boxes = (
+                config._round_need_to_boxes(need_qty, box_qty) if packaging else 0
+            )
+            suggested_qty = suggested_boxes * box_qty if packaging else need_qty
             line_values.append(
                 {
                     "batch_id": self.id,
@@ -271,6 +279,11 @@ class SngBiweeklyReplenishmentBatch(models.Model):
                     "draft_in_qty": draft_in_qty,
                     "draft_out_qty": draft_out_qty,
                     "projected_qty": projected_qty,
+                    "need_qty": need_qty,
+                    "packaging_id": packaging.id if packaging else False,
+                    "box_qty": box_qty,
+                    "without_box": not packaging,
+                    "suggested_boxes": suggested_boxes,
                     "suggested_qty": suggested_qty,
                 }
             )
@@ -310,42 +323,82 @@ class SngBiweeklyReplenishmentBatch(models.Model):
                 for product in products
             }
 
-        allocation_values = []
+        config = self.config_id
+        allocation_values = {}
+
+        def add_allocation(line, source, quantity, boxes=0, loose_qty=0.0):
+            key = (line.id, source.id)
+            values = allocation_values.setdefault(
+                key,
+                {
+                    "batch_id": self.id,
+                    "line_id": line.id,
+                    "source_id": source.id,
+                    "warehouse_id": source.warehouse_id.id,
+                    "priority": source.sequence,
+                    "available_qty": availability[source.id].get(
+                        line.product_id.id, 0.0
+                    ),
+                    "allocated_qty": 0.0,
+                    "allocated_boxes": 0,
+                    "loose_qty": 0.0,
+                },
+            )
+            values["allocated_qty"] += quantity
+            values["allocated_boxes"] += boxes
+            values["loose_qty"] += loose_qty
+            availability[source.id][line.product_id.id] = max(
+                0.0, availability[source.id].get(line.product_id.id, 0.0) - quantity
+            )
+
         for line in lines:
+            product_id = line.product_id.id
+            rounding = config._get_qty_rounding(line.uom_id)
             remaining = line.suggested_qty
+            if line.box_qty:
+                # Primero cajas completas por prioridad de CEDIS; un CEDIS que
+                # no completa una caja se salta.
+                remaining_boxes = line.suggested_boxes
+                for source in source_lines:
+                    if remaining_boxes <= 0:
+                        break
+                    boxes = min(
+                        config._floor_boxes(
+                            availability[source.id].get(product_id, 0.0),
+                            line.box_qty,
+                        ),
+                        remaining_boxes,
+                    )
+                    if boxes <= 0:
+                        continue
+                    add_allocation(line, source, boxes * line.box_qty, boxes=boxes)
+                    remaining_boxes -= boxes
+                remaining = remaining_boxes * line.box_qty
+                if not config.allow_loose_units:
+                    continue
             # Del CEDIS solo se toman unidades completas; la fracción de un
             # stock libre fraccionado (p. ej. 29.5) no se traslada.
-            rounding = self.config_id._get_qty_rounding(line.uom_id)
             for source in source_lines:
-                available = availability[source.id].get(line.product_id.id, 0.0)
                 if float_compare(remaining, 0.0, precision_rounding=rounding) <= 0:
                     break
                 usable = float_round(
-                    available,
+                    availability[source.id].get(product_id, 0.0),
                     precision_rounding=rounding,
                     rounding_method="DOWN",
                 )
                 allocated = min(usable, remaining)
                 if float_compare(allocated, 0.0, precision_rounding=rounding) <= 0:
                     continue
-                allocation_values.append(
-                    {
-                        "batch_id": self.id,
-                        "line_id": line.id,
-                        "source_id": source.id,
-                        "warehouse_id": source.warehouse_id.id,
-                        "priority": source.sequence,
-                        "available_qty": available,
-                        "allocated_qty": allocated,
-                    }
+                add_allocation(
+                    line,
+                    source,
+                    allocated,
+                    loose_qty=allocated if line.box_qty else 0.0,
                 )
                 remaining -= allocated
-                availability[source.id][line.product_id.id] = max(
-                    0.0, available - allocated
-                )
         if allocation_values:
             self.env["sng.biweekly.replenishment.allocation"].create(
-                allocation_values
+                list(allocation_values.values())
             )
 
     def _schedule_for_users(self, record, users, summary, note=""):
@@ -402,19 +455,23 @@ class SngBiweeklyReplenishmentBatch(models.Model):
             )
             created_pickings |= picking
             for allocation in allocations:
-                move = self.env["stock.move"].create(
-                    {
-                        "name": allocation.line_id.product_id.display_name,
-                        "product_id": allocation.line_id.product_id.id,
-                        "product_uom_qty": allocation.allocated_qty,
-                        "product_uom": allocation.line_id.uom_id.id,
-                        "picking_id": picking.id,
-                        "location_id": warehouse.lot_stock_id.id,
-                        "location_dest_id": self.main_warehouse_id.lot_stock_id.id,
-                        "company_id": self.company_id.id,
-                        "sng_replenishment_line_id": allocation.line_id.id,
-                    }
-                )
+                move_values = {
+                    "name": allocation.line_id.product_id.display_name,
+                    "product_id": allocation.line_id.product_id.id,
+                    "product_uom_qty": allocation.allocated_qty,
+                    "product_uom": allocation.line_id.uom_id.id,
+                    "picking_id": picking.id,
+                    "location_id": warehouse.lot_stock_id.id,
+                    "location_dest_id": self.main_warehouse_id.lot_stock_id.id,
+                    "company_id": self.company_id.id,
+                    "sng_replenishment_line_id": allocation.line_id.id,
+                }
+                # Solo cajas completas: la bodega ve el movimiento en cajas.
+                if allocation.line_id.packaging_id and not allocation.loose_qty:
+                    move_values["product_packaging_id"] = (
+                        allocation.line_id.packaging_id.id
+                    )
+                move = self.env["stock.move"].create(move_values)
                 allocation.write({"picking_id": picking.id, "move_id": move.id})
             self._schedule_for_users(
                 picking,
@@ -573,6 +630,29 @@ class SngBiweeklyReplenishmentLine(models.Model):
         digits="Product Unit of Measure",
         readonly=True,
     )
+    need_qty = fields.Float(
+        string="Necesidad",
+        digits="Product Unit of Measure",
+        readonly=True,
+        help="Unidades que faltan para el stock objetivo, antes de ajustar a cajas.",
+    )
+    packaging_id = fields.Many2one(
+        "product.packaging",
+        string="Empaque caja",
+        readonly=True,
+        ondelete="set null",
+    )
+    box_qty = fields.Float(
+        string="Unidades por caja",
+        digits="Product Unit of Measure",
+        readonly=True,
+    )
+    without_box = fields.Boolean(
+        string="Sin caja",
+        readonly=True,
+        help="El producto no tiene empaque de caja: se traslada por unidades.",
+    )
+    suggested_boxes = fields.Integer(string="Cajas sugeridas", readonly=True)
     suggested_qty = fields.Float(
         string="Cantidad sugerida",
         digits="Product Unit of Measure",
@@ -596,6 +676,11 @@ class SngBiweeklyReplenishmentLine(models.Model):
         store=True,
         digits="Product Unit of Measure",
     )
+    allocated_boxes = fields.Integer(
+        string="Cajas asignadas",
+        compute="_compute_allocation_totals",
+        store=True,
+    )
     allocation_summary = fields.Char(
         string="Distribución por CEDIS",
         compute="_compute_allocation_summary",
@@ -609,15 +694,22 @@ class SngBiweeklyReplenishmentLine(models.Model):
         )
     ]
 
-    @api.depends("allocation_ids.allocated_qty", "suggested_qty")
+    @api.depends(
+        "allocation_ids.allocated_qty",
+        "allocation_ids.allocated_boxes",
+        "suggested_qty",
+    )
     def _compute_allocation_totals(self):
         for line in self:
             allocated = sum(line.allocation_ids.mapped("allocated_qty"))
             line.allocated_qty = allocated
+            line.allocated_boxes = sum(line.allocation_ids.mapped("allocated_boxes"))
             line.shortage_qty = max(0.0, line.suggested_qty - allocated)
 
     @api.depends(
         "allocation_ids.allocated_qty",
+        "allocation_ids.allocated_boxes",
+        "allocation_ids.loose_qty",
         "allocation_ids.warehouse_id",
         "allocation_ids.picking_id",
     )
@@ -632,7 +724,7 @@ class SngBiweeklyReplenishmentLine(models.Model):
                     "%s: %s (%s)"
                     % (
                         allocation.warehouse_id.code,
-                        allocation.allocated_qty,
+                        allocation._get_quantity_label(),
                         reference,
                     )
                 )
@@ -687,6 +779,13 @@ class SngBiweeklyReplenishmentAllocation(models.Model):
         required=True,
         readonly=True,
     )
+    box_qty = fields.Float(related="line_id.box_qty", string="Unidades por caja")
+    allocated_boxes = fields.Integer(string="Cajas", readonly=True)
+    loose_qty = fields.Float(
+        string="Unidades sueltas",
+        digits="Product Unit of Measure",
+        readonly=True,
+    )
     picking_id = fields.Many2one(
         "stock.picking",
         string="Transferencia",
@@ -714,3 +813,18 @@ class SngBiweeklyReplenishmentAllocation(models.Model):
             "La cantidad asignada debe ser mayor que cero.",
         ),
     ]
+
+    def _get_quantity_label(self):
+        """Cantidad en cajas y unidades, p. ej. "2 cajas (288)"."""
+        self.ensure_one()
+        quantity = "%g" % self.allocated_qty
+        if not self.allocated_boxes:
+            return quantity
+        label = _("%(boxes)s caja(s)", boxes=self.allocated_boxes)
+        if self.loose_qty:
+            label = _(
+                "%(boxes)s + %(loose)g sueltas",
+                boxes=label,
+                loose=self.loose_qty,
+            )
+        return "%s (%s)" % (label, quantity)

@@ -58,9 +58,17 @@ class SngBiweeklyReplenishmentXlsx(models.AbstractModel):
                 _("Salidas borrador"),
                 _("Stock proyectado"),
                 _("Stock objetivo"),
+                _("Necesidad"),
+                _("Und. por caja"),
+                _("Cajas sugeridas"),
                 _("Sugerido"),
             ]
-            trailing_headers = [_("Asignado"), _("Faltante"), _("Pickings")]
+            trailing_headers = [
+                _("Cajas asignadas"),
+                _("Asignado"),
+                _("Faltante"),
+                _("Pickings"),
+            ]
             headers = fixed_headers + [source.warehouse_id.code for source in sources] + trailing_headers
 
             sheet.merge_range(0, 0, 0, len(headers) - 1, _("Reabastecimiento %s") % batch.name, title_format)
@@ -91,6 +99,9 @@ class SngBiweeklyReplenishmentXlsx(models.AbstractModel):
                     line.draft_out_qty,
                     line.projected_qty,
                     line.target_stock,
+                    line.need_qty,
+                    line.box_qty,
+                    line.suggested_boxes,
                     line.suggested_qty,
                 ]
                 for column, value in enumerate(values):
@@ -110,15 +121,16 @@ class SngBiweeklyReplenishmentXlsx(models.AbstractModel):
                     sheet.write_number(row_number, source_start + offset, quantity, qty_format)
 
                 trailing_start = source_start + len(sources)
-                sheet.write_number(row_number, trailing_start, line.allocated_qty, qty_format)
+                sheet.write_number(row_number, trailing_start, line.allocated_boxes, qty_format)
+                sheet.write_number(row_number, trailing_start + 1, line.allocated_qty, qty_format)
                 sheet.write_number(
                     row_number,
-                    trailing_start + 1,
+                    trailing_start + 2,
                     line.shortage_qty,
                     shortage_format if line.shortage_qty else qty_format,
                 )
                 references = ", ".join(line.allocation_ids.mapped("picking_id.name"))
-                sheet.write(row_number, trailing_start + 2, references, text_format)
+                sheet.write(row_number, trailing_start + 3, references, text_format)
 
             last_row = max(header_row + len(batch.line_ids), header_row + 1)
             sheet.freeze_panes(header_row + 1, 3)

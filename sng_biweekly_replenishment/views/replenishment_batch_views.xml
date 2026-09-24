@@ -76,7 +76,8 @@
                     <notebook>
                         <page string="SKUs">
                             <field name="line_ids" readonly="1">
-                                <list decoration-warning="shortage_qty &gt; 0">
+                                <list decoration-warning="shortage_qty &gt; 0"
+                                      decoration-muted="suggested_qty == 0">
                                     <field name="product_code"/>
                                     <field name="product_id"/>
                                     <field name="uom_id"/>
@@ -89,7 +90,12 @@
                                     <field name="draft_in_qty" optional="hide"/>
                                     <field name="draft_out_qty" optional="hide"/>
                                     <field name="projected_qty"/>
+                                    <field name="need_qty" optional="show"/>
+                                    <field name="box_qty"/>
+                                    <field name="without_box" widget="boolean" optional="show"/>
+                                    <field name="suggested_boxes" sum="Cajas"/>
                                     <field name="suggested_qty" sum="Sugerido"/>
+                                    <field name="allocated_boxes" sum="Cajas asignadas" optional="show"/>
                                     <field name="allocated_qty" sum="Asignado"/>
                                     <field name="shortage_qty" sum="Faltante"/>
                                     <field name="allocation_summary" optional="show"/>
@@ -103,6 +109,9 @@
                                     <field name="warehouse_id"/>
                                     <field name="product_id"/>
                                     <field name="available_qty"/>
+                                    <field name="box_qty"/>
+                                    <field name="allocated_boxes" sum="Total cajas"/>
+                                    <field name="loose_qty" sum="Total sueltas" optional="show"/>
                                     <field name="allocated_qty" sum="Total asignado"/>
                                     <field name="picking_id"/>
                                 </list>
@@ -160,6 +169,7 @@
                 <field name="batch_id"/>
                 <field name="main_warehouse_id"/>
                 <filter name="with_shortage" string="Con faltante" domain="[('shortage_qty', '&gt;', 0)]"/>
+                <filter name="without_box" string="Sin caja" domain="[('without_box', '=', True)]"/>
                 <group expand="0" string="Agrupar por">
                     <filter name="group_product" string="Producto" context="{'group_by': 'product_id'}"/>
                     <filter name="group_batch" string="Ciclo" context="{'group_by': 'batch_id'}"/>

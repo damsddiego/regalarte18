@@ -360,3 +360,80 @@ class TestBiweeklyReplenishment(TransactionCase):
                     "main_warehouse_id": self.main_warehouse.id,
                 }
             )
+
+    def _set_box(self, qty):
+        return self.env["product.packaging"].create(
+            {
+                "name": "Caja",
+                "product_id": self.product.id,
+                "qty": qty,
+                "sales": False,
+                "purchase": False,
+            }
+        )
+
+    def test_box_rounding_rule(self):
+        # Regla de Regalarte: la fracción se completa a caja solo si supera
+        # el 50 % de la caja.
+        cases = [(12, 48, 0), (24, 48, 0), (28, 48, 1), (100, 48, 2), (127, 144, 1), (0, 48, 0)]
+        for need, box, expected in cases:
+            self.assertEqual(
+                self.config._round_need_to_boxes(need, box), expected, (need, box)
+            )
+
+    def test_product_without_box_uses_units(self):
+        line = self._new_batch().line_ids
+        self.assertTrue(line.without_box)
+        self.assertFalse(line.box_qty)
+        self.assertAlmostEqual(line.need_qty, 120.0)
+        self.assertAlmostEqual(line.suggested_qty, 120.0)
+
+    def test_boxes_skip_cedis_without_full_box(self):
+        packaging = self._set_box(48)
+        batch = self._new_batch()
+        line = batch.line_ids
+        # Necesidad 120 = 2 cajas + 24; 24 no supera el 50 % de 48.
+        self.assertFalse(line.without_box)
+        self.assertAlmostEqual(line.need_qty, 120.0)
+        self.assertEqual(line.suggested_boxes, 2)
+        self.assertAlmostEqual(line.suggested_qty, 96.0)
+        allocations = line.allocation_ids.sorted("priority")
+        # CEDIS 1 (70) da 1 caja, CEDIS 2 (30) no completa caja, CEDIS 3 da 1.
+        self.assertEqual(
+            allocations.mapped("warehouse_id"), self.source_1 | self.source_3
+        )
+        self.assertEqual(allocations.mapped("allocated_boxes"), [1, 1])
+        self.assertEqual(allocations.mapped("allocated_qty"), [48.0, 48.0])
+        self.assertAlmostEqual(line.shortage_qty, 0.0)
+
+        batch.action_generate_pickings()
+        moves = batch.picking_ids.move_ids
+        self.assertEqual(len(moves), 2)
+        self.assertEqual(moves.product_packaging_id, packaging)
+
+    def test_boxes_shortage_without_loose_units(self):
+        self._set_box(40)
+        line = self._new_batch().line_ids
+        self.assertEqual(line.suggested_boxes, 3)
+        self.assertEqual(line.allocated_boxes, 2)
+        self.assertAlmostEqual(line.allocated_qty, 80.0)
+        self.assertAlmostEqual(line.shortage_qty, 40.0)
+
+    def test_boxes_completed_with_loose_units_when_allowed(self):
+        self.config.allow_loose_units = True
+        self._set_box(40)
+        batch = self._new_batch()
+        line = batch.line_ids
+        allocations = line.allocation_ids.sorted("priority")
+        self.assertEqual(allocations.mapped("allocated_boxes"), [1, 0, 1])
+        self.assertEqual(allocations.mapped("loose_qty"), [30.0, 10.0, 0.0])
+        self.assertEqual(allocations.mapped("allocated_qty"), [70.0, 10.0, 40.0])
+        self.assertAlmostEqual(line.shortage_qty, 0.0)
+
+        batch.action_generate_pickings()
+        box_move = batch.picking_ids.move_ids.filtered(
+            lambda move: move.location_id == self.source_3.lot_stock_id
+        )
+        loose_moves = batch.picking_ids.move_ids - box_move
+        self.assertTrue(box_move.product_packaging_id)
+        self.assertFalse(loose_moves.product_packaging_id)

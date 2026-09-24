@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import math
 from collections import defaultdict
 from datetime import timedelta
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
+from odoo.tools.float_utils import float_compare
 
 
 _logger = logging.getLogger(__name__)
@@ -127,6 +129,28 @@ class SngBiweeklyReplenishmentConfig(models.Model):
         required=True,
         tracking=True,
     )
+    box_packaging_name = fields.Char(
+        string="Empaque de caja",
+        default="Caja",
+        required=True,
+        tracking=True,
+        help="Nombre del empaque de producto que indica las unidades por caja.",
+    )
+    box_round_up_percent = fields.Float(
+        string="% mínimo para completar caja",
+        default=50.0,
+        required=True,
+        tracking=True,
+        help="Si lo que falta para la siguiente caja supera este porcentaje de la "
+        "caja, se sugiere la caja completa; si no, esa fracción no se traslada.",
+    )
+    allow_loose_units = fields.Boolean(
+        string="Permitir unidades sueltas",
+        default=False,
+        tracking=True,
+        help="Si ningún CEDIS completa las cajas requeridas, completar con "
+        "unidades sueltas. Desactivado: solo se trasladan cajas completas.",
+    )
     last_alert_check_date = fields.Date(
         string="Última revisión de alertas",
         readonly=True,
@@ -165,6 +189,11 @@ class SngBiweeklyReplenishmentConfig(models.Model):
             "cycle_interval_days_positive",
             "check(cycle_interval_days > 0)",
             "La periodicidad debe ser mayor que cero.",
+        ),
+        (
+            "box_round_up_percent_range",
+            "check(box_round_up_percent >= 0 and box_round_up_percent <= 100)",
+            "El porcentaje para completar caja debe estar entre 0 y 100.",
         ),
     ]
 
@@ -304,6 +333,47 @@ class SngBiweeklyReplenishmentConfig(models.Model):
         traslada por unidad completa.
         """
         return max(uom.rounding or 1.0, 1.0)
+
+    def _get_box_packagings(self, products):
+        """Empaque "Caja" de cada producto (el primero por secuencia)."""
+        self.ensure_one()
+        if not products or not (self.box_packaging_name or "").strip():
+            return {}
+        packagings = self.env["product.packaging"].search(
+            [
+                ("product_id", "in", products.ids),
+                ("name", "=ilike", self.box_packaging_name.strip()),
+                ("qty", ">", 0),
+                ("company_id", "in", [False, self.company_id.id]),
+            ],
+            order="sequence, id",
+        )
+        result = {}
+        for packaging in packagings:
+            result.setdefault(packaging.product_id.id, packaging)
+        return result
+
+    @api.model
+    def _floor_boxes(self, quantity, box_qty):
+        """Cajas completas que caben en una cantidad."""
+        if box_qty <= 0 or quantity <= 0:
+            return 0
+        return int(math.floor(quantity / box_qty + 1e-9))
+
+    def _round_need_to_boxes(self, need_qty, box_qty):
+        """Cajas a sugerir para una necesidad en unidades.
+
+        La fracción que sobra de las cajas completas solo se convierte en una
+        caja más si supera el porcentaje configurado de la caja (Regalarte:
+        caja de 48, faltan 28 -> 1 caja; faltan 12 -> nada).
+        """
+        self.ensure_one()
+        boxes = self._floor_boxes(need_qty, box_qty)
+        remainder = need_qty - boxes * box_qty
+        threshold = box_qty * self.box_round_up_percent / 100.0
+        if float_compare(remainder, threshold, precision_digits=4) > 0:
+            boxes += 1
+        return boxes
 
     def _get_quantity_map(self, products, warehouse):
         self.ensure_one()
