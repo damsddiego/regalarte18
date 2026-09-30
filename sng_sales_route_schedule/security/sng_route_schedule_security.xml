@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="group_route_schedule_manager" model="res.groups">
+        <field name="name">Cronograma de rutas: Responsable</field>
+        <field name="category_id" ref="sng_control_visitas.module_category_control_visitas"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+        <field name="comment">Arma, confirma y envía el cronograma de rutas.</field>
+    </record>
+
+    <record id="sng_control_visitas.group_control_visitas_manager" model="res.groups">
+        <field name="implied_ids" eval="[(4, ref('group_route_schedule_manager'))]"/>
+    </record>
+
+    <record id="rule_route_schedule_company" model="ir.rule">
+        <field name="name">Cronograma de rutas: multi-compañía</field>
+        <field name="model_id" ref="model_sng_route_schedule"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_route_schedule_line_company" model="ir.rule">
+        <field name="name">Semanas del cronograma: multi-compañía</field>
+        <field name="model_id" ref="model_sng_route_schedule_line"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_route_rotation_company" model="ir.rule">
+        <field name="name">Rotaciones: multi-compañía</field>
+        <field name="model_id" ref="model_sng_route_rotation"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_route_compliance_company" model="ir.rule">
+        <field name="name">Cumplimiento cronograma: multi-compañía</field>
+        <field name="model_id" ref="model_sng_route_schedule_compliance"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_partner_form_route_schedule" model="ir.ui.view">
+        <field name="name">res.partner.form.route.schedule</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="sng_control_visitas.view_partner_form_control_visitas"/>
+        <field name="arch" type="xml">
+            <field name="sng_excluir_matriz" position="after">
+                <field name="sng_cerrado_temporada"/>
+            </field>
+        </field>
+    </record>
+</odoo>

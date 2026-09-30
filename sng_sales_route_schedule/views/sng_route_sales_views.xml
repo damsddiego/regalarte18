@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Ventas por ruta: facturas de cliente publicadas, por semana, mes o año. -->
+    <record id="view_route_sales_pivot" model="ir.ui.view">
+        <field name="name">account.move.route.sales.pivot</field>
+        <field name="model">account.move</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <pivot string="Ventas por ruta" disable_linking="0">
+                <field name="sales_route_id" type="row"/>
+                <field name="invoice_date" interval="month" type="col"/>
+                <field name="amount_untaxed_signed" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_route_sales_graph" model="ir.ui.view">
+        <field name="name">account.move.route.sales.graph</field>
+        <field name="model">account.move</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <graph string="Ventas por ruta" type="bar">
+                <field name="invoice_date" interval="month"/>
+                <field name="sales_route_id"/>
+                <field name="amount_untaxed_signed" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_route_sales_search" model="ir.ui.view">
+        <field name="name">account.move.route.sales.search</field>
+        <field name="model">account.move</field>
+        <field name="priority">99</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="partner_id"/>
+                <field name="sales_route_id"/>
+                <filter name="invoice_date" string="Fecha de factura" date="invoice_date"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_route" string="Ruta" context="{'group_by': 'sales_route_id'}"/>
+                    <filter name="group_week" string="Semana" context="{'group_by': 'invoice_date:week'}"/>
+                    <filter name="group_month" string="Mes" context="{'group_by': 'invoice_date:month'}"/>
+                    <filter name="group_year" string="Año" context="{'group_by': 'invoice_date:year'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_route_sales" model="ir.actions.act_window">
+        <field name="name">Ventas por ruta</field>
+        <field name="res_model">account.move</field>
+        <field name="view_mode">pivot,graph</field>
+        <field name="domain">[('move_type', 'in', ('out_invoice', 'out_refund')), ('state', '=', 'posted')]</field>
+        <field name="context">{'search_default_invoice_date': 1, 'create': False}</field>
+        <field name="search_view_id" ref="view_route_sales_search"/>
+        <field name="view_ids" eval="[(5, 0, 0),
+            (0, 0, {'view_mode': 'pivot', 'view_id': ref('view_route_sales_pivot')}),
+            (0, 0, {'view_mode': 'graph', 'view_id': ref('view_route_sales_graph')})]"/>
+    </record>
+</odoo>

@@ -291,6 +291,11 @@ class SngControlVisitasLinea(models.Model):
             if v.fecha_programada:
                 v_programadas.setdefault(pid, []).append(v.fecha_programada)
 
+        plan, sin_plan = self._sng_programacion_externa(
+            partners, fecha_desde, fecha_hasta, company)
+        for pid, fechas in plan.items():
+            v_programadas.setdefault(pid, []).extend(fechas)
+
         seg_real = {}
         for s in Seg.search([
                 ('partner_id', 'in', partners.ids),
@@ -321,7 +326,8 @@ class SngControlVisitasLinea(models.Model):
             vals.update(self._sng_vals_gestion(
                 partner, vals, v_ultima.get(pid), v_real.get(pid),
                 v_programadas.get(pid), seg_real.get(pid), seg_pend.get(pid),
-                fecha_desde, fecha_hasta, corte, dias_alerta))
+                fecha_desde, fecha_hasta, corte, dias_alerta,
+                sin_programar=pid in sin_plan))
             vals.update({
                 'periodo': periodo,
                 'fecha_desde': fecha_desde,
@@ -346,9 +352,20 @@ class SngControlVisitasLinea(models.Model):
         return creadas
 
     @api.model
+    def _sng_programacion_externa(self, partners, fecha_desde, fecha_hasta,
+                                  company):
+        """Punto de extensión para planificaciones fuera de la visita.
+
+        Devuelve `(plan, sin_plan)`: `plan` es {partner_id: [fechas]} de
+        visitas programadas en el período y `sin_plan` el conjunto de
+        clientes que una planificación deja deliberadamente fuera del
+        período (no se les deduce visita por frecuencia)."""
+        return {}, set()
+
+    @api.model
     def _sng_vals_gestion(self, partner, maestros, v_ult, v_real,
                           programadas, s_real, s_pend, fecha_desde,
-                          fecha_hasta, corte, dias_alerta):
+                          fecha_hasta, corte, dias_alerta, sin_programar=False):
         """Bloques agente/televentas y columnas AC..AI del Excel."""
         tipo = maestros['tipo_atencion']
         frecuencia = maestros['frecuencia_visita']
@@ -363,7 +380,7 @@ class SngControlVisitasLinea(models.Model):
         programada = min(programadas) if programadas else False
         if not programada and realizada:
             programada = realizada
-        if not programada and tipo == 'ruta' and dias_frec:
+        if not programada and tipo == 'ruta' and dias_frec and not sin_programar:
             proxima = partner.sng_fecha_proxima_visita
             if nunca_visitado:
                 programada = fecha_desde
@@ -400,7 +417,8 @@ class SngControlVisitasLinea(models.Model):
 
         # ---- AG cliente desatendido (fórmula del Excel + frecuencia)
         if tipo == 'ruta':
-            esperado = bool(dias_frec) and (bool(programada) or nunca_visitado)
+            esperado = bool(dias_frec) and (
+                bool(programada) or (nunca_visitado and not sin_programar))
         else:
             ultimo = partner.sng_fecha_ultimo_contacto_televentas
             esperado = (frecuencia != 'sin_visita') and (

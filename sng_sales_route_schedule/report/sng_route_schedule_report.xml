@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_route_schedule" model="ir.actions.report">
+        <field name="name">Cronograma de rutas</field>
+        <field name="model">sng.route.schedule</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sng_sales_route_schedule.report_route_schedule</field>
+        <field name="report_file">sng_sales_route_schedule.report_route_schedule</field>
+        <field name="print_report_name">'Cronograma de rutas - %s' % (object.date_from and object.date_from.strftime('%d-%m-%Y') or '')</field>
+        <field name="binding_model_id" ref="model_sng_route_schedule"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_route_schedule_document">
+        <t t-call="web.external_layout">
+            <t t-set="grid" t-value="o._report_weeks()"/>
+            <t t-set="people" t-value="grid[0]"/>
+            <div class="page">
+                <h3>Plan de trabajo comercial</h3>
+                <p>
+                    <strong>Semanas:</strong>
+                    <span t-field="o.date_from"/> al <span t-field="o.date_to"/>
+                    <span t-if="o.state == 'draft'" class="badge text-bg-warning ms-2">Borrador</span>
+                </p>
+                <table class="table table-sm table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Semana</th>
+                            <th>Fechas</th>
+                            <th t-foreach="people" t-as="person"><span t-esc="person.name"/></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <t t-set="mes" t-value="False"/>
+                        <t t-foreach="grid[1]" t-as="week">
+                            <tr t-if="week['start'].month != mes" class="table-light">
+                                <t t-set="mes" t-value="week['start'].month"/>
+                                <td t-att-colspan="len(people) + 2">
+                                    <strong t-esc="week['start'].strftime('%m/%Y')"/>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td t-esc="'S%02d' % week['start'].isocalendar()[1]"/>
+                                <td>
+                                    <span t-esc="week['start'].strftime('%d/%m')"/> -
+                                    <span t-esc="week['end'].strftime('%d/%m')"/>
+                                </td>
+                                <td t-foreach="week['cells']" t-as="cell">
+                                    <t t-foreach="cell" t-as="line">
+                                        <span t-esc="line.route_names"/>
+                                        <div t-if="line.note" class="text-muted small" t-esc="line.note"/>
+                                    </t>
+                                </td>
+                            </tr>
+                        </t>
+                    </tbody>
+                </table>
+                <p t-if="o.note" t-field="o.note"/>
+            </div>
+        </t>
+    </template>
+
+    <template id="report_route_schedule">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="sng_sales_route_schedule.report_route_schedule_document"/>
+            </t>
+        </t>
+    </template>
+</odoo>

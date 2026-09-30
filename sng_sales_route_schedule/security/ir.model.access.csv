@@ -1,0 +1,10 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_route_rotation_user,sng.route.rotation user,model_sng_route_rotation,base.group_user,1,0,0,0
+access_route_rotation_manager,sng.route.rotation manager,model_sng_route_rotation,group_route_schedule_manager,1,1,1,1
+access_route_rotation_slot_user,sng.route.rotation.slot user,model_sng_route_rotation_slot,base.group_user,1,0,0,0
+access_route_rotation_slot_manager,sng.route.rotation.slot manager,model_sng_route_rotation_slot,group_route_schedule_manager,1,1,1,1
+access_route_schedule_user,sng.route.schedule user,model_sng_route_schedule,base.group_user,1,0,0,0
+access_route_schedule_manager,sng.route.schedule manager,model_sng_route_schedule,group_route_schedule_manager,1,1,1,1
+access_route_schedule_line_user,sng.route.schedule.line user,model_sng_route_schedule_line,base.group_user,1,0,0,0
+access_route_schedule_line_manager,sng.route.schedule.line manager,model_sng_route_schedule_line,group_route_schedule_manager,1,1,1,1
+access_route_schedule_compliance_user,sng.route.schedule.compliance user,model_sng_route_schedule_compliance,base.group_user,1,0,0,0

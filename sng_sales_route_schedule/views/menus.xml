@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="sng_ruteros_pagos.menu_ruteros_root" model="ir.ui.menu">
+        <field name="groups_id" eval="[(4, ref('sng_sales_route_schedule.group_route_schedule_manager'))]"/>
+    </record>
+
+    <menuitem id="menu_route_schedule_root"
+              name="Cronograma de rutas"
+              parent="sng_ruteros_pagos.menu_ruteros_root"
+              sequence="50"/>
+
+    <menuitem id="menu_route_schedule_plan"
+              name="Plan de rutas"
+              parent="menu_route_schedule_root"
+              action="action_route_schedule_line"
+              sequence="10"/>
+
+    <menuitem id="menu_route_schedule"
+              name="Cronogramas"
+              parent="menu_route_schedule_root"
+              action="action_route_schedule"
+              sequence="20"/>
+
+    <menuitem id="menu_route_schedule_compliance"
+              name="Cumplimiento de visitas"
+              parent="menu_route_schedule_root"
+              action="action_route_schedule_compliance"
+              sequence="30"/>
+
+    <menuitem id="menu_route_sales"
+              name="Ventas por ruta"
+              parent="menu_route_schedule_root"
+              action="action_route_sales"
+              sequence="40"
+              groups="account.group_account_readonly,sng_sales_route_schedule.group_route_schedule_manager"/>
+
+    <menuitem id="menu_route_rotation"
+              name="Rotaciones por asesor"
+              parent="menu_route_schedule_root"
+              action="action_route_rotation"
+              sequence="90"
+              groups="sng_sales_route_schedule.group_route_schedule_manager"/>
+</odoo>

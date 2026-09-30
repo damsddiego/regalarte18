@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_route_schedule_list" model="ir.ui.view">
+        <field name="name">sng.route.schedule.list</field>
+        <field name="model">sng.route.schedule</field>
+        <field name="arch" type="xml">
+            <list string="Cronogramas de rutas" decoration-muted="state == 'cancel'"
+                  decoration-info="state == 'draft'">
+                <field name="name"/>
+                <field name="date_from"/>
+                <field name="date_to"/>
+                <field name="week_count"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'confirmed'"
+                       decoration-info="state == 'draft'"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_route_schedule_form" model="ir.ui.view">
+        <field name="name">sng.route.schedule.form</field>
+        <field name="model">sng.route.schedule</field>
+        <field name="arch" type="xml">
+            <form string="Cronograma de rutas">
+                <header>
+                    <button name="action_generate" type="object" string="Generar semanas"
+                            class="btn-primary" invisible="state != 'draft'"
+                            confirm="Se reemplazan las semanas actuales del borrador. ¿Continuar?"
+                            groups="sng_sales_route_schedule.group_route_schedule_manager"/>
+                    <button name="action_confirm" type="object" string="Confirmar"
+                            class="btn-primary" invisible="state != 'draft'"
+                            groups="sng_sales_route_schedule.group_route_schedule_manager"/>
+                    <button name="action_send" type="object" string="Enviar a gerencia"
+                            class="btn-primary" invisible="state != 'confirmed'"
+                            groups="sng_sales_route_schedule.group_route_schedule_manager"/>
+                    <button name="action_print" type="object" string="Imprimir"/>
+                    <button name="action_draft" type="object" string="Volver a borrador"
+                            invisible="state != 'confirmed'"
+                            groups="sng_sales_route_schedule.group_route_schedule_manager"/>
+                    <button name="action_cancel" type="object" string="Cancelar"
+                            invisible="state == 'cancel'"
+                            groups="sng_sales_route_schedule.group_route_schedule_manager"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_compliance" type="object" class="oe_stat_button"
+                                icon="fa-check-square-o" invisible="state != 'confirmed'">
+                            <span class="o_stat_text">Cumplimiento</span>
+                        </button>
+                    </div>
+                    <div class="oe_title"><h1><field name="name"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="date_from" readonly="state != 'draft'"/>
+                            <field name="week_count" readonly="state != 'draft'"/>
+                            <field name="date_to"/>
+                        </group>
+                        <group>
+                            <field name="rotation_ids" widget="many2many_tags" readonly="state != 'draft'"/>
+                            <field name="recipient_ids" widget="many2many_tags"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Semanas" name="lines">
+                            <field name="line_ids" readonly="state == 'cancel'">
+                                <list editable="bottom" create="0"
+                                      decoration-muted="started and state == 'confirmed'">
+                                    <field name="week_number"/>
+                                    <field name="week_start" readonly="1"/>
+                                    <field name="week_end" optional="hide"/>
+                                    <field name="salesperson_id" readonly="1"/>
+                                    <field name="rotation_id" column_invisible="1"/>
+                                    <field name="state" column_invisible="1"/>
+                                    <field name="started" column_invisible="1"/>
+                                    <field name="slot_id" options="{'no_create': True}"
+                                           readonly="started and state == 'confirmed'"/>
+                                    <field name="route_ids" widget="many2many_tags"
+                                           readonly="started and state == 'confirmed'"/>
+                                    <field name="client_count" optional="show"/>
+                                    <field name="note"/>
+                                    <button name="action_skip" type="object" icon="fa-forward"
+                                            title="Saltar esta posición del ciclo (corre las semanas siguientes)"
+                                            invisible="started and state == 'confirmed'"
+                                            groups="sng_sales_route_schedule.group_route_schedule_manager"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Notas" name="notes">
+                            <field name="note"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_route_schedule_line_list" model="ir.ui.view">
+        <field name="name">sng.route.schedule.line.list</field>
+        <field name="model">sng.route.schedule.line</field>
+        <field name="arch" type="xml">
+            <list string="Semanas programadas" create="0" edit="0">
+                <field name="week_number"/>
+                <field name="week_start"/>
+                <field name="week_end"/>
+                <field name="salesperson_id"/>
+                <field name="route_ids" widget="many2many_tags"/>
+                <field name="client_count"/>
+                <field name="note"/>
+                <field name="schedule_id" optional="hide"/>
+                <field name="state" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_route_schedule_line_calendar" model="ir.ui.view">
+        <field name="name">sng.route.schedule.line.calendar</field>
+        <field name="model">sng.route.schedule.line</field>
+        <field name="arch" type="xml">
+            <calendar string="Cronograma" date_start="week_start" date_stop="week_end"
+                      color="salesperson_id" mode="month" all_day="1"
+                      create="0" quick_create="0" event_open_popup="1">
+                <field name="salesperson_id" filters="1"/>
+                <field name="route_names"/>
+            </calendar>
+        </field>
+    </record>
+
+    <record id="view_route_schedule_line_search" model="ir.ui.view">
+        <field name="name">sng.route.schedule.line.search</field>
+        <field name="model">sng.route.schedule.line</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="salesperson_id"/>
+                <field name="route_ids"/>
+                <filter name="confirmed" string="Confirmado" domain="[('state', '=', 'confirmed')]"/>
+                <filter name="current" string="Semana actual"
+                        domain="[('week_start', '&lt;=', context_today().strftime('%Y-%m-%d')),
+                                 ('week_end', '&gt;=', context_today().strftime('%Y-%m-%d'))]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_salesperson" string="Asesor" context="{'group_by': 'salesperson_id'}"/>
+                    <filter name="group_month" string="Mes" context="{'group_by': 'week_start:month'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_route_schedule" model="ir.actions.act_window">
+        <field name="name">Cronogramas</field>
+        <field name="res_model">sng.route.schedule</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <record id="action_route_schedule_line" model="ir.actions.act_window">
+        <field name="name">Plan de rutas</field>
+        <field name="res_model">sng.route.schedule.line</field>
+        <field name="view_mode">calendar,list</field>
+        <field name="search_view_id" ref="view_route_schedule_line_search"/>
+        <field name="context">{'search_default_confirmed': 1}</field>
+    </record>
+</odoo>

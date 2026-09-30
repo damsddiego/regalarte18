@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="mail_template_route_schedule" model="mail.template">
+            <field name="name">Cronograma de rutas: envío a gerencia</field>
+            <field name="model_id" ref="model_sng_route_schedule"/>
+            <field name="subject">{{ object.name }}</field>
+            <field name="partner_to">{{ object.recipient_partner_to }}</field>
+            <field name="report_template_ids" eval="[(4, ref('action_report_route_schedule'))]"/>
+            <field name="body_html" type="html">
+<div>
+    <p>Buenos días,</p>
+    <p>Adjunto el plan de trabajo comercial del
+        <t t-out="object.date_from.strftime('%d/%m/%Y')"/> al
+        <t t-out="object.date_to.strftime('%d/%m/%Y')"/>.</p>
+    <p>Saludos cordiales,</p>
+    <p t-out="user.name"/>
+</div>
+            </field>
+            <field name="auto_delete" eval="False"/>
+        </record>
+    </data>
+</odoo>
