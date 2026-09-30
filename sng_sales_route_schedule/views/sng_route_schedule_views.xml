@@ -121,7 +121,7 @@
         <field name="model">sng.route.schedule.line</field>
         <field name="arch" type="xml">
             <calendar string="Cronograma" date_start="week_start" date_stop="week_end"
-                      color="salesperson_id" mode="month" all_day="1"
+                      color="salesperson_id" mode="month"
                       create="0" quick_create="0" event_open_popup="1">
                 <field name="salesperson_id" filters="1"/>
                 <field name="route_names"/>
