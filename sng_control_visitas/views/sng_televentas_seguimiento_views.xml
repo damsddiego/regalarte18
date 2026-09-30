@@ -176,6 +176,13 @@
                 <filter name="esta_semana" string="Esta semana"
                         domain="[('semana', '&gt;=', (context_today() - relativedelta(days=context_today().weekday())).strftime('%Y-%m-%d')),
                                  ('semana', '&lt;=', (context_today() + relativedelta(days=6 - context_today().weekday())).strftime('%Y-%m-%d'))]"/>
+                <filter name="semana_anterior" string="Semana anterior"
+                        domain="[('semana', '&gt;=', (context_today() - relativedelta(days=context_today().weekday() + 7)).strftime('%Y-%m-%d')),
+                                 ('semana', '&lt;=', (context_today() - relativedelta(days=context_today().weekday() + 1)).strftime('%Y-%m-%d'))]"/>
+                <filter name="proxima_semana" string="Próxima semana"
+                        domain="[('semana', '&gt;=', (context_today() + relativedelta(days=7 - context_today().weekday())).strftime('%Y-%m-%d')),
+                                 ('semana', '&lt;=', (context_today() + relativedelta(days=13 - context_today().weekday())).strftime('%Y-%m-%d'))]"/>
+                <separator/>
                 <filter name="con_venta" string="Con venta"
                         domain="[('resultado', 'in', ('venta_recuperada', 'pedido_pendiente'))]"/>
                 <filter name="sin_comentario" string="Sin comentario" domain="[('sin_comentario', '=', True)]"/>
