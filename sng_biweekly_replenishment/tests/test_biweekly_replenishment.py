@@ -207,6 +207,78 @@ class TestBiweeklyReplenishment(TransactionCase):
         demand = self.config._get_demand_by_product(period_start, period_end)
         self.assertAlmostEqual(demand[self.product.id], 174.0)
 
+    def _create_history(self, moves_count, quantity, period_start):
+        """Movimientos de referencia anteriores al período evaluado."""
+        destination = self.env.ref("stock.stock_location_customers")
+        self.env["stock.quant"]._update_available_quantity(
+            self.product,
+            self.main_warehouse.lot_stock_id,
+            moves_count * quantity,
+        )
+        history = self.env["stock.move"]
+        for index in range(moves_count):
+            move = self._create_done_move(
+                self.product,
+                quantity,
+                self.main_warehouse.lot_stock_id,
+                destination,
+                self.main_warehouse.out_type_id,
+            )
+            move.date = period_start - timedelta(days=index + 1)
+            history |= move
+        return history
+
+    def test_atypical_move_is_trimmed(self):
+        """Una venta institucional solo aporta el tope del SKU a la demanda."""
+        period_end = fields.Datetime.now().replace(microsecond=0)
+        period_start = period_end - timedelta(days=14)
+        self._create_history(25, 10.0, period_start)
+
+        detail = self.config._get_demand_detail(period_start, period_end)
+        # La demanda base del setUpClass (140 u) entra en el período evaluado.
+        cap = 10.0 + self.config.outlier_factor * 10.0
+        self.assertAlmostEqual(detail[self.product.id]["gross"], 140.0)
+        self.assertAlmostEqual(detail[self.product.id]["net"], cap)
+        self.assertAlmostEqual(detail[self.product.id]["trimmed"], 140.0 - cap)
+        self.assertAlmostEqual(
+            self.config._get_demand_by_product(period_start, period_end)[
+                self.product.id
+            ],
+            cap,
+        )
+
+    def test_atypical_filter_needs_enough_history(self):
+        """Con pocos movimientos de referencia no se topa nada."""
+        period_end = fields.Datetime.now().replace(microsecond=0)
+        period_start = period_end - timedelta(days=14)
+        self._create_history(self.config.outlier_min_history_moves - 1, 10.0, period_start)
+
+        detail = self.config._get_demand_detail(period_start, period_end)
+        self.assertAlmostEqual(detail[self.product.id]["net"], 140.0)
+        self.assertAlmostEqual(detail[self.product.id]["trimmed"], 0.0)
+
+    def test_atypical_filter_can_be_disabled(self):
+        period_end = fields.Datetime.now().replace(microsecond=0)
+        period_start = period_end - timedelta(days=14)
+        self._create_history(25, 10.0, period_start)
+        self.config.outlier_filter_active = False
+
+        detail = self.config._get_demand_detail(period_start, period_end)
+        self.assertAlmostEqual(detail[self.product.id]["net"], 140.0)
+        self.assertAlmostEqual(detail[self.product.id]["trimmed"], 0.0)
+
+    def test_batch_line_keeps_gross_and_atypical(self):
+        period_start = fields.Datetime.now().replace(microsecond=0) - timedelta(days=14)
+        self._create_history(25, 10.0, period_start)
+        batch = self._new_batch()
+        line = batch.line_ids
+
+        self.assertAlmostEqual(line.demand_gross_qty, 140.0)
+        self.assertGreater(line.atypical_qty, 0.0)
+        self.assertAlmostEqual(
+            line.demand_qty + line.atypical_qty, line.demand_gross_qty
+        )
+
     def test_formula_and_priority_allocation(self):
         batch = self._new_batch()
         line = batch.line_ids

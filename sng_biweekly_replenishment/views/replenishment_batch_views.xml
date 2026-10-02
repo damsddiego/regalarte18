@@ -82,6 +82,10 @@
                                     <field name="product_id"/>
                                     <field name="uom_id"/>
                                     <field name="demand_qty" sum="Demanda"/>
+                                    <field name="demand_gross_qty" optional="hide"
+                                           sum="Salidas brutas"/>
+                                    <field name="atypical_qty" optional="show"
+                                           sum="Atípico descartado"/>
                                     <field name="daily_demand"/>
                                     <field name="target_stock"/>
                                     <field name="reorder_point" optional="hide"/>

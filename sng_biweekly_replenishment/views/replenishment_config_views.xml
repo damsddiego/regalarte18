@@ -68,6 +68,17 @@
                             <field name="box_round_up_percent"/>
                             <field name="allow_loose_units"/>
                         </group>
+                        <group string="Ventas atípicas">
+                            <field name="outlier_filter_active"/>
+                            <field name="outlier_baseline_days"
+                                   invisible="not outlier_filter_active"/>
+                            <field name="outlier_factor"
+                                   invisible="not outlier_filter_active"/>
+                            <field name="outlier_min_qty"
+                                   invisible="not outlier_filter_active"/>
+                            <field name="outlier_min_history_moves"
+                                   invisible="not outlier_filter_active"/>
+                        </group>
                     </group>
                     <notebook>
                         <page string="CEDIS y prioridad">

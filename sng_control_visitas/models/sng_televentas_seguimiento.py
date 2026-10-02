@@ -30,6 +30,18 @@ CANALES = [
     ('videollamada', 'Videollamada'),
 ]
 
+# Campo del seguimiento -> campo de regalarte.customer.metric
+INDICADORES_METRICA = {
+    'venta_mes_actual': 'customer_current_month_sales',
+    'venta_mes_anterior': 'customer_previous_month_sales',
+    'promedio_trimestral': 'customer_quarterly_avg_sales',
+    'promedio_semestral': 'customer_semiannual_avg_sales',
+    'promedio_anual': 'customer_annual_avg_sales',
+    'venta_acumulada': 'customer_total_sales',
+    'dpp_dias': 'customer_dpp_days',
+    'indicadores_actualizados': 'customer_metrics_last_update',
+}
+
 ORIGENES = [
     ('no_visitado', 'Cliente no visitado'),
     ('visita_pendiente', 'Visita pendiente según frecuencia'),
@@ -118,6 +130,61 @@ class SngTeleventasSeguimiento(models.Model):
     vencido = fields.Boolean(
         string='Vencido', compute='_compute_vencido', search='_search_vencido')
 
+    # Indicadores del cliente, solo de consulta, para preparar la llamada.
+    # Son los de la pestaña "Indicadores del Cliente" de la ficha
+    # (regalarte_customer_metrics) más la última compra.
+    partner_phone = fields.Char(
+        related='partner_id.phone', string='Teléfono')
+    partner_mobile = fields.Char(
+        related='partner_id.mobile', string='Móvil')
+    fecha_ultima_visita = fields.Date(
+        related='partner_id.sng_fecha_ultima_visita', string='Última visita')
+    fecha_ultimo_contacto = fields.Date(
+        related='partner_id.sng_fecha_ultimo_contacto_televentas',
+        string='Último contacto televentas')
+    fecha_ultima_compra = fields.Date(
+        string='Última compra', compute='_compute_indicadores_cliente',
+        help='Fecha de la última factura de cliente publicada.')
+    monto_ultima_compra = fields.Monetary(
+        string='Monto última compra', currency_field='currency_id',
+        compute='_compute_indicadores_cliente')
+    dias_sin_comprar = fields.Integer(
+        string='Días sin comprar', compute='_compute_indicadores_cliente')
+    venta_mes_actual = fields.Monetary(
+        string='Venta mes actual', currency_field='currency_id',
+        compute='_compute_indicadores_cliente')
+    venta_mes_anterior = fields.Monetary(
+        string='Venta mes anterior', currency_field='currency_id',
+        compute='_compute_indicadores_cliente')
+    promedio_trimestral = fields.Monetary(
+        string='Promedio trimestral', currency_field='currency_id',
+        compute='_compute_indicadores_cliente',
+        help='Venta mensual promedio de los últimos 3 meses.')
+    promedio_semestral = fields.Monetary(
+        string='Promedio semestral', currency_field='currency_id',
+        compute='_compute_indicadores_cliente',
+        help='Venta mensual promedio de los últimos 6 meses.')
+    promedio_anual = fields.Monetary(
+        string='Promedio anual', currency_field='currency_id',
+        compute='_compute_indicadores_cliente',
+        help='Venta mensual promedio de los últimos 12 meses.')
+    venta_acumulada = fields.Monetary(
+        string='Venta acumulada', currency_field='currency_id',
+        compute='_compute_indicadores_cliente')
+    saldo_pendiente = fields.Monetary(
+        string='Saldo pendiente', currency_field='currency_id',
+        compute='_compute_indicadores_cliente',
+        help='Saldo por cobrar del cliente al momento de la consulta.')
+    dpp_dias = fields.Float(
+        string='DPP (días)', digits=(16, 2),
+        compute='_compute_indicadores_cliente',
+        help='Días promedio de pago del cliente.')
+    indicadores_actualizados = fields.Datetime(
+        string='Indicadores actualizados',
+        compute='_compute_indicadores_cliente',
+        help='Última vez que se recalcularon las ventas y el DPP. La última '
+             'compra y el saldo pendiente se consultan al momento.')
+
     # ----------------------------------------------------------------- computes
 
     @api.depends('partner_id', 'partner_id.commercial_name', 'semana')
@@ -172,6 +239,68 @@ class SngTeleventasSeguimiento(models.Model):
                    ('fecha_limite', '<', hoy)]
         positivo = (operator == '=' and value) or (operator == '!=' and not value)
         return dominio if positivo else ['!'] + dominio
+
+    @api.depends('partner_id', 'company_id')
+    def _compute_indicadores_cliente(self):
+        # sudo: las métricas están restringidas a contabilidad, y la
+        # responsable de televentas necesita verlas para preparar la llamada.
+        Metric = self.env['regalarte.customer.metric'].sudo()
+        hoy = fields.Date.context_today(self)
+        sin_cliente = self
+        for company in self.company_id:
+            recs = self.filtered(
+                lambda r: r.company_id == company and r.partner_id)
+            if not recs:
+                continue
+            sin_cliente -= recs
+            comerciales = recs.partner_id.commercial_partner_id
+            metricas = {m.partner_id.id: m for m in Metric.search([
+                ('partner_id', 'in', comerciales.ids),
+                ('company_id', '=', company.id),
+            ])}
+            saldos = Metric._get_receivable_balances(comerciales.ids, company)
+            compras = self._sng_ultimas_compras(comerciales.ids, company)
+            for rec in recs:
+                pid = rec.partner_id.commercial_partner_id.id
+                metrica = metricas.get(pid, Metric)
+                fecha, monto = compras.get(pid, (False, 0.0))
+                rec.fecha_ultima_compra = fecha
+                rec.monto_ultima_compra = monto
+                rec.dias_sin_comprar = (hoy - fecha).days if fecha else 0
+                for campo, origen in INDICADORES_METRICA.items():
+                    rec[campo] = metrica[origen]
+                rec.saldo_pendiente = saldos.get(pid, 0.0)
+        for rec in sin_cliente:
+            rec.fecha_ultima_compra = False
+            rec.monto_ultima_compra = 0.0
+            rec.dias_sin_comprar = 0
+            for campo in INDICADORES_METRICA:
+                rec[campo] = False
+            rec.saldo_pendiente = 0.0
+
+    @api.model
+    def _sng_ultimas_compras(self, partner_ids, company):
+        """{cliente comercial: (fecha, monto)} de su última factura publicada.
+
+        Mismo criterio que "última factura" en la Matriz de Control."""
+        if not partner_ids:
+            return {}
+        self.env['account.move'].flush_model([
+            'move_type', 'state', 'invoice_date', 'company_id',
+            'commercial_partner_id', 'amount_total_signed'])
+        self.env.cr.execute("""
+            SELECT DISTINCT ON (commercial_partner_id)
+                   commercial_partner_id, invoice_date, amount_total_signed
+              FROM account_move
+             WHERE move_type = 'out_invoice'
+               AND state = 'posted'
+               AND invoice_date IS NOT NULL
+               AND company_id = %s
+               AND commercial_partner_id = ANY(%s)
+             ORDER BY commercial_partner_id, invoice_date DESC, id DESC
+        """, (company.id, list(partner_ids)))
+        return {pid: (fecha, monto or 0.0)
+                for pid, fecha, monto in self.env.cr.fetchall()}
 
     # -------------------------------------------------------------- restricciones
 

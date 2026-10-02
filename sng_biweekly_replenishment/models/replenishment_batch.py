@@ -212,7 +212,10 @@ class SngBiweeklyReplenishmentBatch(models.Model):
         self.generated_at = False
 
         config = self.config_id
-        demand_map = config._get_demand_by_product(self.period_start, self.period_end)
+        demand_detail = config._get_demand_detail(self.period_start, self.period_end)
+        demand_map = {
+            product_id: values["net"] for product_id, values in demand_detail.items()
+        }
         positive_product_ids = [
             product_id for product_id, qty in demand_map.items() if qty > 0
         ]
@@ -268,6 +271,12 @@ class SngBiweeklyReplenishmentBatch(models.Model):
                     "product_id": product.id,
                     "uom_id": product.uom_id.id,
                     "demand_qty": demand_qty,
+                    "demand_gross_qty": demand_detail.get(product.id, {}).get(
+                        "gross", demand_qty
+                    ),
+                    "atypical_qty": demand_detail.get(product.id, {}).get(
+                        "trimmed", 0.0
+                    ),
                     "daily_demand": daily_demand,
                     "coverage_days": config.coverage_days,
                     "safety_days": config.safety_days,
@@ -289,15 +298,22 @@ class SngBiweeklyReplenishmentBatch(models.Model):
             )
         lines = self.env["sng.biweekly.replenishment.line"].create(line_values)
         self._allocate_sources(lines.filtered(lambda line: line.suggested_qty > 0))
-        self.message_post(
-            body=_(
-                "Cálculo actualizado con %(products)s SKU(s) y demanda desde "
-                "%(start)s hasta %(end)s.",
-                products=len(lines),
-                start=fields.Datetime.to_string(self.period_start),
-                end=fields.Datetime.to_string(self.period_end),
-            )
+        body = _(
+            "Cálculo actualizado con %(products)s SKU(s) y demanda desde "
+            "%(start)s hasta %(end)s.",
+            products=len(lines),
+            start=fields.Datetime.to_string(self.period_start),
+            end=fields.Datetime.to_string(self.period_end),
         )
+        atypical_lines = lines.filtered(lambda line: line.atypical_qty > 0)
+        if atypical_lines:
+            body += _(
+                "<br/>Se descartaron %(qty)s unidades atípicas en %(products)s "
+                "SKU(s) para no inflar el promedio de rotación.",
+                qty=int(round(sum(atypical_lines.mapped("atypical_qty")))),
+                products=len(atypical_lines),
+            )
+        self.message_post(body=body)
         return self._get_form_action()
 
     def _allocate_sources(self, lines):
@@ -586,6 +602,22 @@ class SngBiweeklyReplenishmentLine(models.Model):
         string="Salidas 14 días",
         digits="Product Unit of Measure",
         readonly=True,
+        help="Demanda que alimenta el cálculo, ya sin los picos atípicos.",
+    )
+    demand_gross_qty = fields.Float(
+        string="Salidas brutas",
+        digits="Product Unit of Measure",
+        readonly=True,
+        help="Todo lo que salió de la Bodega Principal en el período, incluidos "
+        "los movimientos atípicos.",
+    )
+    atypical_qty = fields.Float(
+        string="Atípico descartado",
+        digits="Product Unit of Measure",
+        readonly=True,
+        help="Unidades que el tope dejó fuera del promedio de rotación: ventas "
+        "institucionales, licitaciones o mayoreo de una sola vez. El pedido en "
+        "firme se cubre por el stock previsto.",
     )
     daily_demand = fields.Float(
         string="Demanda diaria",

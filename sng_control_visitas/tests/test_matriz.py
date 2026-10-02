@@ -10,19 +10,6 @@ from .common import ControlVisitasCommon
 @tagged('post_install', '-at_install', 'sng_control_visitas')
 class TestMatriz(ControlVisitasCommon):
 
-    def _factura(self, partner, fecha):
-        producto = self.env['product.product'].create({
-            'name': 'Prod F', 'list_price': 10.0, 'type': 'consu'})
-        inv = self.env['account.move'].create({
-            'move_type': 'out_invoice',
-            'partner_id': partner.id,
-            'invoice_date': fecha,
-            'invoice_line_ids': [(0, 0, {'product_id': producto.id,
-                                         'quantity': 1, 'price_unit': 10})],
-        })
-        inv.action_post()
-        return inv
-
     def test_nunca_visitado_es_pendiente_y_desatendido(self):
         linea = self._linea(self.cliente)
         # nunca visitado en ruta con frecuencia: se espera visita este mes

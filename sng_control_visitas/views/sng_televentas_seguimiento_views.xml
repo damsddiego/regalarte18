@@ -25,6 +25,11 @@
                 <field name="monto_venta" optional="show" sum="Total"/>
                 <field name="proxima_accion_id" optional="show"/>
                 <field name="fecha_proxima_accion" optional="show"/>
+                <field name="partner_phone" widget="phone" optional="hide"/>
+                <field name="fecha_ultima_compra" optional="hide"/>
+                <field name="dias_sin_comprar" optional="hide"/>
+                <field name="promedio_trimestral" optional="hide"/>
+                <field name="saldo_pendiente" optional="hide"/>
                 <field name="vencido" column_invisible="1"/>
                 <field name="sin_comentario" optional="hide"/>
                 <field name="activity_ids" widget="list_activity" optional="hide"/>
@@ -54,6 +59,9 @@
                     <group>
                         <group string="Cliente">
                             <field name="partner_id" readonly="estado != 'pendiente'"/>
+                            <field name="partner_phone" widget="phone"/>
+                            <field name="partner_mobile" widget="phone"
+                                   invisible="not partner_mobile"/>
                             <field name="vendedor_id"/>
                             <field name="sales_route_id"/>
                             <field name="visita_id"/>
@@ -65,6 +73,28 @@
                             <field name="fecha_limite"/>
                             <field name="responsable_id" widget="many2one_avatar_user"/>
                             <field name="vencido" invisible="1"/>
+                        </group>
+                    </group>
+                    <group invisible="not partner_id">
+                        <group string="Compras del cliente">
+                            <field name="fecha_ultima_compra"/>
+                            <field name="dias_sin_comprar"
+                                   invisible="not fecha_ultima_compra"/>
+                            <field name="monto_ultima_compra"
+                                   invisible="not fecha_ultima_compra"/>
+                            <field name="venta_mes_actual"/>
+                            <field name="venta_mes_anterior"/>
+                            <field name="promedio_trimestral"/>
+                            <field name="promedio_semestral"/>
+                            <field name="promedio_anual"/>
+                            <field name="venta_acumulada"/>
+                        </group>
+                        <group string="Cobranza y atención">
+                            <field name="saldo_pendiente"/>
+                            <field name="dpp_dias"/>
+                            <field name="fecha_ultima_visita"/>
+                            <field name="fecha_ultimo_contacto"/>
+                            <field name="indicadores_actualizados"/>
                         </group>
                     </group>
                     <group string="Gestión" col="4">

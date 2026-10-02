@@ -93,6 +93,19 @@ class ControlVisitasCommon(TransactionCase):
         base.update(vals)
         return self.Seg.create(base)
 
+    def _factura(self, partner, fecha):
+        producto = self.env['product.product'].create({
+            'name': 'Prod F', 'list_price': 10.0, 'type': 'consu'})
+        inv = self.env['account.move'].create({
+            'move_type': 'out_invoice',
+            'partner_id': partner.id,
+            'invoice_date': fecha,
+            'invoice_line_ids': [(0, 0, {'product_id': producto.id,
+                                         'quantity': 1, 'price_unit': 10})],
+        })
+        inv.action_post()
+        return inv
+
     def _linea(self, partner, fecha=None):
         from odoo import fields
         fecha = fecha or fields.Date.context_today(self.Linea)

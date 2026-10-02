@@ -4,6 +4,7 @@ import logging
 import math
 from collections import defaultdict
 from datetime import timedelta
+from statistics import median
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError, ValidationError
@@ -151,6 +152,48 @@ class SngBiweeklyReplenishmentConfig(models.Model):
         help="Si ningún CEDIS completa las cajas requeridas, completar con "
         "unidades sueltas. Desactivado: solo se trasladan cajas completas.",
     )
+    outlier_filter_active = fields.Boolean(
+        string="Filtrar ventas atípicas",
+        default=True,
+        tracking=True,
+        help="Recorta los movimientos desproporcionados (ventas institucionales, "
+        "licitaciones, mayoreo de una sola vez) para que no inflen la demanda "
+        "del período. El pedido atípico se cubre por el stock previsto, no por "
+        "el promedio de rotación.",
+    )
+    outlier_baseline_days = fields.Integer(
+        string="Histórico de referencia (días)",
+        default=180,
+        required=True,
+        tracking=True,
+        help="Días anteriores al período que se usan para medir el tamaño "
+        "normal de movimiento de cada producto.",
+    )
+    outlier_factor = fields.Float(
+        string="Factor del tope",
+        default=4.0,
+        required=True,
+        tracking=True,
+        help="Cuántas desviaciones medianas por encima de su tamaño típico "
+        "puede medir un movimiento antes de considerarse atípico. Más alto "
+        "tolera picos mayores.",
+    )
+    outlier_min_qty = fields.Float(
+        string="Tope mínimo (unidades)",
+        default=12.0,
+        required=True,
+        tracking=True,
+        help="Ningún tope baja de esta cantidad, para no recortar productos de "
+        "movimiento pequeño.",
+    )
+    outlier_min_history_moves = fields.Integer(
+        string="Movimientos mínimos de referencia",
+        default=20,
+        required=True,
+        tracking=True,
+        help="Productos con menos movimientos en el histórico no se topan: la "
+        "muestra es muy corta para saber qué es normal.",
+    )
     last_alert_check_date = fields.Date(
         string="Última revisión de alertas",
         readonly=True,
@@ -194,6 +237,26 @@ class SngBiweeklyReplenishmentConfig(models.Model):
             "box_round_up_percent_range",
             "check(box_round_up_percent >= 0 and box_round_up_percent <= 100)",
             "El porcentaje para completar caja debe estar entre 0 y 100.",
+        ),
+        (
+            "outlier_baseline_days_positive",
+            "check(outlier_baseline_days > 0)",
+            "El histórico de referencia debe ser mayor que cero.",
+        ),
+        (
+            "outlier_factor_positive",
+            "check(outlier_factor > 0)",
+            "El factor del tope debe ser mayor que cero.",
+        ),
+        (
+            "outlier_min_qty_positive",
+            "check(outlier_min_qty > 0)",
+            "El tope mínimo debe ser mayor que cero.",
+        ),
+        (
+            "outlier_min_history_moves_positive",
+            "check(outlier_min_history_moves > 0)",
+            "Los movimientos mínimos de referencia deben ser mayores que cero.",
         ),
     ]
 
@@ -294,8 +357,16 @@ class SngBiweeklyReplenishmentConfig(models.Model):
         if not products:
             return {}
 
+        detail = self._get_demand_detail(period_start, period_end, products=products)
+        return {
+            product_id: values["net"] for product_id, values in detail.items()
+        }
+
+    def _get_demand_move_domain(self, period_start, period_end, products):
+        """Movimientos físicos de salida de la Bodega Principal en un período."""
+        self.ensure_one()
         physical_internal_codes = ["CONS", "REGOUT"]
-        domain = [
+        return [
             ("state", "=", "done"),
             ("date", ">=", period_start),
             ("date", "<", period_end),
@@ -310,19 +381,77 @@ class SngBiweeklyReplenishmentConfig(models.Model):
             ("location_dest_id.warehouse_id", "!=", self.main_warehouse_id.id),
             ("picking_type_id.sequence_code", "in", physical_internal_codes),
         ]
-        grouped = self.env["stock.move"]._read_group(
-            domain,
-            ["product_id", "product_uom"],
-            ["quantity:sum"],
-        )
-        demand = defaultdict(float)
-        for product, uom, quantity in grouped:
-            demand[product.id] += uom._compute_quantity(
-                quantity,
+
+    def _get_outlier_caps(self, products, window_start):
+        """Unidades que cada SKU puede aportar en un solo movimiento.
+
+        El tope sale del propio historial del producto: la mediana del tamaño de
+        sus movimientos más un múltiplo de su desviación mediana. Una entrega
+        institucional o una licitación supera ese tope y solo aporta el tope a la
+        demanda del período, de modo que no infla el promedio de rotación.
+
+        Se mide sobre el historial anterior al período evaluado, para que el
+        propio pico que se quiere descartar no levante su tope. Los productos con
+        pocos movimientos no se topan: la muestra no alcanza para saber qué es
+        normal en ellos.
+        """
+        self.ensure_one()
+        if not self.outlier_filter_active or not products:
+            return {}
+        baseline_start = window_start - timedelta(days=self.outlier_baseline_days)
+        domain = self._get_demand_move_domain(baseline_start, window_start, products)
+        sizes = defaultdict(list)
+        for move in self.env["stock.move"].search(domain):
+            quantity = move.product_uom._compute_quantity(
+                move.quantity,
+                move.product_id.uom_id,
+                round=False,
+            )
+            if quantity > 0:
+                sizes[move.product_id.id].append(quantity)
+
+        caps = {}
+        for product_id, quantities in sizes.items():
+            if len(quantities) < self.outlier_min_history_moves:
+                continue
+            typical = median(quantities)
+            spread = median([abs(qty - typical) for qty in quantities])
+            caps[product_id] = max(
+                typical + self.outlier_factor * (spread or typical),
+                self.outlier_min_qty,
+            )
+        return caps
+
+    def _get_demand_detail(self, period_start, period_end, products=None):
+        """Demanda física por producto, separando los picos atípicos.
+
+        Devuelve {product_id: {"gross", "net", "trimmed"}} en la UdM base del
+        producto: "gross" es todo lo que salió, "net" es lo que alimenta el
+        cálculo de reposición y "trimmed" lo que el tope dejó fuera.
+        """
+        self.ensure_one()
+        if products is None:
+            products = self.env["product.product"].search(self._get_product_domain())
+        if not products:
+            return {}
+
+        caps = self._get_outlier_caps(products, period_start)
+        domain = self._get_demand_move_domain(period_start, period_end, products)
+        detail = defaultdict(lambda: {"gross": 0.0, "net": 0.0, "trimmed": 0.0})
+        for move in self.env["stock.move"].search(domain):
+            product = move.product_id
+            quantity = move.product_uom._compute_quantity(
+                move.quantity,
                 product.uom_id,
                 round=False,
             )
-        return dict(demand)
+            cap = caps.get(product.id)
+            usable = quantity if cap is None else min(quantity, cap)
+            values = detail[product.id]
+            values["gross"] += quantity
+            values["net"] += usable
+            values["trimmed"] += quantity - usable
+        return dict(detail)
 
     @api.model
     def _get_qty_rounding(self, uom):

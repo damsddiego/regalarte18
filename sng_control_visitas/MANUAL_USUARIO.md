@@ -101,6 +101,16 @@ Un seguimiento es una llamada que hay que hacer a un cliente en una semana concr
 - **Responsable**: por defecto Natalia.
 - **Estado**: Pendiente → Realizado, o Cancelado.
 
+Para preparar la llamada, la ficha muestra además los datos del cliente (solo de consulta):
+
+| Bloque | Datos |
+|---|---|
+| Cliente | Teléfono y móvil |
+| Compras del cliente | Última compra (fecha, monto y días sin comprar) · Venta mes actual y mes anterior · Promedio trimestral, semestral y anual · Venta acumulada |
+| Cobranza y atención | Saldo pendiente · DPP (días promedio de pago) · Última visita del agente · Último contacto de televentas |
+
+Las ventas, los promedios y el DPP son los mismos de la pestaña **Indicadores del Cliente** de la ficha del contacto y se recalculan una vez al día (ver "Indicadores actualizados"). La última compra y el saldo pendiente se consultan al momento. En la lista se pueden activar como columnas opcionales el teléfono, la última compra, los días sin comprar, el promedio trimestral y el saldo.
+
 ### 4.1 Cómo trabajar la lista
 
 1. Entrar a Ruteros › Seguimiento Televentas. Por defecto muestra los **pendientes**. El filtro **Mis pendientes** deja solo los propios.

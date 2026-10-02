@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "SNG Reabastecimiento Bisemanal",
-    "version": "18.0.1.2.0",
+    "version": "18.0.1.3.0",
     "category": "Inventory/Operations",
     "summary": "Demanda, alertas y traslados bisemanales entre almacenes",
     "author": "SNG Cloud",

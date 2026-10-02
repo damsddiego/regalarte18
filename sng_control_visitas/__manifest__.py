@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "SNG Control de Visitas y Rutas",
-    "version": "18.0.1.3.0",
+    "version": "18.0.1.4.0",
     "category": "Sales",
     "summary": "Control de visitas de agentes de ruta, seguimiento de televentas "
                "y matriz gerencial de cobertura por cliente",
@@ -29,6 +29,7 @@ Replica en Odoo la "Matriz Control de visitas y rutas":
         "sng_sales_routes",
         "sales_commission_omax",
         "sng_cxc_report",
+        "regalarte_customer_metrics",
     ],
     "data": [
         "security/sng_control_visitas_security.xml",
