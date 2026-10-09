@@ -1,0 +1,298 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_inventario_sesion_list" model="ir.ui.view">
+        <field name="name">sng.inventario.sesion.list</field>
+        <field name="model">sng.inventario.sesion</field>
+        <field name="arch" type="xml">
+            <list string="Inventario móvil">
+                <field name="name"/>
+                <field name="warehouse_id"/>
+                <field name="location_id"/>
+                <field name="tipo" optional="hide"/>
+                <field name="responsable_id" widget="many2one_avatar_user"/>
+                <field name="fecha_inicio"/>
+                <field name="fecha_aplicado" optional="show"/>
+                <field name="diferencia_count"/>
+                <field name="valor_neto" sum="Total"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="state" widget="badge"
+                       decoration-info="state in ('conteo', 'reconteo')"
+                       decoration-warning="state == 'revision'"
+                       decoration-success="state == 'aplicado'"
+                       decoration-muted="state == 'cancelado'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_inventario_sesion_search" model="ir.ui.view">
+        <field name="name">sng.inventario.sesion.search</field>
+        <field name="model">sng.inventario.sesion</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="warehouse_id"/>
+                <field name="location_id"/>
+                <field name="responsable_id"/>
+                <filter name="abiertas" string="Abiertas"
+                        domain="[('state', 'in', ('borrador', 'conteo', 'reconteo', 'revision'))]"/>
+                <filter name="por_aplicar" string="Por aplicar" domain="[('state', '=', 'revision')]"/>
+                <filter name="aplicadas" string="Aplicadas" domain="[('state', '=', 'aplicado')]"/>
+                <group>
+                    <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
+                    <filter name="group_warehouse" string="Almacén" context="{'group_by': 'warehouse_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_sng_inventario_sesion_form" model="ir.ui.view">
+        <field name="name">sng.inventario.sesion.form</field>
+        <field name="model">sng.inventario.sesion</field>
+        <field name="arch" type="xml">
+            <form string="Inventario móvil">
+                <header>
+                    <button name="action_iniciar_conteo" type="object" string="Iniciar conteo"
+                            class="btn-primary" invisible="state != 'borrador'"
+                            groups="sng_inventario_movil.group_responsable"/>
+                    <button name="action_cerrar_conteo" type="object" string="Cerrar conteo"
+                            class="btn-primary" invisible="state != 'conteo'"
+                            groups="sng_inventario_movil.group_responsable"
+                            confirm="Se cierran las lecturas de la ronda 1. Las diferencias sobre el umbral pasan a reconteo. ¿Continuar?"/>
+                    <button name="action_cerrar_reconteo" type="object" string="Cerrar reconteo"
+                            class="btn-primary" invisible="state != 'reconteo'"
+                            groups="sng_inventario_movil.group_responsable"
+                            confirm="Lo que no se haya recontado se queda con el primer conteo. ¿Continuar?"/>
+                    <button name="action_aplicar_ajuste" type="object" string="Aplicar ajuste"
+                            class="btn-primary" invisible="state != 'revision'"
+                            groups="sng_inventory_adjustment_history.group_inventory_adjustment_approver"
+                            confirm="Se crearán los movimientos de ajuste y su valoración contable. ¿Aplicar?"/>
+                    <button name="action_guardar_codigos" type="object" string="Guardar códigos leídos"
+                            invisible="state not in ('revision', 'aplicado')"
+                            groups="sng_inventario_movil.group_responsable"
+                            help="Guarda como código de barras del producto el código que leyó el lector, si el producto no tiene uno."/>
+                    <button name="%(sng_inventario_movil.action_report_acta_inventario)d" type="action"
+                            string="Imprimir acta" invisible="state not in ('revision', 'aplicado')"/>
+                    <button name="action_cancelar" type="object" string="Cancelar"
+                            invisible="state in ('aplicado', 'cancelado')"
+                            groups="sng_inventario_movil.group_responsable"
+                            confirm="¿Cancelar la sesión? Las lecturas se conservan pero no se aplicará ningún ajuste."/>
+                    <button name="action_volver_borrador" type="object" string="Volver a borrador"
+                            invisible="state != 'cancelado'"
+                            groups="sng_inventario_movil.group_responsable"/>
+                    <field name="state" widget="statusbar" statusbar_visible="borrador,conteo,reconteo,revision,aplicado"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_ver_lecturas" type="object" class="oe_stat_button" icon="fa-barcode">
+                            <field name="lectura_count" widget="statinfo" string="Lecturas"/>
+                        </button>
+                        <button name="action_ver_movimientos" type="object" class="oe_stat_button"
+                                icon="fa-exchange" invisible="move_count == 0">
+                            <field name="move_count" widget="statinfo" string="Movimientos"/>
+                        </button>
+                    </div>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <group>
+                        <group string="Qué se cuenta">
+                            <field name="company_id" invisible="1"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="warehouse_id" readonly="state != 'borrador'"/>
+                            <field name="location_id" readonly="state != 'borrador'"/>
+                            <field name="tipo" widget="radio" readonly="state != 'borrador'"/>
+                        </group>
+                        <group string="Quién cuenta">
+                            <field name="responsable_id" readonly="state not in ('borrador', 'conteo')"/>
+                            <field name="dispositivo_ids" widget="many2many_tags"
+                                   readonly="state not in ('borrador', 'conteo')"
+                                   placeholder="Cualquier tableta activa"/>
+                            <field name="contador_ids" widget="many2many_tags_avatar"
+                                   readonly="state not in ('borrador', 'conteo')"
+                                   placeholder="Cualquier usuario contador"
+                                   groups="base.group_no_one"/>
+                        </group>
+                        <group string="Reconteo">
+                            <field name="umbral_unidades" readonly="state not in ('borrador', 'conteo')"/>
+                            <field name="umbral_valor" readonly="state not in ('borrador', 'conteo')"/>
+                            <field name="redispositivo_ids" widget="many2many_tags"
+                                   readonly="state not in ('borrador', 'conteo', 'reconteo')"
+                                   placeholder="Las mismas del conteo"/>
+                            <field name="reconteo_otra_tableta"
+                                   readonly="state not in ('borrador', 'conteo', 'reconteo')"/>
+                            <field name="recontador_ids" widget="many2many_tags_avatar"
+                                   readonly="state not in ('borrador', 'conteo', 'reconteo')"
+                                   placeholder="Los mismos usuarios" groups="base.group_no_one"/>
+                        </group>
+                        <group string="Resultado" invisible="state in ('borrador', 'conteo')">
+                            <field name="linea_count"/>
+                            <field name="reconteo_count"/>
+                            <field name="diferencia_count"/>
+                            <field name="valor_faltante" decoration-danger="valor_faltante &lt; 0"/>
+                            <field name="valor_sobrante"/>
+                            <field name="valor_neto" decoration-bf="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Diferencias" name="lineas" invisible="state in ('borrador', 'conteo')">
+                            <field name="linea_ids" readonly="state != 'revision'">
+                                <list editable="bottom" create="0" delete="0"
+                                      decoration-warning="reconteo_conflicto"
+                                      decoration-danger="diferencia &lt; 0"
+                                      decoration-success="diferencia &gt; 0"
+                                      decoration-muted="diferencia == 0">
+                                    <field name="default_code" optional="show"/>
+                                    <field name="product_id" readonly="1"/>
+                                    <field name="location_id" readonly="1" optional="show"/>
+                                    <field name="teorica1" optional="show"/>
+                                    <field name="conteo1"/>
+                                    <field name="contado1" optional="hide"/>
+                                    <field name="requiere_reconteo" optional="show"/>
+                                    <field name="teorica2" optional="hide"/>
+                                    <field name="conteo2" optional="show"/>
+                                    <field name="contado2" optional="hide"/>
+                                    <field name="teorica_ref" optional="hide"/>
+                                    <field name="qty_final" readonly="parent.state != 'revision'"/>
+                                    <field name="diferencia" sum="Total"/>
+                                    <field name="product_uom_id" optional="hide"/>
+                                    <field name="costo" optional="hide"/>
+                                    <field name="valor_diferencia" sum="Total"/>
+                                    <field name="currency_id" column_invisible="1"/>
+                                    <field name="ajuste_manual" optional="show"/>
+                                    <field name="dispositivo_ids" widget="many2many_tags" optional="show"/>
+                                    <field name="reconteo_conflicto" optional="show"/>
+                                    <field name="qty_sistema_aplicacion" optional="hide"/>
+                                    <field name="nota" readonly="parent.state != 'revision'" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Observaciones" name="nota">
+                            <field name="nota" placeholder="Notas del conteo, incidencias, etc."/>
+                        </page>
+                        <page string="Fechas" name="fechas">
+                            <group>
+                                <field name="fecha_inicio"/>
+                                <field name="fecha_cierre_conteo"/>
+                                <field name="fecha_cierre_reconteo"/>
+                                <field name="fecha_aplicado"/>
+                                <field name="aplicado_por_id"/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_sng_inventario_lectura_list" model="ir.ui.view">
+        <field name="name">sng.inventario.lectura.list</field>
+        <field name="model">sng.inventario.lectura</field>
+        <field name="arch" type="xml">
+            <list string="Lecturas" create="0" edit="0" delete="0">
+                <field name="create_date" string="Recibida"/>
+                <field name="fecha_dispositivo" optional="hide"/>
+                <field name="sesion_id" optional="hide"/>
+                <field name="ronda"/>
+                <field name="dispositivo_id"/>
+                <field name="user_id" widget="many2one_avatar_user" optional="hide"/>
+                <field name="location_id"/>
+                <field name="product_id"/>
+                <field name="qty" sum="Total"/>
+                <field name="qty_sistema" optional="hide"/>
+                <field name="codigo_leido"/>
+                <field name="coincidencia"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_inventario_lectura_search" model="ir.ui.view">
+        <field name="name">sng.inventario.lectura.search</field>
+        <field name="model">sng.inventario.lectura</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="product_id"/>
+                <field name="codigo_leido"/>
+                <field name="dispositivo_id"/>
+                <field name="location_id"/>
+                <filter name="ronda1" string="Conteo" domain="[('ronda', '=', 1)]"/>
+                <filter name="ronda2" string="Reconteo" domain="[('ronda', '=', 2)]"/>
+                <separator/>
+                <filter name="sin_barcode" string="Identificados sin código de barras"
+                        domain="[('coincidencia', 'in', ('referencia', 'aproximada', 'manual'))]"/>
+                <filter name="manual" string="Elegidos a mano" domain="[('coincidencia', '=', 'manual')]"/>
+                <group>
+                    <filter name="group_dispositivo" string="Tableta" context="{'group_by': 'dispositivo_id'}"/>
+                    <filter name="group_sesion" string="Sesión" context="{'group_by': 'sesion_id'}"/>
+                    <filter name="group_location" string="Ubicación" context="{'group_by': 'location_id'}"/>
+                    <filter name="group_product" string="Producto" context="{'group_by': 'product_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sng_inventario_sesion" model="ir.actions.act_window">
+        <field name="name">Inventario móvil</field>
+        <field name="res_model">sng.inventario.sesion</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_abiertas': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Cree una sesión de inventario</p>
+            <p>Elija el almacén y la ubicación, asigne las tabletas e inicie el conteo.
+               Se cuenta con la app Android y el lector de código de barras; usted
+               revisa las diferencias y Gerencia aplica el ajuste.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_sng_inventario_movil" name="Inventario móvil"
+              parent="stock.menu_stock_adjustments" sequence="40"
+              action="action_sng_inventario_sesion"
+              groups="sng_inventario_movil.group_responsable,sng_inventory_adjustment_history.group_inventory_adjustment_approver"/>
+
+    <record id="view_sng_inventario_dispositivo_list" model="ir.ui.view">
+        <field name="name">sng.inventario.dispositivo.list</field>
+        <field name="model">sng.inventario.dispositivo</field>
+        <field name="arch" type="xml">
+            <list string="Tabletas" create="0" editable="bottom">
+                <field name="name"/>
+                <field name="nota"/>
+                <field name="ultima_conexion"/>
+                <field name="usuario_id" optional="show"/>
+                <field name="version_app" optional="hide"/>
+                <field name="fecha_registro" optional="hide"/>
+                <field name="codigo" optional="hide"/>
+                <field name="lectura_count"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_inventario_dispositivo_search" model="ir.ui.view">
+        <field name="name">sng.inventario.dispositivo.search</field>
+        <field name="model">sng.inventario.dispositivo</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="codigo"/>
+                <filter name="archivadas" string="Desactivadas" domain="[('active', '=', False)]"/>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_sng_inventario_dispositivo" model="ir.actions.act_window">
+        <field name="name">Tabletas de inventario</field>
+        <field name="res_model">sng.inventario.dispositivo</field>
+        <field name="view_mode">list</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Aún no hay tabletas registradas</p>
+            <p>Cada tableta se registra sola la primera vez que ingresa a la app con el nombre
+               que se le ponga ahí ("Tableta 1"). Aquí puede renombrarlas o desactivar
+               una tableta perdida.</p>
+        </field>
+    </record>
+
+    <menuitem id="menu_sng_inventario_dispositivo" name="Tabletas de inventario"
+              parent="stock.menu_stock_config_settings" sequence="90"
+              action="action_sng_inventario_dispositivo"
+              groups="sng_inventario_movil.group_responsable"/>
+</odoo>

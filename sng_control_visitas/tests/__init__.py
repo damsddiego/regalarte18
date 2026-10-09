@@ -5,3 +5,4 @@ from . import test_matriz
 from . import test_cron_pendientes
 from . import test_menu_inicio
 from . import test_indicadores_cliente
+from . import test_monto_televentas

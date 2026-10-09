@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "SNG Control de Visitas y Rutas",
-    "version": "18.0.1.4.0",
+    "version": "18.0.1.5.0",
     "category": "Sales",
     "summary": "Control de visitas de agentes de ruta, seguimiento de televentas "
                "y matriz gerencial de cobertura por cliente",

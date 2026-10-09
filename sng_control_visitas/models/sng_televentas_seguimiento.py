@@ -108,9 +108,14 @@ class SngTeleventasSeguimiento(models.Model):
     resultado = fields.Selection(
         RESULTADOS_TELEVENTAS, string='Resultado televentas', tracking=True)
     monto_venta = fields.Monetary(
-        string='Monto venta televentas', currency_field='currency_id')
+        string='Monto venta televentas', currency_field='currency_id',
+        compute='_compute_monto_venta', store=True, readonly=False,
+        help='Con orden de venta se llena solo con lo facturado de la orden '
+             '(facturas menos notas de crédito); mientras la orden no tenga '
+             'factura, con el total de la orden. Sin orden se digita a mano.')
     sale_order_id = fields.Many2one(
-        'sale.order', string='Orden de venta', check_company=True)
+        'sale.order', string='Orden de venta', check_company=True,
+        index='btree_not_null')
     proxima_accion_id = fields.Many2one(
         'sng.visita.catalogo', string='Próxima acción',
         domain="[('tipo', '=', 'proxima_accion')]", ondelete='restrict')
@@ -206,6 +211,31 @@ class SngTeleventasSeguimiento(models.Model):
         for rec in self:
             rec.fecha_limite = (
                 rec.semana + timedelta(days=6) if rec.semana else False)
+
+    @api.depends(
+        'sale_order_id.state', 'sale_order_id.amount_total',
+        'sale_order_id.order_line.invoice_lines.move_id.state',
+        'sale_order_id.order_line.invoice_lines.move_id.amount_total_signed')
+    def _compute_monto_venta(self):
+        for rec in self:
+            orden = rec.sale_order_id
+            if not orden:
+                # Sin orden el monto es manual: se conserva lo digitado.
+                rec.monto_venta = rec.monto_venta
+                continue
+            facturas = orden.order_line.invoice_lines.move_id.filtered(
+                lambda m: m.state == 'posted'
+                and m.move_type in ('out_invoice', 'out_refund'))
+            if facturas:
+                # amount_total_signed: en moneda de la compañía y con las
+                # notas de crédito en negativo.
+                rec.monto_venta = sum(facturas.mapped('amount_total_signed'))
+            elif orden.state == 'cancel':
+                rec.monto_venta = 0.0
+            else:
+                rec.monto_venta = orden.currency_id._convert(
+                    orden.amount_total, rec.currency_id, rec.company_id,
+                    orden.date_order or fields.Date.context_today(rec))
 
     @api.depends('resultado', 'estado')
     def _compute_efectividad(self):

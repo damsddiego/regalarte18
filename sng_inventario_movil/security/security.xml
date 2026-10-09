@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="module_category_inventario_movil" model="ir.module.category">
+        <field name="name">Inventario móvil</field>
+        <field name="sequence">40</field>
+    </record>
+
+    <!-- El contador solo usa la app: no tiene acceso directo a los modelos,
+         la app llama métodos que validan la asignación y no exponen la
+         existencia del sistema. -->
+    <record id="group_contador" model="res.groups">
+        <field name="name">Contador (app)</field>
+        <field name="category_id" ref="module_category_inventario_movil"/>
+        <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+    </record>
+
+    <record id="group_responsable" model="res.groups">
+        <field name="name">Responsable</field>
+        <field name="category_id" ref="module_category_inventario_movil"/>
+        <field name="implied_ids" eval="[(4, ref('group_contador')), (4, ref('stock.group_stock_user'))]"/>
+        <field name="users" eval="[(4, ref('base.user_root')), (4, ref('base.user_admin'))]"/>
+    </record>
+
+    <record id="rule_sesion_company" model="ir.rule">
+        <field name="name">Inventario móvil: sesiones multi-compañía</field>
+        <field name="model_id" ref="model_sng_inventario_sesion"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_linea_company" model="ir.rule">
+        <field name="name">Inventario móvil: líneas multi-compañía</field>
+        <field name="model_id" ref="model_sng_inventario_linea"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_lectura_company" model="ir.rule">
+        <field name="name">Inventario móvil: lecturas multi-compañía</field>
+        <field name="model_id" ref="model_sng_inventario_lectura"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+    <record id="rule_dispositivo_company" model="ir.rule">
+        <field name="name">Inventario móvil: tabletas multi-compañía</field>
+        <field name="model_id" ref="model_sng_inventario_dispositivo"/>
+        <field name="domain_force">[('company_id', 'in', company_ids)]</field>
+    </record>
+</odoo>

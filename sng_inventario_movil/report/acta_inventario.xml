@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_acta_inventario" model="ir.actions.report">
+        <field name="name">Acta de inventario</field>
+        <field name="model">sng.inventario.sesion</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sng_inventario_movil.report_acta_inventario</field>
+        <field name="report_file">sng_inventario_movil.report_acta_inventario</field>
+        <field name="print_report_name">'Acta %s' % (object.name or '').replace('/', '-')</field>
+        <field name="binding_model_id" ref="model_sng_inventario_sesion"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_acta_inventario">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="o">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h3>Acta de inventario <span t-field="o.name"/></h3>
+                        <table class="table table-sm table-borderless mb-3">
+                            <tr>
+                                <td><strong>Almacén:</strong> <span t-field="o.warehouse_id"/></td>
+                                <td><strong>Ubicación:</strong> <span t-field="o.location_id"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Tipo:</strong> <span t-field="o.tipo"/></td>
+                                <td><strong>Estado:</strong> <span t-field="o.state"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Inicio:</strong> <span t-field="o.fecha_inicio"/></td>
+                                <td><strong>Ajuste aplicado:</strong> <span t-field="o.fecha_aplicado"/></td>
+                            </tr>
+                            <tr>
+                                <td><strong>Tabletas (conteo):</strong>
+                                    <span t-esc="', '.join(o.lectura_ids.filtered(lambda l: l.ronda == 1).dispositivo_id.mapped('name')) or '-'"/></td>
+                                <td><strong>Tabletas (reconteo):</strong>
+                                    <span t-esc="', '.join(o.lectura_ids.filtered(lambda l: l.ronda == 2).dispositivo_id.mapped('name')) or '-'"/></td>
+                            </tr>
+                        </table>
+
+                        <p>
+                            Productos revisados: <span t-field="o.linea_count"/>.
+                            Enviados a reconteo: <span t-field="o.reconteo_count"/>.
+                            Con diferencia: <span t-field="o.diferencia_count"/>.
+                        </p>
+
+                        <t t-set="lineas" t-value="o.linea_ids.filtered(lambda l: not l._diferencia_es_cero())"/>
+                        <table class="table table-sm o_main_table" t-if="lineas">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Producto</th>
+                                    <th>Ubicación</th>
+                                    <th class="text-end">Sistema</th>
+                                    <th class="text-end">Físico</th>
+                                    <th class="text-end">Diferencia</th>
+                                    <th class="text-end">Costo</th>
+                                    <th class="text-end">Valor</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="lineas" t-as="l">
+                                    <td><span t-field="l.default_code"/></td>
+                                    <td><span t-field="l.product_id.name"/>
+                                        <t t-if="l.ajuste_manual"> <em>(corregido)</em></t>
+                                        <t t-if="l.reconteo_conflicto"> <em>(reconteos distintos)</em></t></td>
+                                    <td><span t-esc="l.location_id.name"/></td>
+                                    <td class="text-end"><span t-field="l.teorica_ref"/></td>
+                                    <td class="text-end"><span t-field="l.qty_final"/></td>
+                                    <td class="text-end"><span t-field="l.diferencia"/></td>
+                                    <td class="text-end"><span t-field="l.costo"/></td>
+                                    <td class="text-end"><span t-field="l.valor_diferencia"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p t-else="">No hubo diferencias.</p>
+
+                        <table class="table table-sm w-50 ms-auto">
+                            <tr><td>Faltante</td><td class="text-end"><span t-field="o.valor_faltante"/></td></tr>
+                            <tr><td>Sobrante</td><td class="text-end"><span t-field="o.valor_sobrante"/></td></tr>
+                            <tr class="fw-bold"><td>Diferencia neta</td><td class="text-end"><span t-field="o.valor_neto"/></td></tr>
+                        </table>
+
+                        <p t-if="o.nota"><strong>Observaciones:</strong> <span t-field="o.nota"/></p>
+
+                        <div class="row mt-5 pt-5 text-center">
+                            <div class="col-4">______________________<br/>Responsable<br/><span t-field="o.responsable_id"/></div>
+                            <div class="col-4">______________________<br/>Contador(es)</div>
+                            <div class="col-4">______________________<br/>Gerencia<br/><span t-field="o.aplicado_por_id"/></div>
+                        </div>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

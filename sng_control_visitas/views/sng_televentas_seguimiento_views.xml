@@ -102,8 +102,8 @@
                         <field name="canal"/>
                         <field name="resultado"/>
                         <field name="currency_id" invisible="1"/>
-                        <field name="monto_venta"/>
                         <field name="sale_order_id"/>
+                        <field name="monto_venta" readonly="sale_order_id"/>
                         <field name="efectividad" widget="percentage"/>
                         <field name="proxima_accion_id"/>
                         <field name="fecha_proxima_accion"/>
