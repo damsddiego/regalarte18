@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 
 from odoo import _, api, fields, models
 from odoo.exceptions import AccessError, UserError
+from markupsafe import Markup, escape
+
 from odoo.tools import float_is_zero, plaintext2html
 
 _logger = logging.getLogger(__name__)
@@ -125,6 +127,24 @@ class SngInventarioSesion(models.Model):
     valor_faltante = fields.Monetary("Faltante", compute="_compute_indicadores")
     valor_sobrante = fields.Monetary("Sobrante", compute="_compute_indicadores")
     valor_neto = fields.Monetary("Diferencia neta", compute="_compute_indicadores")
+    unidades_faltante = fields.Float("Unidades faltantes", compute="_compute_indicadores",
+                                     digits="Product Unit of Measure")
+    unidades_sobrante = fields.Float("Unidades sobrantes", compute="_compute_indicadores",
+                                     digits="Product Unit of Measure")
+    resumen_categorias_html = fields.Html(
+        "Ajuste por categoría", compute="_compute_resumen_categorias", sanitize=False)
+
+    # Avance en vivo (solo en conteo; ver sng.inventario.avance)
+    avance_contados = fields.Integer("Productos contados", compute="_compute_avance")
+    avance_pendientes = fields.Integer("Sin contar", compute="_compute_avance")
+    avance_porcentaje = fields.Float("Avance", compute="_compute_avance",
+                                     help="Productos con existencia en el sistema que ya se contaron.")
+    avance_faltante = fields.Monetary("Faltante provisional", compute="_compute_avance")
+    avance_sobrante = fields.Monetary("Sobrante provisional", compute="_compute_avance")
+    avance_valor_pendiente = fields.Monetary(
+        "Valor sin contar", compute="_compute_avance",
+        help="Valor en sistema de lo que nadie ha contado todavía.")
+    avance_tabletas = fields.Integer("Tabletas contando", compute="_compute_avance")
 
     @api.depends("state")
     def _compute_ronda(self):
@@ -146,6 +166,142 @@ class SngInventarioSesion(models.Model):
             sesion.valor_faltante = sum(v for v in valores if v < 0)
             sesion.valor_sobrante = sum(v for v in valores if v > 0)
             sesion.valor_neto = sum(valores)
+            sesion.unidades_faltante = sum(con_diferencia.mapped("unidades_faltante"))
+            sesion.unidades_sobrante = sum(con_diferencia.mapped("unidades_sobrante"))
+
+    def _resumen_por_categoria(self):
+        """Lo que se ajustaría (o se ajustó) agrupado por categoría, de mayor
+        pérdida a mayor ganancia. Faltante y sobrante van por separado para
+        que uno no esconda al otro."""
+        self.ensure_one()
+        filas = {}
+        for linea in self.linea_ids.filtered("con_diferencia"):
+            categoria = linea.categ_id
+            f = filas.setdefault(categoria, {
+                "categoria": categoria.complete_name or _("Sin categoría"),
+                "productos": 0, "unidades_faltante": 0.0, "unidades_sobrante": 0.0,
+                "valor_faltante": 0.0, "valor_sobrante": 0.0,
+            })
+            f["productos"] += 1
+            f["unidades_faltante"] += linea.unidades_faltante
+            f["unidades_sobrante"] += linea.unidades_sobrante
+            f["valor_faltante"] += linea.valor_faltante
+            f["valor_sobrante"] += linea.valor_sobrante
+        resultado = sorted(filas.values(), key=lambda f: f["valor_faltante"] + f["valor_sobrante"])
+        for f in resultado:
+            f["valor_neto"] = f["valor_faltante"] + f["valor_sobrante"]
+        return resultado
+
+    @api.depends("linea_ids.diferencia", "linea_ids.valor_diferencia", "state")
+    def _compute_resumen_categorias(self):
+        for sesion in self:
+            filas = sesion._resumen_por_categoria() if sesion.linea_ids else []
+            if not filas:
+                sesion.resumen_categorias_html = Markup("<p class='text-muted'>%s</p>") % _(
+                    "No hay diferencias.")
+                continue
+            moneda = sesion.currency_id
+
+            def num(v):
+                return "{:,.2f}".format(v).rstrip("0").rstrip(".") if v else "0"
+
+            def dinero(v, clase=""):
+                return Markup("<td class='text-end %s'>%s</td>") % (clase, moneda.format(v))
+
+            filas_html = Markup("")
+            for f in filas:
+                filas_html += Markup(
+                    "<tr><td>%s</td><td class='text-end'>%s</td>"
+                    "<td class='text-end text-danger'>%s</td><td class='text-end text-success'>%s</td>"
+                ) % (escape(f["categoria"]), f["productos"],
+                     num(f["unidades_faltante"]), num(f["unidades_sobrante"]))
+                filas_html += dinero(f["valor_faltante"], "text-danger")
+                filas_html += dinero(f["valor_sobrante"], "text-success")
+                filas_html += dinero(f["valor_neto"], "fw-bold") + Markup("</tr>")
+            total = {k: sum(f[k] for f in filas) for k in (
+                "productos", "unidades_faltante", "unidades_sobrante",
+                "valor_faltante", "valor_sobrante", "valor_neto")}
+            total_html = Markup(
+                "<tr class='fw-bold border-top'><td>%s</td><td class='text-end'>%s</td>"
+                "<td class='text-end text-danger'>%s</td><td class='text-end text-success'>%s</td>"
+            ) % (_("Total"), total["productos"], num(total["unidades_faltante"]),
+                 num(total["unidades_sobrante"]))
+            total_html += dinero(total["valor_faltante"], "text-danger")
+            total_html += dinero(total["valor_sobrante"], "text-success")
+            total_html += dinero(total["valor_neto"]) + Markup("</tr>")
+            encabezado = Markup("").join(
+                Markup("<th class='%s'>%s</th>") % ("text-end" if i else "", t) for i, t in enumerate([
+                    _("Categoría"), _("Productos"), _("Unid. faltantes"), _("Unid. sobrantes"),
+                    _("Faltante"), _("Sobrante"), _("Neto")]))
+            sesion.resumen_categorias_html = Markup(
+                "<table class='table table-sm table-hover o_list_table'><thead><tr>%s</tr></thead>"
+                "<tbody>%s</tbody><tfoot>%s</tfoot></table>") % (encabezado, filas_html, total_html)
+
+    def action_ver_diferencias(self):
+        """Líneas con diferencia para analizar (lista agrupable y tabla dinámica)."""
+        self.ensure_one()
+        vista = self.env.context.get("vista_diferencias", "list")
+        contexto = {"search_default_con_diferencia": 1}
+        if self.env.context.get("agrupar_categoria"):
+            contexto["search_default_group_categ"] = 1
+        return {
+            "type": "ir.actions.act_window", "name": _("Diferencias de %s", self.name),
+            "res_model": "sng.inventario.linea",
+            "view_mode": "pivot,list" if vista == "pivot" else "list,pivot",
+            "views": [(self.env.ref("sng_inventario_movil.view_sng_inventario_linea_pivot").id, "pivot"),
+                      (self.env.ref("sng_inventario_movil.view_sng_inventario_linea_list").id, "list")]
+            if vista == "pivot" else
+            [(self.env.ref("sng_inventario_movil.view_sng_inventario_linea_list").id, "list"),
+             (self.env.ref("sng_inventario_movil.view_sng_inventario_linea_pivot").id, "pivot")],
+            "search_view_id": self.env.ref("sng_inventario_movil.view_sng_inventario_linea_search").id,
+            "domain": [("sesion_id", "=", self.id)],
+            "context": contexto,
+        }
+
+    def _compute_avance(self):
+        en_conteo = self.filtered(lambda s: s.state == "conteo")
+        filas = self.env["sng.inventario.avance"].sudo().search_read(
+            [("sesion_id", "in", en_conteo.ids)],
+            ["sesion_id", "estado", "sistema", "valor_diferencia", "valor_sistema", "dispositivo_id"],
+        ) if en_conteo else []
+        datos = {}
+        for f in filas:
+            d = datos.setdefault(f["sesion_id"][0], {
+                "contado": 0, "pendiente": 0, "faltante": 0.0, "sobrante": 0.0,
+                "valor_pendiente": 0.0, "con_existencia": 0, "contados_con_existencia": 0,
+            })
+            d[f["estado"]] += 1
+            v = f["valor_diferencia"]
+            d["faltante" if v < 0 else "sobrante"] += v
+            if f["estado"] == "pendiente":
+                d["valor_pendiente"] += f["valor_sistema"]
+            if f["sistema"] > 0:
+                d["con_existencia"] += 1
+                d["contados_con_existencia"] += f["estado"] == "contado"
+        for sesion in self:
+            d = datos.get(sesion.id, {})
+            sesion.avance_contados = d.get("contado", 0)
+            sesion.avance_pendientes = d.get("pendiente", 0)
+            sesion.avance_porcentaje = (
+                100.0 * d["contados_con_existencia"] / d["con_existencia"] if d.get("con_existencia") else 0.0)
+            sesion.avance_faltante = d.get("faltante", 0.0)
+            sesion.avance_sobrante = d.get("sobrante", 0.0)
+            sesion.avance_valor_pendiente = d.get("valor_pendiente", 0.0)
+            sesion.avance_tabletas = len(
+                sesion.lectura_ids.filtered(lambda l: l.ronda == 1).dispositivo_id) if sesion.state == "conteo" else 0
+
+    def action_ver_avance(self):
+        self.ensure_one()
+        filtro = self.env.context.get("filtro_avance")
+        contexto = {}
+        if filtro:
+            contexto["search_default_%s" % filtro] = 1
+        return {
+            "type": "ir.actions.act_window", "name": _("Avance de %s", self.name),
+            "res_model": "sng.inventario.avance", "view_mode": "list,pivot",
+            "domain": [("sesion_id", "=", self.id)],
+            "context": contexto,
+        }
 
     @api.onchange("warehouse_id")
     def _onchange_warehouse_id(self):

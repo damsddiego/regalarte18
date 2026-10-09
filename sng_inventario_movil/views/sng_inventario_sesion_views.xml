@@ -128,12 +128,82 @@
                             <field name="linea_count"/>
                             <field name="reconteo_count"/>
                             <field name="diferencia_count"/>
+                            <field name="unidades_faltante"/>
+                            <field name="unidades_sobrante"/>
                             <field name="valor_faltante" decoration-danger="valor_faltante &lt; 0"/>
                             <field name="valor_sobrante"/>
                             <field name="valor_neto" decoration-bf="1"/>
                         </group>
                     </group>
                     <notebook>
+                        <page string="Avance" name="avance" invisible="state != 'conteo'">
+                            <p class="text-muted">
+                                Lo que van contando las tabletas comparado con el sistema, en vivo
+                                (recargue la página para actualizar). Solo usted lo ve: en las tabletas
+                                el conteo sigue siendo ciego. Son cifras provisionales: el resultado
+                                final sale al cerrar el conteo y el reconteo.
+                            </p>
+                            <group>
+                                <group string="Cuánto se ha contado">
+                                    <field name="avance_porcentaje" widget="progressbar"/>
+                                    <field name="avance_contados"/>
+                                    <field name="avance_pendientes"/>
+                                    <field name="avance_tabletas"/>
+                                </group>
+                                <group string="Diferencias provisionales">
+                                    <field name="avance_faltante" decoration-danger="avance_faltante &lt; 0"/>
+                                    <field name="avance_sobrante"/>
+                                    <field name="avance_valor_pendiente"/>
+                                </group>
+                            </group>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button name="action_ver_avance" type="object" class="btn-primary"
+                                        string="Ver todo" icon="fa-list"/>
+                                <button name="action_ver_avance" type="object" class="btn-secondary"
+                                        string="Contados con diferencia" icon="fa-balance-scale"
+                                        context="{'filtro_avance': 'con_diferencia'}"/>
+                                <button name="action_ver_avance" type="object" class="btn-secondary"
+                                        string="Sin contar" icon="fa-hourglass-half"
+                                        context="{'filtro_avance': 'pendiente'}"/>
+                                <button name="action_ver_avance" type="object" class="btn-secondary"
+                                        string="Por categoría" icon="fa-sitemap"
+                                        context="{'filtro_avance': 'group_categ'}"/>
+                            </div>
+                        </page>
+                        <page string="Resumen del ajuste" name="resumen"
+                              invisible="state not in ('reconteo', 'revision', 'aplicado')">
+                            <p class="text-muted" invisible="state != 'reconteo'">
+                                Provisional: el reconteo todavía puede cambiar estas cifras.
+                            </p>
+                            <p class="text-muted" invisible="state != 'revision'">
+                                Esto es lo que se ajustará al aplicar. Faltante y sobrante se muestran por
+                                separado: el neto puede esconder pérdidas compensadas con sobrantes.
+                            </p>
+                            <group>
+                                <group string="Ajuste global">
+                                    <field name="diferencia_count" string="Productos con diferencia"/>
+                                    <field name="unidades_faltante"/>
+                                    <field name="unidades_sobrante"/>
+                                </group>
+                                <group string="Valor">
+                                    <field name="valor_faltante" decoration-danger="valor_faltante &lt; 0"/>
+                                    <field name="valor_sobrante" decoration-success="valor_sobrante &gt; 0"/>
+                                    <field name="valor_neto" decoration-bf="1"/>
+                                </group>
+                            </group>
+                            <h5 class="mt-3">Por categoría</h5>
+                            <field name="resumen_categorias_html" nolabel="1" readonly="1"/>
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                <button name="action_ver_diferencias" type="object" class="btn-primary"
+                                        string="Productos con diferencia" icon="fa-list"/>
+                                <button name="action_ver_diferencias" type="object" class="btn-secondary"
+                                        string="Productos por categoría" icon="fa-sitemap"
+                                        context="{'agrupar_categoria': 1}"/>
+                                <button name="action_ver_diferencias" type="object" class="btn-secondary"
+                                        string="Tabla dinámica" icon="fa-table"
+                                        context="{'vista_diferencias': 'pivot'}"/>
+                            </div>
+                        </page>
                         <page string="Diferencias" name="lineas" invisible="state in ('borrador', 'conteo')">
                             <field name="linea_ids" readonly="state != 'revision'">
                                 <list editable="bottom" create="0" delete="0"
@@ -143,6 +213,7 @@
                                       decoration-muted="diferencia == 0">
                                     <field name="default_code" optional="show"/>
                                     <field name="product_id" readonly="1"/>
+                                    <field name="categ_id" optional="show"/>
                                     <field name="location_id" readonly="1" optional="show"/>
                                     <field name="teorica1" optional="show"/>
                                     <field name="conteo1"/>
@@ -226,6 +297,147 @@
                     <filter name="group_sesion" string="Sesión" context="{'group_by': 'sesion_id'}"/>
                     <filter name="group_location" string="Ubicación" context="{'group_by': 'location_id'}"/>
                     <filter name="group_product" string="Producto" context="{'group_by': 'product_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_sng_inventario_linea_list" model="ir.ui.view">
+        <field name="name">sng.inventario.linea.list</field>
+        <field name="model">sng.inventario.linea</field>
+        <field name="arch" type="xml">
+            <list string="Diferencias" create="0" delete="0" editable="bottom"
+                  decoration-warning="reconteo_conflicto"
+                  decoration-danger="diferencia &lt; 0" decoration-success="diferencia &gt; 0">
+                <field name="state" column_invisible="1"/>
+                <field name="default_code" optional="show"/>
+                <field name="product_id" readonly="1"/>
+                <field name="categ_id" optional="show"/>
+                <field name="location_id" optional="hide"/>
+                <field name="teorica_ref" string="Sistema"/>
+                <field name="qty_final" readonly="state != 'revision'"/>
+                <field name="diferencia" sum="Total"/>
+                <field name="unidades_faltante" sum="Total" optional="show"/>
+                <field name="unidades_sobrante" sum="Total" optional="show"/>
+                <field name="product_uom_id" optional="hide"/>
+                <field name="costo" optional="show"/>
+                <field name="valor_faltante" sum="Total"/>
+                <field name="valor_sobrante" sum="Total"/>
+                <field name="valor_diferencia" sum="Total" string="Neto"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="requiere_reconteo" optional="hide"/>
+                <field name="ajuste_manual" optional="show"/>
+                <field name="reconteo_conflicto" optional="hide"/>
+                <field name="dispositivo_ids" widget="many2many_tags" optional="hide"/>
+                <field name="nota" readonly="state != 'revision'" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_inventario_linea_pivot" model="ir.ui.view">
+        <field name="name">sng.inventario.linea.pivot</field>
+        <field name="model">sng.inventario.linea</field>
+        <field name="arch" type="xml">
+            <pivot string="Diferencias por categoría">
+                <field name="categ_id" type="row"/>
+                <field name="unidades_faltante" type="measure"/>
+                <field name="unidades_sobrante" type="measure"/>
+                <field name="valor_faltante" type="measure"/>
+                <field name="valor_sobrante" type="measure"/>
+                <field name="valor_diferencia" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_sng_inventario_linea_search" model="ir.ui.view">
+        <field name="name">sng.inventario.linea.search</field>
+        <field name="model">sng.inventario.linea</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="product_id"/>
+                <field name="default_code"/>
+                <field name="categ_id"/>
+                <field name="location_id"/>
+                <filter name="con_diferencia" string="Con diferencia" domain="[('con_diferencia', '=', True)]"/>
+                <filter name="faltante" string="Faltante" domain="[('diferencia', '&lt;', 0)]"/>
+                <filter name="sobrante" string="Sobrante" domain="[('diferencia', '&gt;', 0)]"/>
+                <separator/>
+                <filter name="manual" string="Corregidos a mano" domain="[('ajuste_manual', '=', True)]"/>
+                <filter name="conflicto" string="Reconteos distintos" domain="[('reconteo_conflicto', '=', True)]"/>
+                <group>
+                    <filter name="group_categ" string="Categoría" context="{'group_by': 'categ_id'}"/>
+                    <filter name="group_location" string="Ubicación" context="{'group_by': 'location_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_sng_inventario_avance_list" model="ir.ui.view">
+        <field name="name">sng.inventario.avance.list</field>
+        <field name="model">sng.inventario.avance</field>
+        <field name="arch" type="xml">
+            <list string="Avance del conteo" create="0" edit="0" delete="0"
+                  decoration-muted="estado == 'pendiente'"
+                  decoration-danger="estado == 'contado' and diferencia &lt; 0"
+                  decoration-success="estado == 'contado' and diferencia &gt; 0">
+                <field name="estado" widget="badge"
+                       decoration-warning="estado == 'pendiente'" decoration-info="estado == 'contado'"/>
+                <field name="default_code" optional="show"/>
+                <field name="product_id"/>
+                <field name="categ_id" optional="hide"/>
+                <field name="location_id" optional="show"/>
+                <field name="sistema" sum="Total"/>
+                <field name="contado" sum="Total"/>
+                <field name="diferencia" sum="Total"/>
+                <field name="existencia_actual" optional="hide"/>
+                <field name="costo" optional="hide"/>
+                <field name="valor_diferencia" sum="Total"/>
+                <field name="valor_sistema" optional="hide" sum="Total"/>
+                <field name="currency_id" column_invisible="1"/>
+                <field name="lecturas" optional="show"/>
+                <field name="tabletas" optional="hide"/>
+                <field name="dispositivo_id" optional="show"/>
+                <field name="ultima_lectura" optional="hide"/>
+                <button name="action_abrir_producto" type="object" icon="fa-barcode"
+                        title="Ver lecturas" invisible="lecturas == 0"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_sng_inventario_avance_pivot" model="ir.ui.view">
+        <field name="name">sng.inventario.avance.pivot</field>
+        <field name="model">sng.inventario.avance</field>
+        <field name="arch" type="xml">
+            <pivot string="Avance del conteo">
+                <field name="categ_id" type="row"/>
+                <field name="estado" type="col"/>
+                <field name="valor_diferencia" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_sng_inventario_avance_search" model="ir.ui.view">
+        <field name="name">sng.inventario.avance.search</field>
+        <field name="model">sng.inventario.avance</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="product_id"/>
+                <field name="default_code"/>
+                <field name="categ_id"/>
+                <field name="location_id"/>
+                <field name="dispositivo_id"/>
+                <filter name="pendiente" string="Sin contar" domain="[('estado', '=', 'pendiente')]"/>
+                <filter name="contado" string="Contados" domain="[('estado', '=', 'contado')]"/>
+                <separator/>
+                <filter name="con_diferencia" string="Contados con diferencia"
+                        domain="[('estado', '=', 'contado'), ('diferencia', '!=', 0)]"/>
+                <filter name="faltante" string="Faltante" domain="[('diferencia', '&lt;', 0)]"/>
+                <filter name="sobrante" string="Sobrante" domain="[('diferencia', '&gt;', 0)]"/>
+                <group>
+                    <filter name="group_estado" string="Estado" context="{'group_by': 'estado'}"/>
+                    <filter name="group_categ" string="Categoría" context="{'group_by': 'categ_id'}"/>
+                    <filter name="group_location" string="Ubicación" context="{'group_by': 'location_id'}"/>
+                    <filter name="group_dispositivo" string="Tableta" context="{'group_by': 'dispositivo_id'}"/>
                 </group>
             </search>
         </field>

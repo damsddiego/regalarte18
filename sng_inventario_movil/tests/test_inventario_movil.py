@@ -255,6 +255,60 @@ class TestInventarioMovil(TransactionCase):
         with self.assertRaises(AccessError):
             sesion.with_user(self.gerente).action_aplicar_ajuste()
 
+    def test_avance_en_vivo(self):
+        sesion = self._sesion()
+        self._registrar(sesion, self.t1, [self._lectura(self.taza, 6), self._lectura(self.taza, 2)])  # 8 de 10
+        self._registrar(sesion, self.t2, [self._lectura(self.llavero, 7, ubicacion=self.estante)])     # 7 de 5
+        filas = {(f.product_id, f.location_id): f for f in
+                 self.env["sng.inventario.avance"].search([("sesion_id", "=", sesion.id)])}
+        taza = filas[(self.taza, self.stock)]
+        self.assertEqual((taza.estado, taza.contado, taza.sistema, taza.diferencia), ("contado", 8, 10, -2))
+        self.assertEqual(taza.valor_diferencia, -2000)
+        self.assertEqual(taza.dispositivo_id, self.tableta[self.t1])
+        self.assertEqual(filas[(self.llavero, self.estante)].diferencia, 2)
+        iman = filas[(self.iman, self.stock)]
+        self.assertEqual((iman.estado, iman.diferencia), ("pendiente", -4))
+        sesion.invalidate_recordset()
+        self.assertEqual((sesion.avance_contados, sesion.avance_pendientes), (2, 1))
+        self.assertAlmostEqual(sesion.avance_porcentaje, 200 / 3)
+        self.assertEqual(sesion.avance_faltante, -2000 - 1200)
+        self.assertEqual(sesion.avance_sobrante, 1000)
+        self.assertEqual(sesion.avance_valor_pendiente, 1200)
+        self.assertEqual(sesion.avance_tabletas, 2)
+        # Las tabletas no pueden leer el avance.
+        with self.assertRaises(AccessError):
+            self.env["sng.inventario.avance"].with_user(self.bodega).search([])
+        # Al cerrar el conteo, el avance desaparece y quedan las líneas.
+        sesion.with_user(self.responsable).action_cerrar_conteo()
+        self.assertFalse(self.env["sng.inventario.avance"].search([("sesion_id", "=", sesion.id)]))
+
+    def test_resumen_por_categoria(self):
+        tazas = self.env["product.category"].create({"name": "Tazas TIMV"})
+        imanes = self.env["product.category"].create({"name": "Imanes TIMV"})
+        self.taza.categ_id = tazas
+        self.llavero.categ_id = tazas
+        self.iman.categ_id = imanes
+        sesion = self._sesion(tipo="parcial", reconteo_otra_tableta=False)
+        self._registrar(sesion, self.t1, [
+            self._lectura(self.taza, 7),                              # -3 x 1000
+            self._lectura(self.llavero, 6, ubicacion=self.estante),   # +1 x 500
+            self._lectura(self.iman, 2),                              # -2 x 300
+        ])
+        self._cerrar_todo(sesion)
+        filas = {f["categoria"]: f for f in sesion._resumen_por_categoria()}
+        t = filas["All / Tazas TIMV"] if "All / Tazas TIMV" in filas else filas["Tazas TIMV"]
+        self.assertEqual((t["productos"], t["unidades_faltante"], t["unidades_sobrante"]), (2, -3, 1))
+        self.assertEqual((t["valor_faltante"], t["valor_sobrante"], t["valor_neto"]), (-3000, 500, -2500))
+        # Primero la categoría que más pierde.
+        self.assertEqual(sesion._resumen_por_categoria()[0]["valor_neto"], -2500)
+        self.assertEqual((sesion.unidades_faltante, sesion.unidades_sobrante), (-5, 1))
+        self.assertIn("Tazas TIMV", sesion.resumen_categorias_html)
+        html, _tipo = self.env["ir.actions.report"]._render_qweb_html(
+            "sng_inventario_movil.report_acta_inventario", sesion.ids)
+        self.assertIn(b"Ajuste por categor", html)
+        accion = sesion.with_context(agrupar_categoria=1).action_ver_diferencias()
+        self.assertEqual(accion["context"]["search_default_group_categ"], 1)
+
     def test_sesiones_superpuestas(self):
         self._sesion()
         with self.assertRaises(UserError):

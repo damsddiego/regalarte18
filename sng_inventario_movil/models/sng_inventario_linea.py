@@ -22,6 +22,7 @@ class SngInventarioLinea(models.Model):
     product_id = fields.Many2one("product.product", string="Producto", required=True, index=True)
     default_code = fields.Char(related="product_id.default_code", string="Referencia")
     product_uom_id = fields.Many2one(related="product_id.uom_id", string="Unidad")
+    categ_id = fields.Many2one(related="product_id.categ_id", string="Categoría", store=True, index=True)
     location_id = fields.Many2one("stock.location", string="Ubicación", required=True)
 
     teorica1 = fields.Float("Sistema (conteo)", digits="Product Unit of Measure", readonly=True)
@@ -47,6 +48,17 @@ class SngInventarioLinea(models.Model):
     valor_diferencia = fields.Monetary(
         "Valor diferencia", currency_field="currency_id",
         compute="_compute_diferencia", store=True)
+    # La diferencia partida en faltante y sobrante, para sumar por categoría
+    # sin que un sobrante compense un faltante.
+    unidades_faltante = fields.Float(
+        "Unidades faltantes", digits="Product Unit of Measure", compute="_compute_diferencia", store=True)
+    unidades_sobrante = fields.Float(
+        "Unidades sobrantes", digits="Product Unit of Measure", compute="_compute_diferencia", store=True)
+    valor_faltante = fields.Monetary(
+        "Valor faltante", currency_field="currency_id", compute="_compute_diferencia", store=True)
+    valor_sobrante = fields.Monetary(
+        "Valor sobrante", currency_field="currency_id", compute="_compute_diferencia", store=True)
+    con_diferencia = fields.Boolean("Con diferencia", compute="_compute_diferencia", store=True)
     ajuste_manual = fields.Boolean("Corregido a mano", readonly=True)
     nota = fields.Char("Nota")
     contador_ids = fields.Many2many(
@@ -69,8 +81,16 @@ class SngInventarioLinea(models.Model):
     @api.depends("qty_final", "teorica_ref", "costo")
     def _compute_diferencia(self):
         for linea in self:
-            linea.diferencia = linea.qty_final - linea.teorica_ref
-            linea.valor_diferencia = linea.diferencia * linea.costo
+            diferencia = linea.qty_final - linea.teorica_ref
+            valor = diferencia * linea.costo
+            linea.diferencia = diferencia
+            linea.valor_diferencia = valor
+            linea.unidades_faltante = min(diferencia, 0.0)
+            linea.unidades_sobrante = max(diferencia, 0.0)
+            linea.valor_faltante = min(valor, 0.0)
+            linea.valor_sobrante = max(valor, 0.0)
+            linea.con_diferencia = not float_is_zero(
+                diferencia, precision_rounding=linea.product_uom_id.rounding or 0.01)
 
     def _diferencia_es_cero(self):
         self.ensure_one()

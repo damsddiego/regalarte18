@@ -44,11 +44,41 @@
                             Con diferencia: <span t-field="o.diferencia_count"/>.
                         </p>
 
-                        <t t-set="lineas" t-value="o.linea_ids.filtered(lambda l: not l._diferencia_es_cero())"/>
+                        <t t-set="por_categoria" t-value="o._resumen_por_categoria()"/>
+                        <t t-if="por_categoria">
+                            <h5>Ajuste por categoría</h5>
+                            <table class="table table-sm o_main_table mb-4">
+                                <thead>
+                                    <tr>
+                                        <th>Categoría</th>
+                                        <th class="text-end">Productos</th>
+                                        <th class="text-end">Unid. faltantes</th>
+                                        <th class="text-end">Unid. sobrantes</th>
+                                        <th class="text-end">Faltante</th>
+                                        <th class="text-end">Sobrante</th>
+                                        <th class="text-end">Neto</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="por_categoria" t-as="c">
+                                        <td><t t-esc="c['categoria']"/></td>
+                                        <td class="text-end"><t t-esc="c['productos']"/></td>
+                                        <td class="text-end"><t t-esc="c['unidades_faltante']" t-options="{'widget': 'float', 'precision': 2}"/></td>
+                                        <td class="text-end"><t t-esc="c['unidades_sobrante']" t-options="{'widget': 'float', 'precision': 2}"/></td>
+                                        <td class="text-end"><t t-esc="c['valor_faltante']" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+                                        <td class="text-end"><t t-esc="c['valor_sobrante']" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+                                        <td class="text-end fw-bold"><t t-esc="c['valor_neto']" t-options="{'widget': 'monetary', 'display_currency': o.currency_id}"/></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <h5>Detalle por producto</h5>
+                        </t>
+                        <t t-set="lineas" t-value="o.linea_ids.filtered(lambda l: not l._diferencia_es_cero()).sorted(lambda l: (l.categ_id.complete_name or '', l.valor_diferencia))"/>
                         <table class="table table-sm o_main_table" t-if="lineas">
                             <thead>
                                 <tr>
                                     <th>Código</th>
+                                    <th>Categoría</th>
                                     <th>Producto</th>
                                     <th>Ubicación</th>
                                     <th class="text-end">Sistema</th>
@@ -61,6 +91,7 @@
                             <tbody>
                                 <tr t-foreach="lineas" t-as="l">
                                     <td><span t-field="l.default_code"/></td>
+                                    <td><span t-esc="l.categ_id.name"/></td>
                                     <td><span t-field="l.product_id.name"/>
                                         <t t-if="l.ajuste_manual"> <em>(corregido)</em></t>
                                         <t t-if="l.reconteo_conflicto"> <em>(reconteos distintos)</em></t></td>
