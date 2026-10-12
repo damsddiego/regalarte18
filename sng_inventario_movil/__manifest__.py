@@ -4,7 +4,7 @@
     "summary": "Inventario físico desde la app Android con lector de código de "
                "barras: conteo ciego, reconteo de diferencias y ajuste aplicado "
                "por Gerencia.",
-    "version": "18.0.1.3.0",
+    "version": "18.0.1.4.0",
     "category": "Inventory/Inventory",
     "author": "SNG",
     "website": "https://sngcloud.com",

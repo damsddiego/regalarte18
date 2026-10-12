@@ -173,7 +173,9 @@
                         <page string="Resumen del ajuste" name="resumen"
                               invisible="state not in ('reconteo', 'revision', 'aplicado')">
                             <p class="text-muted" invisible="state != 'reconteo'">
-                                Provisional: el reconteo todavía puede cambiar estas cifras.
+                                Provisional: lo recontado hasta ahora (vale la última tableta) y, en lo
+                                que falta recontar, el primer conteo. Se actualiza con cada lectura del
+                                reconteo; recargue la página para ver lo último.
                             </p>
                             <p class="text-muted" invisible="state != 'revision'">
                                 Esto es lo que se ajustará al aplicar. Faltante y sobrante se muestran por

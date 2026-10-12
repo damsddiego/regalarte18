@@ -203,6 +203,34 @@ class TestInventarioMovil(TransactionCase):
         self.assertTrue(linea.reconteo_conflicto)
         self.assertIn("Tableta 2=5", linea.nota)
 
+    def test_resumen_provisional_en_reconteo(self):
+        """Mientras se recuenta, el resumen muestra montos: lo recontado (última
+        tableta) y, en lo demás, el primer conteo. Al cerrar queda igual."""
+        sesion = self._sesion(umbral_unidades=2, reconteo_otra_tableta=False)
+        self._registrar(sesion, self.t1, [
+            self._lectura(self.taza, 9),                                  # 9 vs 10: bajo umbral
+            self._lectura(self.llavero, 2, ubicacion=self.estante),       # 2 vs 5: reconteo
+            # el imán (4) no se cuenta: reconteo
+        ])
+        sesion.with_user(self.responsable).action_cerrar_conteo()
+        self.assertEqual(sesion.state, "reconteo")
+        self.assertEqual(self._linea(sesion, self.taza).diferencia, -1)
+        self.assertEqual(self._linea(sesion, self.llavero, self.estante).diferencia, -3)
+        self.assertEqual(self._linea(sesion, self.iman).diferencia, -4)
+        self.assertEqual(sesion.valor_faltante, -1000 - 1500 - 1200)
+        self.assertIn(self.taza.categ_id.complete_name, sesion.resumen_categorias_html or "")
+
+        self._registrar(sesion, self.t2, [self._lectura(self.llavero, 6, ubicacion=self.estante, ronda=2)])
+        self.assertEqual(self._linea(sesion, self.llavero, self.estante).diferencia, 1)
+        # Otra tableta recuenta el mismo producto: vale la última, no la suma.
+        self._registrar(sesion, self.t3, [self._lectura(self.llavero, 5, ubicacion=self.estante, ronda=2)])
+        self.assertEqual(self._linea(sesion, self.llavero, self.estante).diferencia, 0)
+        self.assertEqual(sesion.valor_neto, -1000 - 1200)
+
+        sesion.with_user(self.responsable).action_cerrar_reconteo()
+        self.assertEqual(sesion.state, "revision")
+        self.assertEqual(sesion.valor_neto, -1000 - 1200)
+
     def test_una_sola_tableta_puede_recontar(self):
         sesion = self._sesion(reconteo_otra_tableta=False)
         self._registrar(sesion, self.t1, [self._lectura(self.taza, 7)])

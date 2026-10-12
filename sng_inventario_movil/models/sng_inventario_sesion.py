@@ -470,6 +470,7 @@ class SngInventarioSesion(models.Model):
             sesion.fecha_cierre_conteo = fields.Datetime.now()
             if any(lineas.mapped("requiere_reconteo")):
                 sesion.state = "reconteo"
+                sesion._actualizar_provisional()
                 sesion._notificar(sesion.responsable_id, _(
                     "Hay %s productos para recontar. Ábranlos en la app (ronda 2).",
                     len(lineas.filtered("requiere_reconteo"))))
@@ -506,6 +507,33 @@ class SngInventarioSesion(models.Model):
             sesion.fecha_cierre_reconteo = fields.Datetime.now()
             sesion._pasar_a_revision()
         return True
+
+    def _actualizar_provisional(self, claves=None):
+        """Durante el reconteo deja en cada línea la cantidad final y la existencia
+        de referencia que tendría si se cerrara ahora, para que el resumen y las
+        diferencias muestren montos provisionales. Misma regla que el cierre: en lo
+        recontado vale el total de la última tableta; lo demás queda con el primer
+        conteo. Al cerrar el reconteo, _pasar_a_revision lo vuelve a calcular.
+
+        :param claves: (producto, ubicación) a recalcular; None = todas."""
+        for sesion in self.filtered(lambda s: s.state == "reconteo"):
+            datos = sesion._agregar_lecturas(2)
+            lineas = sesion.linea_ids
+            if claves is not None:
+                lineas = lineas.filtered(lambda l: (l.product_id.id, l.location_id.id) in claves)
+            for linea in lineas:
+                dato = datos.get((linea.product_id.id, linea.location_id.id)) if linea.requiere_reconteo else None
+                if dato:
+                    final = dato["por_dispositivo"][dato["ultimo_dispositivo"]]
+                    referencia = dato["teorica"]
+                elif linea.contado1:
+                    final, referencia = linea.conteo1, linea.teorica1
+                else:
+                    final, referencia = 0.0, linea.teorica1
+                if linea.qty_final != final or linea.teorica_ref != referencia:
+                    linea.sudo().with_context(sng_inventario_sistema=True).write({
+                        "qty_final": final, "teorica_ref": referencia,
+                    })
 
     def _pasar_a_revision(self):
         for sesion in self:
@@ -868,6 +896,8 @@ class SngInventarioSesion(models.Model):
             aceptadas.append(uuid)
         if nuevas:
             Lectura.create(nuevas)
+            if sesion.state == "reconteo":
+                sesion._actualizar_provisional({(n["product_id"], n["location_id"]) for n in nuevas})
         return {"aceptadas": aceptadas, "rechazadas": rechazadas, "sesion": sesion._app_resumen(tableta)}
 
     def _app_validar_lectura(self, item, tableta, ubicaciones, a_recontar, propios, almacenables):
