@@ -123,7 +123,7 @@ Las ventas, los promedios y el DPP son los mismos de la pestaña **Indicadores d
 | Canal de contacto | Llamada · WhatsApp · Correo · Videollamada |
 | Resultado televentas | Venta recuperada · Pedido pendiente · Cotización enviada · Sin interés · No respondió · Reprogramar llamada · Cliente cerrado · Datos incorrectos · Bloqueado por cobro · Inventario suficiente |
 | Orden de venta | El pedido que resultó de la llamada, si hubo venta |
-| Monto venta televentas | Con orden de venta se llena solo: lo facturado de la orden (facturas menos notas de crédito) o, mientras no tenga factura, el total de la orden. Se actualiza solo cuando la orden se factura. Sin orden se digita a mano |
+| Monto venta televentas | Con orden de venta se llena solo: lo facturado de la orden (facturas menos notas de crédito) o, mientras no tenga factura, el total de la orden. Se actualiza solo cuando la orden se factura. Queda en cero si el resultado no es Venta recuperada, Pedido pendiente o Cotización enviada, porque entonces la gestión no terminó en venta. Sin orden se digita a mano |
 | Próxima acción y fecha | Qué sigue y cuándo |
 | Comentario predeterminado o comentario | **Uno de los dos es obligatorio** |
 

@@ -568,60 +568,88 @@ class SngControlVisitasLinea(models.Model):
 
     @api.model
     def _sng_cron_generar_pendientes(self):
-        """Lunes: crea los pendientes de televentas de la semana."""
+        """Lunes: deja en televentas lo que no se visitó la semana pasada.
+
+        La base es la programación de la semana anterior —el cronograma, por
+        `_sng_programacion_externa`— menos quien sí recibió una visita real.
+        Es el mismo criterio de la matriz a propósito: la pantalla que
+        trabaja televentas y la matriz que revisa gerencia tienen que decir
+        lo mismo de la misma semana.
+
+        Un cliente nunca lleva dos pendientes abiertos. Si ya tenía uno se
+        le mueve la semana en lugar de crear otro, así la bandeja siempre
+        muestra la semana en curso con la fecha límite al día en vez de
+        acumular atraso de semanas viejas.
+        """
         Seg = self.env['sng.televentas.seguimiento']
         Visita = self.env['sng.ruteros.visita']
         hoy = fields.Date.context_today(self)
         semana = Seg._sng_lunes(hoy)
         prev_ini = semana - timedelta(days=7)
         prev_fin = semana - timedelta(days=1)
+        # Una visita de los días previos a la semana programada también
+        # cuenta como atendido: el agente fue, solo se adelantó. Se mira
+        # desde que empezó el mes, igual que la matriz.
+        mes_ini = prev_ini.replace(day=1)
 
         for company in self.env['res.company'].search([]):
             partners, ultimas = self._sng_clientes_maestros(company)
-            con_pendiente = set(Seg.search([
-                ('company_id', '=', company.id),
-                ('estado', '=', 'pendiente'),
-            ]).mapped('partner_id').ids)
+            # El pendiente abierto de cada cliente se reutiliza.
+            pendiente_de = {}
+            for seg in Seg.search([
+                    ('company_id', '=', company.id),
+                    ('estado', '=', 'pendiente'),
+            ], order='semana desc, id desc'):
+                pendiente_de.setdefault(seg.partner_id.id, seg)
             recientes = set(Seg.search([
                 ('company_id', '=', company.id),
                 ('estado', '=', 'realizado'),
                 ('fecha_seguimiento', '>=', hoy - timedelta(days=7)),
             ]).mapped('partner_id').ids)
-            excluidos = con_pendiente | recientes
             candidatos = {}  # partner_id -> (origen, visita)
 
-            # a) visitas de la semana previa que piden televentas
             visitas = Visita.search([
                 ('company_id', '=', company.id),
                 ('partner_id', 'in', partners.ids),
-                ('fecha_inicio', '>=', fields.Datetime.to_datetime(prev_ini)),
+                ('fecha_inicio', '>=', fields.Datetime.to_datetime(mes_ini)),
                 ('fecha_inicio', '<', fields.Datetime.to_datetime(
                     semana + timedelta(days=1))),
             ], order='fecha_inicio desc')
+
+            # Atendidos: con visita real en el mes hasta la fecha de corte.
+            atendidos = {v.partner_id.id for v in visitas
+                         if v._es_visita_real()}
+            # a) visitas de la semana previa que piden televentas
             for v in visitas:
                 fecha = v._sng_fecha_visita()
                 if not (prev_ini <= fecha <= prev_fin):
                     continue
                 pid = v.partner_id.id
-                if pid in excluidos or pid in candidatos:
+                if pid in recientes or pid in candidatos:
                     continue
                 if v.requiere_seguimiento_televentas or not v._es_visita_real():
-                    if v.seguimiento_ids:
-                        continue
+                    abiertos = v.seguimiento_ids.filtered(
+                        lambda s: s.estado == 'pendiente')
+                    if v.seguimiento_ids and not abiertos:
+                        continue  # televentas ya lo trabajó
                     origen = ('solicitud_agente'
                               if v.requiere_seguimiento_televentas
                               else 'no_visitado')
                     candidatos[pid] = (origen, v)
 
-            visitados_prev = set()
-            for v in visitas:
-                if v._es_visita_real():
-                    visitados_prev.add(v.partner_id.id)
+            # b) programados la semana pasada y sin visita real
+            plan, sin_plan = self._sng_programacion_externa(
+                partners, prev_ini, prev_fin, company)
+            for pid in plan:
+                if (pid in recientes or pid in candidatos
+                        or pid in atendidos):
+                    continue
+                candidatos[pid] = ('no_visitado', Visita)
 
             limite_inactivo = hoy - timedelta(days=365)
             for partner in partners:
                 pid = partner.id
-                if pid in excluidos or pid in candidatos:
+                if pid in recientes or pid in candidatos:
                     continue
                 tipo = partner.sng_tipo_atencion or 'ruta'
                 frec = partner.sng_frecuencia_visita or 'mensual'
@@ -629,11 +657,14 @@ class SngControlVisitasLinea(models.Model):
                 if frec == 'sin_visita':
                     continue
                 if tipo == 'ruta':
-                    # b) visita esperada y vencida sin visita real
+                    # c) sin cronograma para la semana: manda la frecuencia.
+                    #    A quien el cronograma dejó fuera a propósito (otra
+                    #    semana de la rotación, cerrado por temporada) no se
+                    #    le pide nada.
+                    if pid in plan or pid in sin_plan or pid in atendidos:
+                        continue
                     proxima = partner.sng_fecha_proxima_visita
                     ultima_factura = ultimas.get(pid)
-                    if pid in visitados_prev:
-                        continue
                     if proxima and proxima <= prev_fin:
                         candidatos[pid] = ('visita_pendiente', Visita)
                     elif (not partner.sng_fecha_ultima_visita
@@ -641,36 +672,53 @@ class SngControlVisitasLinea(models.Model):
                           and ultima_factura >= limite_inactivo):
                         candidatos[pid] = ('visita_pendiente', Visita)
                 else:
-                    # c) contacto de televentas vencido según frecuencia
+                    # d) contacto de televentas vencido según frecuencia
                     ultimo = partner.sng_fecha_ultimo_contacto_televentas
                     if not dias:
                         continue
                     if not ultimo or ultimo + timedelta(days=dias) <= prev_fin:
                         candidatos[pid] = ('frecuencia_televentas', Visita)
 
-            vals_list = [{
-                'partner_id': pid,
-                'company_id': company.id,
-                'visita_id': visita.id if visita else False,
-                'origen': origen,
-                'semana': semana,
-            } for pid, (origen, visita) in candidatos.items()]
+            # El pendiente que ya existía se mueve a esta semana; solo se
+            # crea el del cliente que no tenía ninguno abierto.
+            vals_list = []
+            movidos = Seg
+            for pid, (origen, visita) in candidatos.items():
+                abierto = pendiente_de.get(pid)
+                if abierto:
+                    datos = {}
+                    if abierto.semana != semana:
+                        datos['semana'] = semana
+                    if visita and not abierto.visita_id:
+                        datos['visita_id'] = visita.id
+                    if datos:
+                        abierto.write(datos)
+                        movidos |= abierto
+                    continue
+                vals_list.append({
+                    'partner_id': pid,
+                    'company_id': company.id,
+                    'visita_id': visita.id if visita else False,
+                    'origen': origen,
+                    'semana': semana,
+                })
             creados = Seg.create(vals_list) if vals_list else Seg
             conteo = {}
             for origen, _v in candidatos.values():
                 conteo[origen] = conteo.get(origen, 0) + 1
             _logger.info(
-                'sng_control_visitas: %s pendientes de televentas creados '
-                'para %s semana %s (%s)', len(creados), company.name,
-                semana, conteo)
+                'sng_control_visitas: %s pendientes de televentas creados y '
+                '%s movidos para %s semana %s (%s)', len(creados),
+                len(movidos), company.name, semana, conteo)
             self._sng_publicar(company, Markup(
                 '<p><b>%s</b><br/>%s</p>') % (
                 _('📞 Televentas — semana del %(semana)s — %(comp)s',
                   semana=semana.strftime('%d/%m/%Y'), comp=company.name),
-                _('%(n)s seguimientos pendientes generados '
-                  '(no visitados: %(a)s, visita pendiente: %(b)s, '
-                  'solicitud del agente: %(c)s, frecuencia televentas: %(d)s).',
-                  n=len(creados),
+                _('%(t)s clientes por gestionar: %(n)s nuevos y %(m)s que '
+                  'ya venían pendientes (no visitados: %(a)s, visita '
+                  'pendiente: %(b)s, solicitud del agente: %(c)s, '
+                  'frecuencia televentas: %(d)s).',
+                  t=len(candidatos), n=len(creados), m=len(movidos),
                   a=conteo.get('no_visitado', 0),
                   b=conteo.get('visita_pendiente', 0),
                   c=conteo.get('solicitud_agente', 0),

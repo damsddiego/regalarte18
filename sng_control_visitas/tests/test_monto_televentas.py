@@ -50,6 +50,21 @@ class TestMontoTeleventas(ControlVisitasCommon):
         nota.action_post()
         self.assertAlmostEqual(seg.monto_venta, 0.0)
 
+    def test_resultado_sin_venta_no_acredita_la_orden(self):
+        """Una orden enlazada no cuenta si la gestión se cerró sin venta."""
+        so = self._orden()
+        seg = self._seguimiento(sale_order_id=so.id)
+        # Pendiente: el monto se ve para preparar la llamada.
+        self.assertAlmostEqual(seg.monto_venta, so.amount_total)
+        seg.write({'canal': 'correo', 'resultado': 'datos_incorrectos',
+                   'comentario': 'El correo no existe'})
+        seg.action_marcar_realizado()
+        self.assertEqual(seg.monto_venta, 0.0)
+        self.assertEqual(seg.efectividad, 0.0)
+        # Si después se corrige a venta recuperada, vuelve a contar.
+        seg.write({'resultado': 'venta_recuperada'})
+        self.assertAlmostEqual(seg.monto_venta, so.amount_total)
+
     def test_orden_cancelada_sin_factura_no_suma(self):
         so = self._orden()
         seg = self._seguimiento(sale_order_id=so.id)

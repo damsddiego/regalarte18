@@ -23,6 +23,11 @@ EFECTIVIDAD_TELEVENTAS = {
     'cotizacion_enviada': 0.5,
 }
 
+# Resultados a los que se les puede acreditar monto: los mismos que tienen
+# efectividad. Con cualquier otro resultado la gestión no terminó en venta,
+# así que la orden enlazada no cuenta como venta de televentas.
+RESULTADOS_CON_MONTO = tuple(EFECTIVIDAD_TELEVENTAS)
+
 CANALES = [
     ('llamada', 'Llamada'),
     ('whatsapp', 'WhatsApp'),
@@ -112,7 +117,9 @@ class SngTeleventasSeguimiento(models.Model):
         compute='_compute_monto_venta', store=True, readonly=False,
         help='Con orden de venta se llena solo con lo facturado de la orden '
              '(facturas menos notas de crédito); mientras la orden no tenga '
-             'factura, con el total de la orden. Sin orden se digita a mano.')
+             'factura, con el total de la orden. Queda en cero si la gestión '
+             'se cerró con un resultado que no es de venta. Sin orden se '
+             'digita a mano.')
     sale_order_id = fields.Many2one(
         'sale.order', string='Orden de venta', check_company=True,
         index='btree_not_null')
@@ -213,6 +220,7 @@ class SngTeleventasSeguimiento(models.Model):
                 rec.semana + timedelta(days=6) if rec.semana else False)
 
     @api.depends(
+        'resultado',
         'sale_order_id.state', 'sale_order_id.amount_total',
         'sale_order_id.order_line.invoice_lines.move_id.state',
         'sale_order_id.order_line.invoice_lines.move_id.amount_total_signed')
@@ -222,6 +230,14 @@ class SngTeleventasSeguimiento(models.Model):
             if not orden:
                 # Sin orden el monto es manual: se conserva lo digitado.
                 rec.monto_venta = rec.monto_venta
+                continue
+            if rec.resultado and rec.resultado not in RESULTADOS_CON_MONTO:
+                # La orden pudo venir de otra parte (una visita, el
+                # mostrador) o quedar enlazada por referencia. Si la gestión
+                # se cerró sin venta, no se le acredita a televentas: así
+                # aparecían montos colgando de seguimientos marcados como
+                # "datos incorrectos" o "reprogramar llamada".
+                rec.monto_venta = 0.0
                 continue
             facturas = orden.order_line.invoice_lines.move_id.filtered(
                 lambda m: m.state == 'posted'
