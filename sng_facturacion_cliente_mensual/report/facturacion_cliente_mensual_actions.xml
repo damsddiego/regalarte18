@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_facturacion_cliente_mensual_xlsx" model="ir.actions.report">
+        <field name="name">Facturación por cliente mensual XLSX</field>
+        <field name="model">sng.facturacion.cliente.mensual.wizard</field>
+        <field name="report_type">xlsx</field>
+        <field name="report_name">sng_facturacion_cliente_mensual.facturacion_xlsx</field>
+        <field name="report_file">sng_facturacion_cliente_mensual.facturacion_xlsx</field>
+        <field name="print_report_name">'Facturacion_Cliente_Mensual_%s_%s' % (object.date_from.strftime('%Y-%m'), object.date_to.strftime('%Y-%m'))</field>
+        <field name="binding_model_id" eval="False"/>
+    </record>
+</odoo>

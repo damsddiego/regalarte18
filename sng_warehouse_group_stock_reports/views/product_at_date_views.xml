@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Lista usada por "Inventario a la fecha" (wizard stock.quantity.history).
+        Es la lista nativa de productos con existencias, pero con el js_class del
+        reporte Existencias para que aparezca el panel de almacenes y grupos.
+    -->
+    <record id="view_stock_product_tree_at_date" model="ir.ui.view">
+        <field name="name">product.product.stock.list.at.date.warehouse.group</field>
+        <field name="model">product.product</field>
+        <field name="mode">primary</field>
+        <field name="priority" eval="200"/>
+        <field name="inherit_id" ref="stock.view_stock_product_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="attributes">
+                <attribute name="js_class">stock_report_list_view</attribute>
+                <attribute name="create">0</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>

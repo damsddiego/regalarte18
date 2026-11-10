@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'SNG Plan Comercial Clientes',
-    'version': '18.0.1.1.0',
+    'version': '18.0.1.2.0',
     'category': 'Sales',
     'summary': 'Planificacion comercial anual por cliente con segmentacion y exportacion XLSX',
     'license': 'AGPL-3',
@@ -18,6 +18,7 @@
         'views/sng_commercial_plan_views.xml',
         'views/sng_commercial_plan_line_views.xml',
         'views/sng_commercial_plan_export_wizard_views.xml',
+        'views/sng_commercial_plan_history_views.xml',
     ],
     'installable': True,
     'application': False,

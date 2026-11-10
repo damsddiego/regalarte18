@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'SNG AI Dashboard',
-    'version': '18.0.1.10.0',
+    'version': '18.0.1.10.1',
     'category': 'Reporting',
     'summary': 'Dashboard ejecutivo con KPIs y recomendaciones generadas por IA',
     'description': """

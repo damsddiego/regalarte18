@@ -11,7 +11,9 @@
         <field name="comment">Puede ver el Dashboard IA y generar análisis.</field>
     </record>
 
+    <!-- Ya no se implica desde Ajustes: el acceso se asigna usuario por usuario.
+         (3, ...) quita la implicación que dejaban las versiones anteriores. -->
     <record id="base.group_system" model="res.groups">
-        <field name="implied_ids" eval="[(4, ref('group_ai_dashboard_user'))]"/>
+        <field name="implied_ids" eval="[(3, ref('group_ai_dashboard_user'))]"/>
     </record>
 </odoo>

@@ -43,6 +43,7 @@
                                     <td>
                                         <span t-field="allocation.product_id"/>
                                         <small t-if="allocation.line_id.without_box" class="text-muted"> (sin caja)</small>
+                                        <small t-if="allocation.line_id.min_box_applied" class="text-muted"> (caja mínima por stock bajo)</small>
                                     </td>
                                     <td class="text-end"><span t-field="allocation.line_id.demand_qty"/></td>
                                     <td class="text-end"><span t-field="allocation.line_id.projected_qty"/></td>
@@ -84,6 +85,41 @@
                         </tbody>
                     </table>
                 </t>
+
+                <t t-set="not_sent_lines" t-value="o.line_ids.filtered('not_sent_by_box')"/>
+                <div t-if="not_sent_lines" style="page-break-inside: avoid;">
+                    <h3 class="mt-4">No enviados por regla de caja</h3>
+                    <p class="text-muted">
+                        Necesitaban unidades, pero la necesidad no completaba caja y no
+                        se sugirieron. Bodega decide si los envía a mano.
+                    </p>
+                    <table class="table table-sm table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th class="text-end">Salidas 14 días</th>
+                                <th class="text-end">Stock libre</th>
+                                <th class="text-end">Stock proyectado</th>
+                                <th class="text-end">Punto reorden</th>
+                                <th class="text-end">Necesidad</th>
+                                <th class="text-end">Und. por caja</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr t-foreach="not_sent_lines" t-as="line">
+                                <td><span t-field="line.product_code"/></td>
+                                <td><span t-field="line.product_id"/></td>
+                                <td class="text-end"><span t-field="line.demand_qty"/></td>
+                                <td class="text-end"><span t-field="line.free_qty"/></td>
+                                <td class="text-end"><span t-field="line.projected_qty"/></td>
+                                <td class="text-end"><span t-field="line.reorder_point"/></td>
+                                <td class="text-end"><strong><span t-field="line.need_qty"/></strong></td>
+                                <td class="text-end"><span t-field="line.box_qty"/></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </t>
     </template>

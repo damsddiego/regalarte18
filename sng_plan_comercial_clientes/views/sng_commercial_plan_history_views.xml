@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_sng_commercial_plan_history_search" model="ir.ui.view">
+        <field name="name">sng.commercial.plan.history.search</field>
+        <field name="model">sng.commercial.plan.history</field>
+        <field name="arch" type="xml">
+            <search string="Venta Historica">
+                <field name="source_code"/>
+                <field name="source_name"/>
+                <field name="partner_id"/>
+                <field name="company_id"/>
+                <filter name="filter_unassigned" string="Sin asignar" domain="[('partner_id', '=', False)]"/>
+                <filter name="filter_assigned" string="Asignadas" domain="[('partner_id', '!=', False)]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_period" string="Periodo" context="{'group_by': 'date_from:month'}"/>
+                    <filter name="group_match_method" string="Asignado por" context="{'group_by': 'match_method'}"/>
+                    <filter name="group_partner" string="Cliente" context="{'group_by': 'partner_id'}"/>
+                    <filter name="group_company" string="Compania" context="{'group_by': 'company_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="view_sng_commercial_plan_history_tree" model="ir.ui.view">
+        <field name="name">sng.commercial.plan.history.tree</field>
+        <field name="model">sng.commercial.plan.history</field>
+        <field name="arch" type="xml">
+            <list string="Venta Historica" editable="bottom" create="0">
+                <field name="date_from" readonly="1"/>
+                <field name="date_to" readonly="1"/>
+                <field name="source_code" readonly="1"/>
+                <field name="source_name" readonly="1"/>
+                <field name="partner_id" options="{'no_create': True}"/>
+                <field name="amount" sum="Venta Neta" readonly="1"/>
+                <field name="match_method" readonly="1"/>
+                <field name="note" optional="show"/>
+                <field name="source_file" optional="hide" readonly="1"/>
+                <field name="company_id" optional="hide" readonly="1"/>
+                <field name="currency_id" column_invisible="1"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_sng_commercial_plan_history" model="ir.actions.act_window">
+        <field name="name">Venta Historica</field>
+        <field name="res_model">sng.commercial.plan.history</field>
+        <field name="view_mode">list</field>
+        <field name="search_view_id" ref="view_sng_commercial_plan_history_search"/>
+        <field name="help" type="html">
+            <p>Venta por cliente del sistema anterior, para los periodos previos al inicio de ventas en Odoo.</p>
+            <p>Use "Importar Venta Historica" para cargar el reporte de ventas en Excel.</p>
+        </field>
+    </record>
+
+    <record id="view_sng_commercial_plan_history_import_wizard_form" model="ir.ui.view">
+        <field name="name">sng.commercial.plan.history.import.wizard.form</field>
+        <field name="model">sng.commercial.plan.history.import.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Importar Venta Historica">
+                <field name="state" invisible="1"/>
+                <sheet>
+                    <group invisible="state == 'done'">
+                        <group>
+                            <field name="file_data" filename="file_name"/>
+                            <field name="file_name" invisible="1"/>
+                            <field name="amount_column"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                        <group>
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                            <field name="replace_existing"/>
+                        </group>
+                    </group>
+                    <div class="text-muted" invisible="state == 'done'">
+                        <p>El archivo debe tener una fila de encabezados con "Codigo", "Cliente" y la columna de venta indicada (por ejemplo el reporte "Ventas 2025" del sistema anterior).</p>
+                        <p>Los clientes se buscan por el codigo de cliente de Odoo y, si no aparece, por nombre. Una asignacion manual hecha en Venta Historica se reutiliza en las siguientes importaciones.</p>
+                        <p>Para que los planes salgan completos importe cada periodo anterior al inicio de ventas en Odoo, idealmente un archivo por mes.</p>
+                    </div>
+                    <field name="result_message" invisible="state != 'done'" nolabel="1"/>
+                </sheet>
+                <footer>
+                    <button name="action_import" string="Importar" type="object" class="btn-primary" invisible="state == 'done'"/>
+                    <button name="action_open_history" string="Revisar filas" type="object" class="btn-primary" invisible="state != 'done'"/>
+                    <button string="Cerrar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_sng_commercial_plan_history_import_wizard" model="ir.actions.act_window">
+        <field name="name">Importar Venta Historica</field>
+        <field name="res_model">sng.commercial.plan.history.import.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+
+    <record id="view_company_form_sng_plan_comercial" model="ir.ui.view">
+        <field name="name">res.company.form.sng.plan.comercial</field>
+        <field name="model">res.company</field>
+        <field name="inherit_id" ref="base.view_company_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='currency_id']" position="after">
+                <field name="sng_plan_odoo_start_date"/>
+            </xpath>
+        </field>
+    </record>
+
+    <menuitem id="menu_sng_commercial_plan_history_root"
+              name="Venta Historica"
+              parent="menu_sng_plan_comercial_root"
+              sequence="30"
+              groups="sng_plan_comercial_clientes.group_sng_plan_comercial_manager"/>
+
+    <menuitem id="menu_sng_commercial_plan_history"
+              name="Venta Historica"
+              parent="menu_sng_commercial_plan_history_root"
+              action="action_sng_commercial_plan_history"
+              sequence="10"/>
+
+    <menuitem id="menu_sng_commercial_plan_history_import"
+              name="Importar Venta Historica"
+              parent="menu_sng_commercial_plan_history_root"
+              action="action_sng_commercial_plan_history_import_wizard"
+              sequence="20"/>
+</odoo>

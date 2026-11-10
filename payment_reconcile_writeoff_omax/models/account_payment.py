@@ -53,7 +53,7 @@ class AccountPayment(models.Model):
         return True
 
     #change lines selection then set 'Retencion Amount' as 0 and also change 'Amount' of payment
-    @api.onchange('pay_moves', 'outstanding_move_lines')
+    @api.onchange('amount', 'pay_moves', 'outstanding_move_lines')
     def _onchange_outstanding_move_lines(self):
         """When selecting invoices/bills to pay, keep the original payment amount
         (imported from external app) and only suggest/update the write-off amount
@@ -63,8 +63,11 @@ class AccountPayment(models.Model):
             outstanding_move_ids = self.outstanding_move_lines.filtered(lambda pl: pl.select_to_pay)
             if outstanding_move_ids and self.amount:
                 total_invoice_amount = sum(outstanding_move_ids.mapped('amount_residual'))
-                # Suggest write-off as positive difference (if any)
-                self.writeoff_amt = max(0.0, total_invoice_amount - self.amount)
+                # The amount shown to the user is always positive; the journal
+                # entry direction depends on which side of the payment is larger.
+                self.writeoff_amt = self.currency_id.round(
+                    abs(total_invoice_amount - self.amount)
+                )
             else:
                 self.writeoff_amt = 0.0
 
@@ -72,8 +75,7 @@ class AccountPayment(models.Model):
     @api.onchange('writeoff_amt')
     def _onchange_line_writeoff_amounts(self):
         """Do not change the original payment amount when user edits write-off.
-        Only validate the coherence between:
-            sum(selected invoices)  vs  payment amount + write-off amount.
+        Validate that the write-off matches the difference in either direction.
         """
         if self.pay_moves and self.outstanding_move_lines:
             outstanding_move_ids = self.outstanding_move_lines.filtered(lambda pl: pl.select_to_pay)
@@ -87,20 +89,19 @@ class AccountPayment(models.Model):
                 if writeoff_amount <= 0:
                     return
 
-                # If a positive write-off is set, enforce strict equality.
-                total_payment_and_writeoff = payment_amount + writeoff_amount
-                if self.currency_id.compare_amounts(total_payment_and_writeoff, total_invoice_amount) != 0:
+                expected_writeoff = abs(total_invoice_amount - payment_amount)
+                if self.currency_id.compare_amounts(writeoff_amount, expected_writeoff) != 0:
                     return {
                         'warning': {
                             'title': "Warning!",
                             'message': (
-                                "The total of the selected invoices ({:.2f}) is not equal to "
-                                "Payment amount ({:.2f}) + Write-off amount ({:.2f}) = {:.2f}."
+                                "The selected invoices total {:.2f} and the payment is {:.2f}. "
+                                "The write-off amount must be {:.2f}, not {:.2f}."
                             ).format(
                                 total_invoice_amount,
                                 payment_amount,
+                                expected_writeoff,
                                 writeoff_amount,
-                                total_payment_and_writeoff,
                             ),
                         }
                     }
@@ -129,7 +130,10 @@ class AccountPayment(models.Model):
         ):
             return []
 
+        selected_total = sum(self._get_selected_outstanding_moves().mapped('amount_residual'))
         amount_currency = abs(self.writeoff_amt)
+        if self.currency_id.compare_amounts(selected_total, self.amount) < 0:
+            amount_currency = -amount_currency
         if self.payment_type == 'outbound':
             amount_currency = -amount_currency
         balance = self.currency_id._convert(
@@ -172,20 +176,20 @@ class AccountPayment(models.Model):
                 raise UserError(_("Select a write-off account before posting this payment."))
 
             selected_total = sum(selected_lines.mapped('amount_residual'))
-            total_payment_and_writeoff = (payment.amount or 0.0) + writeoff_amount
-            if payment.currency_id.compare_amounts(total_payment_and_writeoff, selected_total) != 0:
+            expected_writeoff = abs(selected_total - payment.amount)
+            if payment.currency_id.compare_amounts(writeoff_amount, expected_writeoff) != 0:
                 doc_type = _('invoices') if payment.payment_type == 'inbound' else _('bills')
                 raise UserError(_(
                     "Payment mismatch!\n\n"
                     "The total of the selected %(doc_type)s is %(selected_total).2f, but "
-                    "payment amount %(payment_amount).2f + write-off amount %(writeoff_amount).2f "
-                    "is %(total).2f."
+                    "payment amount %(payment_amount).2f requires a write-off of "
+                    "%(expected_writeoff).2f, not %(writeoff_amount).2f."
                 ) % {
                     'doc_type': doc_type,
                     'selected_total': selected_total,
                     'payment_amount': payment.amount,
                     'writeoff_amount': writeoff_amount,
-                    'total': total_payment_and_writeoff,
+                    'expected_writeoff': expected_writeoff,
                 })
 
     def action_validate(self):

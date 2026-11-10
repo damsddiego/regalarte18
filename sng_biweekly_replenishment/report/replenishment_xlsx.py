@@ -64,6 +64,8 @@ class SngBiweeklyReplenishmentXlsx(models.AbstractModel):
                 _("Und. por caja"),
                 _("Cajas sugeridas"),
                 _("Sugerido"),
+                _("Caja mínima"),
+                _("No enviado por caja"),
             ]
             trailing_headers = [
                 _("Cajas asignadas"),
@@ -107,13 +109,14 @@ class SngBiweeklyReplenishmentXlsx(models.AbstractModel):
                     line.box_qty,
                     line.suggested_boxes,
                     line.suggested_qty,
+                    _("Sí") if line.min_box_applied else "",
+                    line.box_skipped_qty,
                 ]
                 for column, value in enumerate(values):
-                    cell_format = text_format if column < 3 else qty_format
-                    if column < 3:
-                        sheet.write(row_number, column, value, cell_format)
+                    if isinstance(value, str):
+                        sheet.write(row_number, column, value, text_format)
                     else:
-                        sheet.write_number(row_number, column, value or 0.0, cell_format)
+                        sheet.write_number(row_number, column, value or 0.0, qty_format)
 
                 source_start = len(fixed_headers)
                 for offset, source in enumerate(sources):

@@ -1,1 +1,2 @@
 from . import sng_commercial_plan_export_wizard
+from . import sng_commercial_plan_history_import_wizard

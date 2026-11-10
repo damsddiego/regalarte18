@@ -145,6 +145,14 @@ class SngBiweeklyReplenishmentConfig(models.Model):
         help="Si lo que falta para la siguiente caja supera este porcentaje de la "
         "caja, se sugiere la caja completa; si no, esa fracción no se traslada.",
     )
+    min_box_below_reorder = fields.Boolean(
+        string="Caja mínima con stock bajo",
+        default=True,
+        tracking=True,
+        help="Si el stock proyectado de la Bodega Principal está en o por debajo "
+        "del punto de reorden y la necesidad no completa caja, se sugiere una "
+        "caja de todas formas.",
+    )
     allow_loose_units = fields.Boolean(
         string="Permitir unidades sueltas",
         default=False,

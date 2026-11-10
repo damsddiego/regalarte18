@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates id="template" xml:space="preserve">
+
+<t t-name="sng_warehouse_group_stock_reports.StockReportSearchPanel.Regular"
+   t-inherit="stock.StockReportSearchPanel.Regular" t-inherit-mode="extension">
+    <xpath expr="//section[hasclass('o_search_panel_warehouse')]" position="replace">
+        <section t-if="warehouseGroups.length" class="o_search_panel_section o_search_panel_warehouse_group">
+            <header class="o_search_panel_section_header pt-4 pb-2 text-uppercase o_cursor_default">
+                <i class="fa fa-sitemap o_search_panel_section_icon text-warning me-2"/>
+                <b>Grupos de almacenes</b>
+            </header>
+            <ul class="list-group d-block o_search_panel_field">
+                <li class="o_search_panel_filter_value list-group-item p-0 mb-1 border-0 o_cursor_pointer"
+                    t-foreach="warehouseGroups" t-as="group" t-key="group.id">
+                    <div t-on-click="() => this.applyWarehouseGroupContext(group)"
+                         t-att-class="{'fw-bolder': sng.groupId === group.id, 'o_search_panel_label_title': true,
+                         'bg-info-subtle': sng.groupId === group.id}"
+                         t-att-title="group.warehouse_ids.length + ' almacenes'">
+                        <t t-out="group.name"/>
+                        <span class="text-muted ms-1 small">(<t t-out="group.warehouse_ids.length"/>)</span>
+                    </div>
+                </li>
+            </ul>
+        </section>
+        <section t-if="warehouses.length > 1" class="o_search_panel_section o_search_panel_warehouse">
+            <header class="o_search_panel_section_header pt-4 pb-2 text-uppercase o_cursor_default">
+                <i class="fa fa-filter o_search_panel_section_icon text-warning me-2"/>
+                <b>Almacenes</b>
+                <span t-if="selectedWarehouseCount" class="badge rounded-pill text-bg-info ms-2"
+                      t-out="selectedWarehouseCount"/>
+            </header>
+            <ul class="list-group d-block o_search_panel_field">
+                <li class="o_search_panel_filter_value list-group-item p-0 mb-1 border-0 o_cursor_pointer">
+                    <span t-on-click="() => this.clearWarehouseContext()"
+                          t-att-class="{'fw-bolder': !selectedWarehouseCount, 'o_search_panel_label_title': true}">Todos los almacenes</span>
+                </li>
+                <li class="list-group-item p-0 mb-1 border-0">
+                    <input type="text" class="form-control form-control-sm"
+                           placeholder="Buscar almacén..."
+                           t-att-value="sng.warehouseFilter"
+                           t-on-input="onWarehouseFilterInput"/>
+                </li>
+            </ul>
+            <ul class="list-group d-block o_search_panel_field o_sng_warehouse_list"
+                style="max-height: 45vh; overflow-y: auto;">
+                <li class="o_search_panel_filter_value list-group-item p-0 mb-1 border-0 o_cursor_pointer"
+                    t-foreach="filteredWarehouses" t-as="warehouse" t-key="warehouse.id">
+                    <label class="o_search_panel_label_title d-flex align-items-center mb-0 o_cursor_pointer"
+                           t-att-class="{'fw-bolder bg-info-subtle': isWarehouseSelected(warehouse.id)}">
+                        <input type="checkbox" class="form-check-input me-2 mt-0"
+                               t-att-checked="isWarehouseSelected(warehouse.id)"
+                               t-on-change="() => this.toggleWarehouseContext(warehouse.id)"/>
+                        <span t-out="warehouse.name"/>
+                    </label>
+                </li>
+                <li t-if="!filteredWarehouses.length" class="list-group-item p-0 border-0 text-muted small">
+                    Sin coincidencias
+                </li>
+            </ul>
+        </section>
+    </xpath>
+</t>
+
+</templates>

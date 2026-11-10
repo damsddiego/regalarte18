@@ -66,6 +66,7 @@
                         <group string="Cajas">
                             <field name="box_packaging_name"/>
                             <field name="box_round_up_percent"/>
+                            <field name="min_box_below_reorder"/>
                             <field name="allow_loose_units"/>
                         </group>
                         <group string="Ventas atípicas">

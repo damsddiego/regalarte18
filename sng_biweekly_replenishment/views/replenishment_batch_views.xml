@@ -77,7 +77,8 @@
                         <page string="SKUs">
                             <field name="line_ids" readonly="1">
                                 <list decoration-warning="shortage_qty &gt; 0"
-                                      decoration-muted="suggested_qty == 0">
+                                      decoration-danger="not_sent_by_box"
+                                      decoration-muted="suggested_qty == 0 and not not_sent_by_box">
                                     <field name="product_code"/>
                                     <field name="product_id"/>
                                     <field name="uom_id"/>
@@ -98,7 +99,11 @@
                                     <field name="box_qty"/>
                                     <field name="without_box" widget="boolean" optional="show"/>
                                     <field name="suggested_boxes" sum="Cajas"/>
+                                    <field name="min_box_applied" widget="boolean" optional="show"/>
                                     <field name="suggested_qty" sum="Sugerido"/>
+                                    <field name="box_skipped_qty" optional="show"
+                                           sum="No enviado por caja"/>
+                                    <field name="not_sent_by_box" column_invisible="True"/>
                                     <field name="allocated_boxes" sum="Cajas asignadas" optional="show"/>
                                     <field name="allocated_qty" sum="Asignado"/>
                                     <field name="shortage_qty" sum="Faltante"/>
@@ -174,6 +179,10 @@
                 <field name="main_warehouse_id"/>
                 <filter name="with_shortage" string="Con faltante" domain="[('shortage_qty', '&gt;', 0)]"/>
                 <filter name="without_box" string="Sin caja" domain="[('without_box', '=', True)]"/>
+                <filter name="not_sent_by_box" string="No enviados por caja"
+                        domain="[('not_sent_by_box', '=', True)]"/>
+                <filter name="min_box_applied" string="Caja mínima por stock bajo"
+                        domain="[('min_box_applied', '=', True)]"/>
                 <group expand="0" string="Agrupar por">
                     <filter name="group_product" string="Producto" context="{'group_by': 'product_id'}"/>
                     <filter name="group_batch" string="Ciclo" context="{'group_by': 'batch_id'}"/>

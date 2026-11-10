@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "SNG Inventory Adjustment History",
-    "version": "18.0.2.1.0",
+    "version": "18.0.3.1.0",
     "author": "SNG Cloud",
     "website": "https://sngcloud.com",
     "category": "Inventory/Inventory",
@@ -18,6 +18,7 @@
         "data/mail_templates.xml",
         "views/inventory_adjustment_history_views.xml",
         "views/warehouse_group_views.xml",
+        "views/inventory_adjustment_batch_views.xml",
         "views/inventory_adjustment_request_views.xml",
         "views/stock_quant_views.xml",
     ],

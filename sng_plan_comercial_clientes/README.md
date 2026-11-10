@@ -136,6 +136,23 @@ Configuracion sugerida similar al Excel:
 - `Limite DPP B = 45`
 - `Etiqueta Sin DPP = Sin DPP`
 
+## Venta historica del sistema anterior
+
+Odoo empezo a facturar el 01/04/2026. Las facturas con fecha anterior son saldos de CxC cargados desde el sistema anterior, no la venta real. Por eso:
+
+1. En la ficha de la compania se define `Inicio de Ventas en Odoo` (01/04/2026). El plan ignora las facturas con fecha anterior.
+2. En `Ventas > Plan Comercial > Venta Historica > Importar Venta Historica` se carga el reporte de ventas del sistema anterior (por ejemplo "Ventas 2025", columnas `codigo`, `Cliente`, `Ventas Netas IVAI`) indicando el periodo que cubre.
+3. Los clientes se asignan por el codigo de cliente de Odoo y, si no aparece, por nombre. Las filas sin cliente se asignan a mano en `Venta Historica` (filtro `Sin asignar`); esa asignacion se reutiliza en las siguientes importaciones.
+
+Reglas:
+
+- un periodo historico cuenta solo si cae completo dentro del periodo del plan (un total anual no se reparte por meses), por eso conviene importar un archivo por mes
+- el historico no puede llegar al inicio de ventas en Odoo ni traslaparse con otro periodo historico
+- el plan muestra un aviso si algun tramo anterior al arranque no tiene historico
+- el DPP de un periodo base anterior al arranque se calcula con las facturas desde el arranque, porque los saldos cargados se cobraron meses despues y darian DPP falsos
+
+Para el plan 2026 (base 2025) basta el reporte de 2025. Para el plan 2027 (base 2026) hace falta ademas la venta de enero a marzo de 2026 del sistema anterior; abril en adelante sale de Odoo. Ese mismo tramo completa la `Venta Actual` del plan 2026.
+
 ## 4. Cargar clientes
 
 Usar el boton `Cargar clientes`.
@@ -249,7 +266,7 @@ Si necesita reabrirlo:
 ## Limitaciones actuales
 
 - la columna `Presupuesto Objetivo` esta lista para uso manual, pero no tiene aun importacion masiva desde Excel
-- si en la base no existen ventas del ano base, no se cargaran lineas
+- si no existen ventas del ano base (facturas desde el arranque o venta historica importada), no se cargaran lineas
 - el resultado depende de la calidad de los datos contables y de conciliacion
 
 ## Caso de uso recomendado

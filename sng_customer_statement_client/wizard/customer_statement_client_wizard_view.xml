@@ -23,6 +23,7 @@
                         <field name="statement_date" readonly="1"/>
                         <field name="show_draft_payments"/>
                         <field name="show_bank_accounts"/>
+                        <field name="apply_late_interest"/>
                     </group>
                 </group>
                 <div class="alert alert-warning" role="alert">

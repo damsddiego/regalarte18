@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_facturacion_cliente_mensual_wizard_form" model="ir.ui.view">
+        <field name="name">sng.facturacion.cliente.mensual.wizard.form</field>
+        <field name="model">sng.facturacion.cliente.mensual.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Facturación por cliente mensual">
+                <sheet>
+                    <group>
+                        <group string="Período">
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                            <field name="company_id"
+                                   options="{'no_create': True}"
+                                   groups="base.group_multi_company"/>
+                        </group>
+                        <group string="Filtros">
+                            <field name="partner_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   placeholder="Todos los clientes"/>
+                            <field name="salesperson_ids"
+                                   widget="many2many_tags"
+                                   options="{'no_create': True}"
+                                   placeholder="Todos los vendedores"/>
+                        </group>
+                    </group>
+                    <div class="text-muted">
+                        Se toman los meses completos del rango. Subtotal y
+                        Descuento salen de las facturas publicadas; Notas de
+                        crédito es el monto sin impuesto de las notas de
+                        crédito del mes. VNAI = Subtotal − Descuento − Notas de
+                        crédito. Impuesto = impuesto de facturas menos el de
+                        notas de crédito. Total = VNAI + Impuesto. Montos en
+                        colones.
+                    </div>
+                </sheet>
+                <footer>
+                    <button name="action_export_xlsx"
+                            string="Descargar Excel"
+                            type="object"
+                            class="btn-primary"/>
+                    <button string="Cancelar"
+                            class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_facturacion_cliente_mensual_wizard" model="ir.actions.act_window">
+        <field name="name">Facturación por cliente mensual</field>
+        <field name="res_model">sng.facturacion.cliente.mensual.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="view_facturacion_cliente_mensual_wizard_form"/>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_facturacion_cliente_mensual_account"
+              name="Facturación por cliente mensual"
+              parent="account.menu_finance_reports"
+              action="action_facturacion_cliente_mensual_wizard"
+              sequence="106"
+              groups="account.group_account_invoice,account.group_account_readonly"/>
+
+    <menuitem id="menu_facturacion_cliente_mensual_sale"
+              name="Facturación por cliente mensual"
+              parent="sale.menu_sale_report"
+              action="action_facturacion_cliente_mensual_wizard"
+              sequence="60"
+              groups="sales_team.group_sale_manager"/>
+</odoo>

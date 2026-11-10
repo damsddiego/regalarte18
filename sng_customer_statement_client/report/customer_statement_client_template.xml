@@ -217,6 +217,11 @@
                         background: #f3f5f4;
                         font-weight: bold;
                     }
+                    .sng_corporate_statement .documents_table tfoot tr.interest_row td {
+                        border-top: 0;
+                        font-weight: normal;
+                        color: #8b2e2e;
+                    }
                     .sng_corporate_statement .aging_table th,
                     .sng_corporate_statement .aging_table td {
                         padding: 6px 7px;
@@ -389,10 +394,22 @@
                         </t>
                     </tbody>
                     <tfoot>
-                        <tr t-foreach="data.get('currency_groups', [])" t-as="group">
-                            <td colspan="6">Saldo total en <span t-esc="fmt_currency_name(group.get('currency')).lower()"/> (<span t-esc="group.get('currency').name"/>)</td>
-                            <td class="number nowrap" t-esc="fmt_money(group.get('balance'), group.get('currency'))"/><td></td>
-                        </tr>
+                        <t t-foreach="data.get('currency_groups', [])" t-as="group">
+                            <tr>
+                                <td colspan="6">Saldo total en <span t-esc="fmt_currency_name(group.get('currency')).lower()"/> (<span t-esc="group.get('currency').name"/>)</td>
+                                <td class="number nowrap" t-esc="fmt_money(group.get('balance'), group.get('currency'))"/><td></td>
+                            </tr>
+                            <t t-if="data.get('apply_late_interest')">
+                                <tr class="interest_row">
+                                    <td colspan="6">4% Mensual de inter&#233;s moratorio</td>
+                                    <td class="number nowrap" t-esc="fmt_money(group.get('interest'), group.get('currency'))"/><td></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="6">Total con intereses en <span t-esc="fmt_currency_name(group.get('currency')).lower()"/> (<span t-esc="group.get('currency').name"/>)</td>
+                                    <td class="number nowrap" t-esc="fmt_money(group.get('total_with_interest'), group.get('currency'))"/><td></td>
+                                </tr>
+                            </t>
+                        </t>
                     </tfoot>
                 </table>
 

@@ -84,3 +84,19 @@ class StockValuationLayer(models.Model):
     @api.model
     def _get_warehouse_group_domain(self, groups):
         return [("warehouse_id", "in", groups.warehouse_ids.ids)]
+
+
+class SngWarehouseGroup(models.Model):
+    _inherit = "sng.warehouse.group"
+
+    @api.model
+    def get_stock_report_groups(self):
+        """Grupos activos para el panel del reporte Inventario > Informes > Existencias.
+
+        El panel JS pone la lista de almacenes del grupo en el contexto
+        ``warehouse_id``; ``product.product._get_domain_locations`` ya acepta listas.
+        """
+        return [
+            {"id": group.id, "name": group.name, "warehouse_ids": group.warehouse_ids.ids}
+            for group in self.search([])
+        ]

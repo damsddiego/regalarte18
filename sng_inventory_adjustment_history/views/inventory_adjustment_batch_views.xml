@@ -1,0 +1,183 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_adjustment_batch_list" model="ir.ui.view">
+        <field name="name">sng.inventory.adjustment.batch.list</field>
+        <field name="model">sng.inventory.adjustment.batch</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="state == 'rejected'" decoration-success="state == 'approved'">
+                <field name="id" string="Solicitud"/>
+                <field name="create_date"/>
+                <field name="location_id"/>
+                <field name="warehouse_id" optional="hide"/>
+                <field name="line_count" string="Líneas"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="estimated_cost" groups="custom_ui_security.group_view_product_cost"/>
+                <field name="requested_by_id"/>
+                <field name="submitted_at" optional="hide"/>
+                <field name="state" widget="badge"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+    <record id="view_adjustment_batch_form" model="ir.ui.view">
+        <field name="name">sng.inventory.adjustment.batch.form</field>
+        <field name="model">sng.inventory.adjustment.batch</field>
+        <field name="arch" type="xml">
+            <form string="Solicitud de ajuste" duplicate="0">
+                <header>
+                    <button name="action_submit" type="object" string="Solicitar aprobación" class="oe_highlight" invisible="state != 'draft'"/>
+                    <button name="action_approve" type="object" string="Aprobar y aplicar" class="oe_highlight" invisible="state != 'pending'" groups="sng_inventory_adjustment_history.group_inventory_adjustment_approver" confirm="Se aplicarán los ajustes de existencias de todas las líneas pendientes y su valoración. ¿Desea continuar?"/>
+                    <button name="action_reject" type="object" string="Rechazar" invisible="state != 'pending'" groups="sng_inventory_adjustment_history.group_inventory_adjustment_approver"/>
+                    <button name="action_recalculate" type="object" string="Recalcular existencias" icon="fa-refresh" invisible="state != 'pending'" groups="sng_inventory_adjustment_history.group_inventory_adjustment_approver"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,pending,approved"/>
+                </header>
+                <sheet>
+                    <div class="alert alert-info" role="alert" invisible="state != 'draft'">
+                        Agregue los productos contados en esta bodega. Si un producto aún no tiene existencia aquí,
+                        la cantidad anterior es 0. El conteo no modifica existencias hasta que Gerencia apruebe la solicitud.
+                    </div>
+                    <div class="alert alert-info" role="alert" invisible="state != 'pending'">
+                        <b>Aprobar y aplicar</b> aplica todas las líneas pendientes de una sola vez, por diferencia:
+                        cada línea queda en <i>existencia actual + discrepancia del conteo</i>, así los movimientos
+                        posteriores al conteo no se pierden. Use <b>Recalcular existencias</b> para ver las cifras al día;
+                        las filas en amarillo cambiaron desde el conteo. Si una línea no debe aplicarse, use
+                        <b>Rechazar línea</b> en esa fila y luego apruebe el resto.
+                    </div>
+                    <group>
+                        <group string="Bodega">
+                            <field name="id" invisible="1"/>
+                            <field name="line_count" invisible="1"/>
+                            <field name="location_id" readonly="state != 'draft' or line_count > 0" force_save="1" options="{'no_create': True}"/>
+                            <field name="warehouse_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group string="Solicitud">
+                            <field name="requested_by_id"/>
+                            <field name="submitted_at"/>
+                            <field name="recalculated_at" invisible="not recalculated_at"/>
+                            <field name="estimated_cost" groups="custom_ui_security.group_view_product_cost"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Líneas" name="lines">
+                            <field name="line_ids" invisible="state != 'draft'">
+                                <list editable="bottom">
+                                    <field name="quant_id" column_invisible="True"/>
+                                    <field name="state" column_invisible="True"/>
+                                    <field name="product_id" options="{'no_create': True}"/>
+                                    <field name="lot_id" optional="hide" options="{'no_create': True}"/>
+                                    <field name="previous_quantity"/>
+                                    <field name="counted_quantity"/>
+                                    <field name="difference_quantity"/>
+                                    <field name="uom_id"/>
+                                    <field name="currency_id" column_invisible="True"/>
+                                    <field name="estimated_cost" groups="custom_ui_security.group_view_product_cost"/>
+                                    <field name="reason"/>
+                                </list>
+                                <form string="Línea de ajuste">
+                                    <group>
+                                        <group>
+                                            <field name="quant_id" invisible="1"/>
+                                            <field name="product_id" options="{'no_create': True}"/>
+                                            <field name="lot_id" options="{'no_create': True}"/>
+                                            <field name="uom_id"/>
+                                        </group>
+                                        <group>
+                                            <field name="previous_quantity"/>
+                                            <field name="counted_quantity"/>
+                                            <field name="difference_quantity"/>
+                                            <field name="currency_id" invisible="1"/>
+                                            <field name="estimated_cost" groups="custom_ui_security.group_view_product_cost"/>
+                                        </group>
+                                    </group>
+                                    <group string="Justificación">
+                                        <field name="reason" placeholder="Explique la causa de la diferencia de inventario."/>
+                                    </group>
+                                </form>
+                            </field>
+                            <field name="line_ids" invisible="state == 'draft'" readonly="1">
+                                <list decoration-muted="state == 'rejected'" decoration-success="state == 'approved'" decoration-warning="stock_changed">
+                                    <field name="stock_changed" column_invisible="True"/>
+                                    <field name="product_id"/>
+                                    <field name="lot_id" optional="hide"/>
+                                    <field name="previous_quantity" string="Cant. al contar"/>
+                                    <field name="counted_quantity"/>
+                                    <field name="difference_quantity" string="Discrepancia"/>
+                                    <field name="current_quantity" invisible="state not in ['draft', 'pending']"/>
+                                    <field name="result_quantity" invisible="state not in ['draft', 'pending']"/>
+                                    <field name="uom_id"/>
+                                    <field name="currency_id" column_invisible="True"/>
+                                    <field name="estimated_cost" groups="custom_ui_security.group_view_product_cost"/>
+                                    <field name="reason"/>
+                                    <field name="review_note" optional="show"/>
+                                    <field name="state" widget="badge"/>
+                                    <button name="action_open_form" type="object" string="Rechazar línea" icon="fa-times" invisible="state != 'pending'" groups="sng_inventory_adjustment_history.group_inventory_adjustment_approver" title="Abrir la línea para rechazarla por separado; la aprobación es por solicitud completa"/>
+                                </list>
+                                <form string="Línea de ajuste">
+                                    <group>
+                                        <group>
+                                            <field name="product_id"/>
+                                            <field name="lot_id"/>
+                                            <field name="uom_id"/>
+                                            <field name="state" widget="badge"/>
+                                        </group>
+                                        <group>
+                                            <field name="previous_quantity" string="Cantidad al contar"/>
+                                            <field name="counted_quantity"/>
+                                            <field name="difference_quantity"/>
+                                            <field name="current_quantity" invisible="state not in ['draft', 'pending']"/>
+                                            <field name="result_quantity" invisible="state not in ['draft', 'pending']"/>
+                                            <field name="currency_id" invisible="1"/>
+                                            <field name="estimated_cost" groups="custom_ui_security.group_view_product_cost"/>
+                                        </group>
+                                    </group>
+                                    <group string="Justificación">
+                                        <field name="reason"/>
+                                        <field name="review_note"/>
+                                    </group>
+                                </form>
+                            </field>
+                        </page>
+                        <page string="Revisión de Gerencia" name="review">
+                            <group>
+                                <field name="review_note" readonly="state not in ['draft', 'pending']" groups="sng_inventory_adjustment_history.group_inventory_adjustment_approver" placeholder="Obligatorio para rechazar; se copia a todas las líneas pendientes."/>
+                                <field name="reviewed_by_id"/>
+                                <field name="reviewed_at"/>
+                            </group>
+                        </page>
+                        <page string="Trazabilidad" name="traceability" invisible="state not in ['approved', 'rejected']">
+                            <field name="history_ids"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="view_adjustment_batch_search" model="ir.ui.view">
+        <field name="name">sng.inventory.adjustment.batch.search</field>
+        <field name="model">sng.inventory.adjustment.batch</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="location_id"/>
+                <field name="warehouse_id"/>
+                <field name="line_ids" string="Producto" filter_domain="[('line_ids.product_id', 'ilike', self)]"/>
+                <field name="requested_by_id"/>
+                <filter name="draft" string="Borradores" domain="[('state', '=', 'draft')]"/>
+                <filter name="pending" string="Por aprobar" domain="[('state', '=', 'pending')]"/>
+                <filter name="approved" string="Aplicados" domain="[('state', '=', 'approved')]"/>
+                <filter name="rejected" string="Rechazados" domain="[('state', '=', 'rejected')]"/>
+                <separator/>
+                <filter name="group_state" string="Estado" context="{'group_by': 'state'}"/>
+                <filter name="group_location" string="Bodega" context="{'group_by': 'location_id'}"/>
+            </search>
+        </field>
+    </record>
+    <record id="action_inventory_adjustment_batches" model="ir.actions.act_window">
+        <field name="name">Solicitudes de ajuste</field>
+        <field name="res_model">sng.inventory.adjustment.batch</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html"><p>Elija la bodega, agregue los productos contados con su motivo y solicite aprobación a Gerencia.</p></field>
+    </record>
+</odoo>

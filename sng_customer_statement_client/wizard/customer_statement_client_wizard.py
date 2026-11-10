@@ -5,6 +5,10 @@ from datetime import date
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError, ValidationError
 
+# Interés moratorio simple: 4 % por cada mes completo (30 días) de atraso.
+LATE_INTEREST_MONTHLY_RATE = 0.04
+LATE_INTEREST_DAYS_PER_MONTH = 30
+
 
 class CustomerStatementClientWizard(models.TransientModel):
     _name = 'sng.customer.statement.client.wizard'
@@ -43,6 +47,13 @@ class CustomerStatementClientWizard(models.TransientModel):
     show_bank_accounts = fields.Boolean(
         string='Mostrar cuentas bancarias de la compañía',
         default=True,
+    )
+    apply_late_interest = fields.Boolean(
+        string='Calcular interés moratorio (4% mensual)',
+        default=False,
+        help='Calcula 4% de interés simple por cada mes completo (30 días) '
+             'de atraso sobre el saldo vencido de cada factura. Es solo '
+             'informativo: no genera asientos ni facturas de intereses.',
     )
 
     @api.model
@@ -197,12 +208,23 @@ class CustomerStatementClientWizard(models.TransientModel):
         return '91_plus'
 
     @staticmethod
+    def _late_interest_amount(balance, days_overdue, currency):
+        """Interés simple por meses completos de atraso; nunca sobre saldos
+        a favor ni en cero."""
+        months = max(days_overdue or 0, 0) // LATE_INTEREST_DAYS_PER_MONTH
+        if balance <= 0 or months <= 0:
+            return 0.0
+        return currency.round(balance * LATE_INTEREST_MONTHLY_RATE * months)
+
+    @staticmethod
     def _get_currency_group(groups, currency):
         if currency.id not in groups:
             groups[currency.id] = {
                 'currency': currency,
                 'rows': [],
                 'balance': 0.0,
+                'interest': 0.0,
+                'total_with_interest': 0.0,
                 'overdue': 0.0,
                 'not_due': 0.0,
                 'credit_available': 0.0,
@@ -228,6 +250,7 @@ class CustomerStatementClientWizard(models.TransientModel):
                 max(abs(move.amount_total) - abs(move.amount_residual), 0.0),
             )
             status = self._status_for_move(move)
+            interest = 0.0
 
             group['balance'] += balance
             if move.move_type == 'out_refund':
@@ -239,6 +262,11 @@ class CustomerStatementClientWizard(models.TransientModel):
                     group['not_due'] += balance
                 else:
                     group['overdue'] += balance
+                if self.apply_late_interest:
+                    interest = self._late_interest_amount(
+                        balance, status['days_overdue'], currency
+                    )
+                    group['interest'] += interest
 
             group['rows'].append({
                 'document': move.name or move.ref or '',
@@ -253,6 +281,7 @@ class CustomerStatementClientWizard(models.TransientModel):
                 'original': original,
                 'applied': applied,
                 'balance': balance,
+                'interest': interest,
                 'status_key': status['key'],
                 'status_label': status['label'],
             })
@@ -290,11 +319,14 @@ class CustomerStatementClientWizard(models.TransientModel):
                 'original': original,
                 'applied': original - balance,
                 'balance': balance,
+                'interest': 0.0,
                 'status_key': status['key'],
                 'status_label': status['label'],
             })
 
         for group in groups.values():
+            group['interest'] = group['currency'].round(group['interest'])
+            group['total_with_interest'] = group['balance'] + group['interest']
             group['rows'].sort(key=lambda row: (
                 row['date_due'] or date.max,
                 row['invoice_date'] or date.max,
@@ -389,6 +421,7 @@ class CustomerStatementClientWizard(models.TransientModel):
             'customer_code': partner.unique_id or '',
             'payment_term': partner.property_payment_term_id.display_name or '',
             'currency_groups': wizard._prepare_currency_groups(moves, credit_lines),
+            'apply_late_interest': wizard.apply_late_interest,
             'document_count': len(moves) + len(credit_lines),
             'draft_payment_groups': wizard._prepare_draft_payment_groups(),
             'bank_accounts': wizard._prepare_bank_accounts(),
@@ -415,6 +448,7 @@ class CustomerStatementClientWizard(models.TransientModel):
                 'statement_date': self.statement_date,
                 'show_draft_payments': self.show_draft_payments,
                 'show_bank_accounts': self.show_bank_accounts,
+                'apply_late_interest': self.apply_late_interest,
             })
             statements.append(individual._prepare_statement_data())
         return statements

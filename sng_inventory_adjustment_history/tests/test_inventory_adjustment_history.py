@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from odoo.exceptions import AccessError
-from odoo.tests.common import TransactionCase, new_test_user
+from odoo.tests.common import TransactionCase, new_test_user, tagged
 
 
+@tagged("post_install", "-at_install")
 class TestInventoryAdjustmentHistory(TransactionCase):
     @classmethod
     def setUpClass(cls):
@@ -11,6 +12,10 @@ class TestInventoryAdjustmentHistory(TransactionCase):
         cls.warehouse = cls.env["stock.warehouse"].search(
             [("company_id", "=", cls.env.company.id)], limit=1
         )
+        # Copias de prod traen grupos reales con correos para la misma bodega.
+        cls.env["sng.warehouse.group"].search([]).write({
+            "adjustment_approval_emails": False, "adjustment_notify_emails": False,
+        })
         cls.warehouse_group = cls.env["sng.warehouse.group"].create(
             {
                 "name": "Almacenes con historial",

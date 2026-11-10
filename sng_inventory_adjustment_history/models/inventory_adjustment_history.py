@@ -18,6 +18,9 @@ class SngInventoryAdjustmentHistory(models.Model):
         "sng.inventory.adjustment.request", string="Solicitud aprobada",
         readonly=True, index=True, ondelete="restrict",
     )
+    batch_id = fields.Many2one(
+        related="request_id.batch_id", string="Solicitud de ajuste", store=True, index=True,
+    )
     reason = fields.Text(related="request_id.reason", string="Motivo justificado")
 
     adjustment_date = fields.Datetime(

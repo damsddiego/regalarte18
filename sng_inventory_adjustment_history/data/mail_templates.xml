@@ -5,16 +5,35 @@
             <h2>Solicitud de aprobación de ajuste de inventario</h2>
             <p>Gerencia General: se requiere su revisión y aprobación. Las existencias aún no se han modificado.</p>
             <table border="1" cellpadding="6" style="border-collapse:collapse;">
-                <tr><th>Solicitud</th><td t-out="adjustment.id"/></tr>
-                <tr><th>Registrado por</th><td t-out="adjustment.requested_by_id.name"/></tr>
-                <tr><th>Producto</th><td t-out="adjustment.product_id.display_name"/></tr>
-                <tr><th>Ubicación</th><td t-out="adjustment.location_id.complete_name"/></tr>
-                <tr><th>Lote / Serie</th><td t-out="adjustment.lot_id.name or '-'"/></tr>
-                <tr><th>Cantidad anterior</th><td><span t-field="adjustment.previous_quantity"/> <span t-out="adjustment.uom_id.name"/></td></tr>
-                <tr><th>Conteo físico</th><td><span t-field="adjustment.counted_quantity"/></td></tr>
-                <tr><th>Unidades de discrepancia</th><td><span t-field="adjustment.difference_quantity"/></td></tr>
-                <tr><th>Costo estimado del ajuste</th><td><span t-field="adjustment.estimated_cost"/></td></tr>
-                <tr><th>Motivo justificado</th><td style="white-space:pre-wrap;" t-out="adjustment.reason"/></tr>
+                <tr><th>Solicitud</th><td t-out="batch.id"/></tr>
+                <tr><th>Registrado por</th><td t-out="batch.requested_by_id.name"/></tr>
+                <tr><th>Bodega</th><td t-out="batch.location_id.complete_name"/></tr>
+                <tr><th>Líneas</th><td t-out="len(lines)"/></tr>
+                <tr><th>Costo estimado total</th><td><span t-out="batch.estimated_cost" t-options='{"widget": "monetary", "display_currency": batch.currency_id}'/></td></tr>
+            </table>
+            <table border="1" cellpadding="6" style="border-collapse:collapse;margin-top:12px;width:100%;">
+                <thead>
+                    <tr style="background-color:#f0f0f0;text-align:left;">
+                        <th>Producto</th>
+                        <th>Lote / Serie</th>
+                        <th style="text-align:right;">Cant. anterior</th>
+                        <th style="text-align:right;">Conteo físico</th>
+                        <th style="text-align:right;">Discrepancia</th>
+                        <th style="text-align:right;">Costo estimado</th>
+                        <th>Motivo justificado</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr t-foreach="lines" t-as="line">
+                        <td t-out="line.product_id.display_name"/>
+                        <td t-out="line.lot_id.name or '-'"/>
+                        <td style="text-align:right;"><span t-field="line.previous_quantity"/> <span t-out="line.uom_id.name"/></td>
+                        <td style="text-align:right;"><span t-field="line.counted_quantity"/></td>
+                        <td t-attf-style="text-align:right;color:{{ 'green' if line.difference_quantity &gt;= 0 else '#c0392b' }};"><span t-field="line.difference_quantity"/></td>
+                        <td style="text-align:right;"><span t-field="line.estimated_cost"/></td>
+                        <td style="white-space:pre-wrap;" t-out="line.reason"/>
+                    </tr>
+                </tbody>
             </table>
             <p>El costo es una estimación al registrar el conteo. La valoración definitiva se determina al aplicar el ajuste.</p>
             <p><a t-att-href="url" style="background:#714B67;color:white;padding:12px;text-decoration:none;">Revisar y aprobar en Odoo</a></p>

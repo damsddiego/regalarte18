@@ -3,6 +3,8 @@
 from collections import defaultdict
 from datetime import timedelta
 
+from markupsafe import Markup
+
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.tools.float_utils import float_compare, float_round
@@ -264,6 +266,20 @@ class SngBiweeklyReplenishmentBatch(models.Model):
             suggested_boxes = (
                 config._round_need_to_boxes(need_qty, box_qty) if packaging else 0
             )
+            # Producto en cero o casi: una caja aunque la necesidad no llegue
+            # al porcentaje para completarla.
+            min_box_applied = bool(
+                packaging
+                and config.min_box_below_reorder
+                and not suggested_boxes
+                and need_qty > 0
+                and float_compare(
+                    projected_qty, reorder_point, precision_rounding=rounding
+                )
+                <= 0
+            )
+            if min_box_applied:
+                suggested_boxes = 1
             suggested_qty = suggested_boxes * box_qty if packaging else need_qty
             line_values.append(
                 {
@@ -294,25 +310,50 @@ class SngBiweeklyReplenishmentBatch(models.Model):
                     "without_box": not packaging,
                     "suggested_boxes": suggested_boxes,
                     "suggested_qty": suggested_qty,
+                    "min_box_applied": min_box_applied,
+                    "box_skipped_qty": max(0.0, need_qty - suggested_qty),
                 }
             )
         lines = self.env["sng.biweekly.replenishment.line"].create(line_values)
         self._allocate_sources(lines.filtered(lambda line: line.suggested_qty > 0))
-        body = _(
-            "Cálculo actualizado con %(products)s SKU(s) y demanda desde "
-            "%(start)s hasta %(end)s.",
-            products=len(lines),
-            start=fields.Datetime.to_string(self.period_start),
-            end=fields.Datetime.to_string(self.period_end),
-        )
+        messages = [
+            _(
+                "Cálculo actualizado con %(products)s SKU(s) y demanda desde "
+                "%(start)s hasta %(end)s.",
+                products=len(lines),
+                start=fields.Datetime.to_string(self.period_start),
+                end=fields.Datetime.to_string(self.period_end),
+            )
+        ]
         atypical_lines = lines.filtered(lambda line: line.atypical_qty > 0)
         if atypical_lines:
-            body += _(
-                "<br/>Se descartaron %(qty)s unidades atípicas en %(products)s "
-                "SKU(s) para no inflar el promedio de rotación.",
-                qty=int(round(sum(atypical_lines.mapped("atypical_qty")))),
-                products=len(atypical_lines),
+            messages.append(
+                _(
+                    "Se descartaron %(qty)s unidades atípicas en %(products)s "
+                    "SKU(s) para no inflar el promedio de rotación.",
+                    qty=int(round(sum(atypical_lines.mapped("atypical_qty")))),
+                    products=len(atypical_lines),
+                )
             )
+        min_box_lines = lines.filtered("min_box_applied")
+        if min_box_lines:
+            messages.append(
+                _(
+                    "Se sugirió una caja mínima en %(products)s SKU(s) con stock "
+                    "en o por debajo del punto de reorden.",
+                    products=len(min_box_lines),
+                )
+            )
+        not_sent_lines = lines.filtered("not_sent_by_box")
+        if not_sent_lines:
+            messages.append(
+                _(
+                    "%(products)s SKU(s) necesitaban unidades pero no completaron "
+                    "caja y no se sugirieron.",
+                    products=len(not_sent_lines),
+                )
+            )
+        body = Markup("<br/>").join(messages)
         self.message_post(body=body)
         return self._get_form_action()
 
@@ -690,6 +731,24 @@ class SngBiweeklyReplenishmentLine(models.Model):
         digits="Product Unit of Measure",
         readonly=True,
     )
+    min_box_applied = fields.Boolean(
+        string="Caja mínima",
+        readonly=True,
+        help="Se sugirió una caja porque el stock estaba en o por debajo del "
+        "punto de reorden, aunque la necesidad no completaba caja.",
+    )
+    box_skipped_qty = fields.Float(
+        string="No enviado por caja",
+        digits="Product Unit of Measure",
+        readonly=True,
+        help="Parte de la necesidad que no se sugirió porque no completaba caja.",
+    )
+    not_sent_by_box = fields.Boolean(
+        string="No enviado por regla de caja",
+        compute="_compute_not_sent_by_box",
+        store=True,
+        help="Necesitaba unidades pero no se sugirió ninguna caja.",
+    )
     allocation_ids = fields.One2many(
         "sng.biweekly.replenishment.allocation",
         "line_id",
@@ -725,6 +784,11 @@ class SngBiweeklyReplenishmentLine(models.Model):
             "El producto solo puede aparecer una vez por ciclo.",
         )
     ]
+
+    @api.depends("box_skipped_qty", "suggested_qty")
+    def _compute_not_sent_by_box(self):
+        for line in self:
+            line.not_sent_by_box = line.box_skipped_qty > 0 and not line.suggested_qty
 
     @api.depends(
         "allocation_ids.allocated_qty",

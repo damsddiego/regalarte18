@@ -491,6 +491,77 @@ class TestBiweeklyReplenishment(TransactionCase):
         self.assertAlmostEqual(line.allocated_qty, 80.0)
         self.assertAlmostEqual(line.shortage_qty, 40.0)
 
+    def test_min_box_when_stock_below_reorder_point(self):
+        # Proyectado 25 <= punto de reorden 30: la necesidad de 135 no llega al
+        # 50 % de la caja de 300, pero se sugiere una caja.
+        self._set_box(300)
+        Quant = self.env["stock.quant"]
+        Quant._update_available_quantity(
+            self.product, self.main_warehouse.lot_stock_id, -15.0
+        )
+        Quant._update_available_quantity(self.product, self.source_1.lot_stock_id, 250.0)
+        batch = self._new_batch()
+        line = batch.line_ids
+        self.assertAlmostEqual(line.projected_qty, 25.0)
+        self.assertAlmostEqual(line.need_qty, 135.0)
+        self.assertTrue(line.min_box_applied)
+        self.assertEqual(line.suggested_boxes, 1)
+        self.assertAlmostEqual(line.suggested_qty, 300.0)
+        self.assertAlmostEqual(line.box_skipped_qty, 0.0)
+        self.assertFalse(line.not_sent_by_box)
+        self.assertEqual(line.allocation_ids.warehouse_id, self.source_1)
+        self.assertAlmostEqual(line.allocated_qty, 300.0)
+
+    def test_no_min_box_when_stock_above_reorder_point(self):
+        # Proyectado 40 > punto de reorden 30: queda en la lista de no enviados.
+        self._set_box(300)
+        batch = self._new_batch()
+        line = batch.line_ids
+        self.assertFalse(line.min_box_applied)
+        self.assertAlmostEqual(line.suggested_qty, 0.0)
+        self.assertAlmostEqual(line.box_skipped_qty, 120.0)
+        self.assertTrue(line.not_sent_by_box)
+        self.assertFalse(batch.allocation_ids)
+        body = str(batch.message_ids[:1].body)
+        self.assertIn("<br>1 SKU(s) necesitaban unidades", body.replace("<br/>", "<br>"))
+        self.assertNotIn("&lt;br", body)
+
+    def test_min_box_can_be_disabled(self):
+        self.config.min_box_below_reorder = False
+        self._set_box(300)
+        self.env["stock.quant"]._update_available_quantity(
+            self.product, self.main_warehouse.lot_stock_id, -15.0
+        )
+        line = self._new_batch().line_ids
+        self.assertFalse(line.min_box_applied)
+        self.assertAlmostEqual(line.suggested_qty, 0.0)
+        self.assertTrue(line.not_sent_by_box)
+
+    def test_boxes_skipped_remainder_is_reported(self):
+        # Necesidad 120 con caja de 48: 2 cajas y 24 que no completan caja.
+        self._set_box(48)
+        line = self._new_batch().line_ids
+        self.assertAlmostEqual(line.box_skipped_qty, 24.0)
+        self.assertFalse(line.not_sent_by_box)
+
+    def test_reports_render_not_sent_by_box(self):
+        self._set_box(300)
+        batch = self._new_batch()
+        html = self.env["ir.actions.report"]._render_qweb_html(
+            "sng_biweekly_replenishment.action_replenishment_batch_pdf",
+            batch.ids,
+        )[0]
+        self.assertIn(b"No enviados por regla de caja", html)
+        xlsx, _type = self.env["ir.actions.report"]._render(
+            "sng_biweekly_replenishment.action_replenishment_batch_xlsx",
+            batch.ids,
+            {},
+        )
+        sheet = load_workbook(BytesIO(xlsx), read_only=True).active
+        headers = [cell.value for cell in next(sheet.iter_rows(min_row=4, max_row=4))]
+        column = headers.index("No enviado por caja") + 1
+        self.assertEqual(sheet.cell(5, column).value, 120)
+
     def test_boxes_completed_with_loose_units_when_allowed(self):
         self.config.allow_loose_units = True
         self._set_box(40)

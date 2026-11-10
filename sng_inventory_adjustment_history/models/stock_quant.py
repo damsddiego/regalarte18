@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from odoo import _, api, fields, models
-from odoo.exceptions import AccessError, UserError
+from odoo.exceptions import AccessError, UserError, ValidationError
 from odoo.tools import float_is_zero
 
 
@@ -124,13 +124,42 @@ class StockQuant(models.Model):
             raise UserError(_("Registre el conteo físico antes de solicitar aprobación."))
         if any(quant.is_outdated for quant in self):
             raise UserError(_("Las existencias cambiaron. Revise y registre nuevamente el conteo."))
-        requests = self.env["sng.inventory.adjustment.request"]._create_from_quants(self)
-        requests.action_submit()
+        batches = self.env["sng.inventory.adjustment.request"]._create_from_quants(self)
+        batches.action_submit()
         return {
             "type": "ir.actions.act_window", "name": _("Solicitudes de ajuste"),
-            "res_model": requests._name, "view_mode": "list,form",
-            "domain": [("id", "in", requests.ids)],
+            "res_model": batches._name, "view_mode": "list,form",
+            "domain": [("id", "in", batches.ids)],
         }
+
+    @api.model
+    def _sng_find_quant(self, product, location, lot=None):
+        """Existencia exacta (sin paquete ni propietario) del producto en la ubicación."""
+        quants = self.sudo()._gather(product, location, lot_id=lot or None, strict=True)
+        quants = quants.filtered(lambda q: q.lot_id == (lot or q.lot_id.browse()))
+        return quants.sorted("id")[:1].with_env(self.env)
+
+    @api.model
+    def _sng_find_or_create_quant(self, product, location, lot=None):
+        """Existencia del producto en la bodega; si no existe se crea en cero
+        para que la solicitud pueda ajustar un producto que aún no está ahí."""
+        if not product.is_storable:
+            raise ValidationError(_(
+                "%s no tiene rastreo de inventario y no se puede ajustar."
+            ) % product.display_name)
+        if product.tracking != "none" and not lot:
+            raise ValidationError(_("Indique el lote o número de serie de %s.") % product.display_name)
+        if lot and lot.product_id != product:
+            raise ValidationError(_("El lote %s no pertenece a %s.") % (lot.name, product.display_name))
+        if location.usage not in ("internal", "transit"):
+            raise ValidationError(_("Seleccione una bodega interna o en tránsito."))
+        quant = self._sng_find_quant(product, location, lot)
+        if not quant:
+            quant = self.sudo().create({
+                "product_id": product.id, "location_id": location.id,
+                "lot_id": lot.id if lot else False, "quantity": 0.0,
+            }).with_env(self.env)
+        return quant
 
     def unlink(self):
         # Keep quants referenced by requests, including automatic cleanup of zero quants.

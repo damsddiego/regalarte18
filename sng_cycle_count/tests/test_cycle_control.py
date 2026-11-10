@@ -180,8 +180,19 @@ class TestCycleControl(TransactionCase):
         with self.assertRaises(UserError):
             quant.action_request_inventory_approval()
         with self.assertRaises(UserError):
-            self.env["sng.inventory.adjustment.request"].with_user(self.operator).create({
-                "quant_id": quant.id, "counted_quantity": 6, "reason": "Intento alternativo",
+            self.env["sng.inventory.adjustment.batch"].with_user(self.operator).create({
+                "location_id": quant.location_id.id,
+                "line_ids": [fields.Command.create({
+                    "quant_id": quant.id, "counted_quantity": 6, "reason": "Intento alternativo",
+                })],
+            })
+        with self.assertRaises(UserError):
+            # Por producto (sin existencia explícita) también se resuelve y bloquea.
+            self.env["sng.inventory.adjustment.batch"].with_user(self.operator).create({
+                "location_id": quant.location_id.id,
+                "line_ids": [fields.Command.create({
+                    "product_id": quant.product_id.id, "counted_quantity": 6, "reason": "Intento por producto",
+                })],
             })
         with self.assertRaises(UserError):
             quant.with_user(self.manager).action_apply_inventory()

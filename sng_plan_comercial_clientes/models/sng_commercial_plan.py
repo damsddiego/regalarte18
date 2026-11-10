@@ -214,6 +214,14 @@ class SngCommercialPlan(models.Model):
         compute='_compute_segment_counts',
         store=True,
     )
+    odoo_sales_start_date = fields.Date(
+        related='company_id.sng_plan_odoo_start_date',
+        string='Inicio de Ventas en Odoo',
+    )
+    history_warning = fields.Text(
+        string='Avisos de Venta Historica',
+        compute='_compute_history_warning',
+    )
 
     @api.model
     def _default_name(self):
@@ -640,6 +648,18 @@ class SngCommercialPlan(models.Model):
             'move_type',
             'state',
         ])
+        if partner_ids is not None and not partner_ids:
+            return {}
+
+        sales = self._get_history_sales_by_partner(date_from, date_to, partner_ids=partner_ids)
+
+        # Antes del arranque de Odoo solo existen los saldos de CxC cargados
+        # desde el sistema anterior; ese tramo lo cubre la venta historica.
+        start_date = self.odoo_sales_start_date
+        odoo_date_from = max(date_from, start_date) if start_date else date_from
+        if odoo_date_from > date_to:
+            return sales
+
         field_name = self._get_sales_amount_field()
         query = f"""
             SELECT commercial_partner_id, COALESCE(SUM({field_name}), 0.0) AS amount_total
@@ -651,15 +671,116 @@ class SngCommercialPlan(models.Model):
               AND COALESCE(invoice_date, date) <= %s
               AND commercial_partner_id IS NOT NULL
         """
-        params = [self.company_id.id, date_from, date_to]
+        params = [self.company_id.id, odoo_date_from, date_to]
         if partner_ids is not None:
-            if not partner_ids:
-                return {}
             query += " AND commercial_partner_id = ANY(%s)"
-            params.append(partner_ids)
+            params.append(list(partner_ids))
         query += " GROUP BY commercial_partner_id"
         self.env.cr.execute(query, params)
-        return {partner_id: amount for partner_id, amount in self.env.cr.fetchall()}
+        for partner_id, amount in self.env.cr.fetchall():
+            sales[partner_id] = sales.get(partner_id, 0.0) + amount
+        return sales
+
+    def _get_history_domain(self, date_from, date_to):
+        self.ensure_one()
+        return [
+            ('company_id', '=', self.company_id.id),
+            ('date_from', '>=', date_from),
+            ('date_to', '<=', date_to),
+        ]
+
+    def _get_history_sales_by_partner(self, date_from, date_to, partner_ids=None):
+        """Venta importada del sistema anterior.
+
+        Solo cuenta un periodo historico si cae completo dentro del rango: un
+        total anual no se puede repartir por meses.
+        """
+        self.ensure_one()
+        domain = self._get_history_domain(date_from, date_to) + [('partner_id', '!=', False)]
+        if partner_ids is not None:
+            domain.append(('partner_id', 'in', list(partner_ids)))
+        groups = self.env['sng.commercial.plan.history'].sudo()._read_group(
+            domain,
+            ['partner_id'],
+            ['amount:sum'],
+        )
+        return {partner.id: amount for partner, amount in groups}
+
+    def _get_history_gaps(self, date_from, date_to):
+        """Tramos anteriores al arranque de Odoo sin venta historica completa."""
+        self.ensure_one()
+        start_date = self.odoo_sales_start_date
+        if not start_date or date_from >= start_date:
+            return []
+        uncovered_to = min(date_to, start_date - timedelta(days=1))
+        periods = sorted(set(
+            (record.date_from, record.date_to)
+            for record in self.env['sng.commercial.plan.history'].sudo().search(
+                self._get_history_domain(date_from, uncovered_to)
+            )
+        ))
+        gaps = []
+        cursor = date_from
+        for period_from, period_to in periods:
+            if period_from > cursor:
+                gaps.append((cursor, period_from - timedelta(days=1)))
+            cursor = max(cursor, period_to + timedelta(days=1))
+        if cursor <= uncovered_to:
+            gaps.append((cursor, uncovered_to))
+        return gaps
+
+    @api.depends(
+        'base_date_from',
+        'base_date_to',
+        'base_year',
+        'company_id',
+        'odoo_sales_start_date',
+        'period_mode',
+        'target_date_from',
+        'target_date_to',
+        'target_year',
+    )
+    def _compute_history_warning(self):
+        history_model = self.env['sng.commercial.plan.history'].sudo()
+        for plan in self:
+            messages = []
+            try:
+                periods = [
+                    (_('base'), *plan._get_base_period()),
+                    (_('objetivo'), *plan._get_target_period()),
+                ]
+            except UserError:
+                periods = []
+            for label, date_from, date_to in periods:
+                if not plan.odoo_sales_start_date:
+                    if history_model.search_count(plan._get_history_domain(date_from, date_to), limit=1):
+                        messages.append(_(
+                            'El periodo %s tiene venta historica pero la compania no tiene definido el '
+                            'Inicio de Ventas en Odoo: las facturas de ese tramo se sumarian dos veces.'
+                        ) % label)
+                    continue
+                for gap_from, gap_to in plan._get_history_gaps(date_from, date_to):
+                    messages.append(_(
+                        'Falta venta historica del %(from)s al %(to)s (periodo %(label)s). '
+                        'Ese tramo es anterior al arranque de Odoo y quedara en cero.'
+                    ) % {
+                        'from': gap_from.strftime('%d/%m/%Y'),
+                        'to': gap_to.strftime('%d/%m/%Y'),
+                        'label': label,
+                    })
+                unassigned = history_model.search(
+                    plan._get_history_domain(date_from, date_to) + [('partner_id', '=', False)]
+                )
+                if unassigned:
+                    messages.append(_(
+                        '%(count)s filas de venta historica del periodo %(label)s no tienen cliente '
+                        'asignado (%(amount)s) y no se toman en cuenta.'
+                    ) % {
+                        'count': len(unassigned),
+                        'label': label,
+                        'amount': '{:,.2f}'.format(sum(unassigned.mapped('amount'))),
+                    })
+            plan.history_warning = '\n'.join(messages) or False
 
     def _get_dpp_by_partner(self, partner_ids=None, date_from=None, date_to=None):
         self.ensure_one()
@@ -667,6 +788,14 @@ class SngCommercialPlan(models.Model):
             partner_ids = self.line_ids.mapped('partner_id').ids
         if not partner_ids:
             return {}
+        # Los saldos de CxC cargados antes del arranque se cobraron en Odoo
+        # meses despues y darian DPP falsos. Si el periodo base es anterior al
+        # arranque se usa el comportamiento de pago desde el arranque.
+        start_date = self.odoo_sales_start_date
+        if start_date and date_from and fields.Date.to_date(date_from) < start_date:
+            if date_to and fields.Date.to_date(date_to) < start_date:
+                date_to = None
+            date_from = start_date
         return self.env['regalarte.customer.metric']._get_dpp_metrics(
             partner_ids,
             self.company_id,

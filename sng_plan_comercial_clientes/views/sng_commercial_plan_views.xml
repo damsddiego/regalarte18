@@ -94,6 +94,9 @@
                     <field name="state" widget="statusbar" statusbar_visible="draft,calculated,closed"/>
                 </header>
                 <sheet>
+                    <div class="alert alert-warning" role="alert" invisible="not history_warning">
+                        <field name="history_warning" nolabel="1"/>
+                    </div>
                     <div class="oe_title">
                         <h1>
                             <field name="name" readonly="state == 'closed'"/>
@@ -109,6 +112,7 @@
                             <field name="base_date_to" invisible="period_mode != 'custom'" readonly="state == 'closed'"/>
                             <field name="target_date_from" invisible="period_mode != 'custom'" readonly="state == 'closed'"/>
                             <field name="target_date_to" invisible="period_mode != 'custom'" readonly="state == 'closed'"/>
+                            <field name="odoo_sales_start_date"/>
                             <field name="active" readonly="state == 'closed'"/>
                         </group>
                         <group>
@@ -158,7 +162,8 @@
                             <separator string="Notas tecnicas"/>
                             <div class="text-muted">
                                 <p>Ventas: el plan usa `account.move` publicado, `move_type in (out_invoice, out_refund)`, `amount_total_signed` y resta notas de credito del periodo.</p>
-                                <p>DPP: el plan usa facturas emitidas dentro del periodo base y toma la ultima fecha de cobro que deja saldada cada factura pagada.</p>
+                                <p>Venta historica: antes del Inicio de Ventas en Odoo (ficha de la compania) se ignoran las facturas, que son saldos de CxC cargados, y se usa la venta historica importada. Un periodo historico cuenta solo si cae completo dentro del rango del plan.</p>
+                                <p>DPP: el plan usa facturas emitidas dentro del periodo base y toma la ultima fecha de cobro que deja saldada cada factura pagada. Si el periodo base es anterior al Inicio de Ventas en Odoo, se usan las facturas desde esa fecha.</p>
                                 <p>Meta protegida: si define una meta total manual o presupuesto total, el factor real se calcula automaticamente contra la venta base total.</p>
                                 <p>Cumplimiento: compara la venta actual contra la meta acumulada segun los meses calendario transcurridos.</p>
                             </div>

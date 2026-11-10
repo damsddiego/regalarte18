@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
 
+from odoo import Command
 from odoo.exceptions import AccessError, UserError, ValidationError
-from odoo.tests.common import Form, TransactionCase, new_test_user
+from odoo.tests.common import Form, TransactionCase, new_test_user, tagged
 
 
+@tagged("post_install", "-at_install")
 class TestAdjustmentApproval(TransactionCase):
     @classmethod
     def setUpClass(cls):
@@ -12,6 +14,10 @@ class TestAdjustmentApproval(TransactionCase):
         cls.warehouse = cls.env["stock.warehouse"].search(
             [("company_id", "=", cls.company.id)], limit=1,
         )
+        # Copias de prod traen grupos reales con correos para la misma bodega.
+        cls.env["sng.warehouse.group"].search([]).write({
+            "adjustment_approval_emails": False, "adjustment_notify_emails": False,
+        })
         cls.group = cls.env["sng.warehouse.group"].create({
             "name": "Aprobaciones de prueba",
             "warehouse_ids": [(6, 0, cls.warehouse.ids)],
@@ -43,34 +49,47 @@ class TestAdjustmentApproval(TransactionCase):
             company_id=cls.company.id,
         )
 
-    def _request(self, user=None, quantity=8.0):
-        return self.env["sng.inventory.adjustment.request"].with_user(user or self.operator).create({
-            "quant_id": self.quant.id, "counted_quantity": quantity,
-            "reason": "Diferencia comprobada en conteo físico.",
+    def _batch(self, user=None, quantity=8.0, quant=None):
+        quant = quant or self.quant
+        return self.env["sng.inventory.adjustment.batch"].with_user(user or self.operator).create({
+            "location_id": quant.location_id.id,
+            "line_ids": [Command.create({
+                "quant_id": quant.id, "counted_quantity": quantity,
+                "reason": "Diferencia comprobada en conteo físico.",
+            })],
         })
+
+    def _request(self, user=None, quantity=8.0):
+        """Línea única dentro de su cabecera; las acciones de línea siguen disponibles."""
+        return self._batch(user=user, quantity=quantity).line_ids
 
     def test_draft_and_submit_only_send_request_without_adjusting_stock(self):
         request = self._request()
+        batch = request.batch_id
         self.assertEqual(request.state, "draft")
+        self.assertEqual(batch.state, "draft")
         self.assertEqual(request.previous_quantity, 10.0)
         self.assertEqual(request.difference_quantity, -2.0)
         self.assertEqual(request.requested_by_id, self.operator)
+        self.assertEqual(batch.requested_by_id, self.operator)
         with self.assertRaises(AccessError):
             request.read(["unit_cost"])
-        request.action_submit()
+        batch.action_submit()
         self.assertEqual(request.state, "pending")
+        self.assertEqual(batch.state, "pending")
+        self.assertTrue(batch.submitted_at)
         self.assertEqual(self.quant.quantity, 10.0)
         self.assertFalse(request.move_ids)
         self.assertFalse(request.history_ids)
         mail = self.env["mail.mail"].search([
-            ("model", "=", request._name), ("res_id", "=", request.id),
+            ("model", "=", batch._name), ("res_id", "=", batch.id),
         ])
         self.assertEqual(len(mail), 1)
         self.assertEqual(mail.email_to, "gerencia-approval@example.com")
         self.assertEqual(mail.email_from, "notificaciones@example.com")
         self.assertEqual(mail.state, "outgoing")
         self.assertIn(request.reason, mail.body_html)
-        self.assertIn("model=sng.inventory.adjustment.request", mail.body_html)
+        self.assertIn("model=sng.inventory.adjustment.batch", mail.body_html)
         self.assertIn("Costo estimado", mail.body_html)
 
     def test_only_approver_can_apply_and_repeated_approval_is_blocked(self):
@@ -124,7 +143,7 @@ class TestAdjustmentApproval(TransactionCase):
     def test_submitting_native_capture_preserves_actual_counter(self):
         self.quant.with_user(self.operator).write({"inventory_quantity": 8, "sng_adjustment_reason": "Conteo físico"})
         action = self.quant.with_user(self.approver).action_request_inventory_approval()
-        request = self.env["sng.inventory.adjustment.request"].search(action["domain"])
+        request = self.env["sng.inventory.adjustment.batch"].search(action["domain"]).line_ids
         self.assertEqual(request.counted_by_ids, self.operator)
         self.assertEqual(request.requested_by_id, self.approver)
         request.with_user(self.approver).action_approve()
@@ -154,7 +173,7 @@ class TestAdjustmentApproval(TransactionCase):
                     **vals,
                 })
         action = quant.action_request_inventory_approval()
-        self.assertEqual(action["res_model"], "sng.inventory.adjustment.request")
+        self.assertEqual(action["res_model"], "sng.inventory.adjustment.batch")
         self.assertEqual(quant.quantity, 10.0)
 
     def test_native_wizards_cannot_bypass_permission(self):
@@ -187,21 +206,27 @@ class TestAdjustmentApproval(TransactionCase):
         with self.assertRaises(UserError):
             duplicate.action_submit()
 
-    def test_changed_stock_requires_new_count(self):
+    def test_changed_stock_keeps_count_difference(self):
         request = self._request()
         request.action_submit()
         self.env["stock.quant"]._update_available_quantity(
             self.product, self.warehouse.lot_stock_id, 1.0,
         )
-        with self.assertRaises(UserError):
-            request.with_user(self.approver).action_approve()
-        self.assertEqual(request.state, "pending")
-        self.assertEqual(self.quant.quantity, 11.0)
+        self.assertEqual(request.current_quantity, 11.0)
+        self.assertEqual(request.result_quantity, 9.0)
+        request.with_user(self.approver).action_approve()
+        self.assertEqual(request.state, "approved")
+        self.assertEqual(self.quant.quantity, 9.0)
+        self.assertEqual(request.history_ids.previous_quantity, 11.0)
+        self.assertEqual(request.history_ids.adjusted_quantity, -2.0)
 
     def test_reason_required_and_rejection_does_not_change_stock(self):
         with self.assertRaises(ValidationError), self.cr.savepoint():
-            self.env["sng.inventory.adjustment.request"].with_user(self.operator).create({
-                "quant_id": self.quant.id, "counted_quantity": 8, "reason": "   ",
+            self.env["sng.inventory.adjustment.batch"].with_user(self.operator).create({
+                "location_id": self.quant.location_id.id,
+                "line_ids": [Command.create({
+                    "quant_id": self.quant.id, "counted_quantity": 8, "reason": "   ",
+                })],
             })
         request = self._request()
         request.action_submit()
@@ -237,13 +262,51 @@ class TestAdjustmentApproval(TransactionCase):
         self.assertTrue(request.quant_id.exists())
 
     def test_operator_can_save_draft_from_form(self):
-        with Form(self.env["sng.inventory.adjustment.request"].with_user(self.operator)) as form:
-            form.quant_id = self.quant
-            form.counted_quantity = 8
-            form.reason = "Reconteo físico con diferencia."
-        self.assertEqual(form.record.state, "draft")
-        self.assertEqual(form.record.previous_quantity, 10)
+        with Form(self.env["sng.inventory.adjustment.batch"].with_user(self.operator)) as form:
+            form.location_id = self.warehouse.lot_stock_id
+            with form.line_ids.new() as line:
+                line.product_id = self.product
+                # El onchange muestra la existencia actual de la bodega elegida.
+                self.assertEqual(line.previous_quantity, 10)
+                line.counted_quantity = 8
+                line.reason = "Reconteo físico con diferencia."
+        batch = form.record
+        self.assertEqual(batch.state, "draft")
+        self.assertEqual(batch.line_ids.quant_id, self.quant)
+        self.assertEqual(batch.line_ids.previous_quantity, 10)
         self.assertEqual(self.quant.quantity, 10)
+
+    def test_approver_can_save_draft_from_form(self):
+        # El formulario de Gerencia incluye review_note y lo envía vacío al crear.
+        with Form(self.env["sng.inventory.adjustment.batch"].with_user(self.approver)) as form:
+            form.location_id = self.warehouse.lot_stock_id
+            with form.line_ids.new() as line:
+                line.product_id = self.product
+                line.counted_quantity = 8
+                line.reason = "Reconteo físico con diferencia."
+        self.assertEqual(form.record.state, "draft")
+        self.assertFalse(form.record.review_note)
+        self.assertFalse(form.record.line_ids.review_note)
+
+    def test_create_ignores_empty_extra_values_but_rejects_real_ones(self):
+        batch = self.env["sng.inventory.adjustment.batch"].with_user(self.approver).create({
+            "location_id": self.quant.location_id.id, "review_note": False, "submitted_at": False,
+        })
+        request = self.env["sng.inventory.adjustment.request"].with_user(self.approver).create({
+            "batch_id": batch.id, "quant_id": self.quant.id, "counted_quantity": 8, "reason": "Conteo.",
+            "review_note": False, "submitted_at": False,
+        })
+        self.assertEqual(request.state, "draft")
+        for extra in ({"state": "approved"}, {"previous_quantity": 1}, {"review_note": "x"}):
+            with self.assertRaises(AccessError), self.cr.savepoint():
+                self.env["sng.inventory.adjustment.request"].with_user(self.approver).create({
+                    "batch_id": batch.id, "product_id": self.product.id,
+                    "counted_quantity": 8, "reason": "Conteo.", **extra,
+                })
+        with self.assertRaises(AccessError), self.cr.savepoint():
+            self.env["sng.inventory.adjustment.batch"].with_user(self.approver).create({
+                "location_id": self.quant.location_id.id, "requested_by_id": self.operator.id,
+            })
 
     def test_native_create_keeps_reason_and_cannot_overwrite_pending(self):
         model = self.env["stock.quant"].with_user(self.operator).with_context(inventory_mode=True)
@@ -266,9 +329,12 @@ class TestAdjustmentApproval(TransactionCase):
 
     def test_missing_recipients_keeps_draft(self):
         self.group.write({"adjustment_approval_emails": False})
-        self.approver.email = False
+        self.env.ref(
+            "sng_inventory_adjustment_history.group_inventory_adjustment_approver"
+        ).users.write({"email": False})
         request = self._request()
         with self.assertRaises(UserError), self.cr.savepoint():
-            request.action_submit()
+            request.batch_id.action_submit()
         self.assertEqual(request.state, "draft")
+        self.assertEqual(request.batch_id.state, "draft")
         self.assertEqual(self.quant.quantity, 10)

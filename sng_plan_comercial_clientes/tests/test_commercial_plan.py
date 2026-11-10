@@ -11,7 +11,7 @@ from odoo.exceptions import UserError, ValidationError
 from odoo.tests.common import TransactionCase
 
 
-class TestCommercialPlan(TransactionCase):
+class CommercialPlanCommon(TransactionCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
@@ -115,6 +115,13 @@ class TestCommercialPlan(TransactionCase):
             lambda line: line.account_id == receivable_account
         )
         (invoice_receivable + payment_receivable).reconcile()
+
+
+class TestCommercialPlan(CommercialPlanCommon):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.env.company.sng_plan_odoo_start_date = False
 
     def test_annual_period_and_month_progress(self):
         plan = self._create_plan()

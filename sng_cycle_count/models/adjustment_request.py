@@ -7,6 +7,9 @@ class InventoryAdjustmentRequest(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        # Las líneas pueden llegar con producto en vez de existencia: resolver
+        # primero para bloquear la existencia correcta antes de crearla.
+        self._sng_resolve_quant_vals(vals_list)
         quants = self.env["stock.quant"].browse([v.get("quant_id") for v in vals_list if v.get("quant_id")])
         quants._cycle_lock()
         quants._cycle_check_no_session()
