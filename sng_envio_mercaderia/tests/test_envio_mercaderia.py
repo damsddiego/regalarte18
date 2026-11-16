@@ -72,6 +72,56 @@ class TestEnvioMercaderia(TransactionCase):
         self.assertTrue(first["delivery_method_changed"])
         self.assertEqual(first["picker_name"], "Persona de bodega")
 
+    def test_transportista_de_ventas_se_guarda_y_preselecciona(self):
+        producto = self.env["product.product"].create({
+            "name": "Servicio de envío de prueba", "type": "service",
+        })
+        carrier = self.env["delivery.carrier"].create({
+            "name": "Método ventas de prueba", "product_id": producto.id,
+        })
+        metodos = self.env["sng.envio.mercaderia"].mobile_get_carrier_methods(
+            "sale.order", self.order.id
+        )
+        self.assertIn(carrier.id, [m["id"] for m in metodos])
+        payload = self._create_mobile_audit(
+            delivery_type_id=carrier.id, delivery_carrier_id=carrier.id,
+            confirm=True,
+        )
+        audit = self.env["sng.envio.mercaderia"].browse(payload["id"])
+        audit.action_set_customer_default(actor_partner_id=self.picker.id)
+        self.assertEqual(
+            self.customer.with_company(self.order.company_id).property_delivery_carrier_id,
+            carrier,
+        )
+        defaults = self.env["sng.envio.mercaderia"].mobile_get_carrier_defaults(
+            "sale.order", self.order.id
+        )
+        self.assertEqual(defaults["suggested_delivery_type_id"], carrier.id)
+        otro = self.env["delivery.carrier"].create({
+            "name": "Otro método de ventas", "product_id": producto.id,
+        })
+        cambio = self._create_mobile_audit(
+            delivery_type_id=otro.id, delivery_carrier_id=otro.id,
+            request_key="otro-metodo", confirm=True,
+        )
+        self.assertEqual(cambio["delivery_method_status"], "changed")
+        self.env["sng.envio.mercaderia"].browse(cambio["id"]).action_set_customer_default(
+            actor_partner_id=self.picker.id
+        )
+        self.assertEqual(
+            self.customer.with_company(self.order.company_id).property_delivery_carrier_id,
+            otro,
+        )
+        defaults = self.env["sng.envio.mercaderia"].mobile_get_carrier_defaults(
+            "sale.order", self.order.id
+        )
+        self.assertEqual(defaults["suggested_delivery_type_id"], otro.id)
+        audit.action_set_customer_default(actor_partner_id=self.picker.id)
+        self.assertEqual(
+            self.customer.with_company(self.order.company_id).property_delivery_carrier_id,
+            otro,
+        )
+
     def test_confirmed_audit_is_locked(self):
         payload = self._create_mobile_audit(confirm=True)
         audit = self.env["sng.envio.mercaderia"].browse(payload["id"])
@@ -97,6 +147,22 @@ class TestEnvioMercaderia(TransactionCase):
         )
         self.assertEqual(payload["delivery_method_status"], "usual")
         self.assertFalse(payload["delivery_method_changed"])
+
+    def test_auditoria_anterior_sincroniza_transportista_equivalente(self):
+        producto = self.env["product.product"].create({
+            "name": "Servicio de envío anterior", "type": "service",
+        })
+        carrier = self.env["delivery.carrier"].create({
+            "name": self.other_method.name, "product_id": producto.id,
+        })
+        payload = self._create_mobile_audit(confirm=True)
+        self.env["sng.envio.mercaderia"].browse(payload["id"]).action_set_customer_default(
+            actor_partner_id=self.picker.id
+        )
+        self.assertEqual(
+            self.customer.with_company(self.order.company_id).property_delivery_carrier_id,
+            carrier,
+        )
 
     def test_box_number_cannot_exceed_total(self):
         with self.assertRaises(ValidationError):

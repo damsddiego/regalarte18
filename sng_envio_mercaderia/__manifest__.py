@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     "name": "SNG Envío de Mercadería",
-    "version": "18.0.1.1.0",
+    "version": "18.0.1.2.0",
     "author": "SNG Cloud",
     "website": "https://sngcloud.com",
     "category": "Inventory",
@@ -24,6 +24,7 @@ Incluye métodos RPC idempotentes para la aplicación móvil.
     "depends": [
         "mail",
         "sale_stock",
+        "delivery",
         "partner_delivery_type",
         "sale_order_shipping_method",
     ],

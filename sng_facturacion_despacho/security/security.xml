@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="group_facturar_despacho" model="res.groups">
+        <field name="name">Facturar desde Despacho</field>
+        <field name="comment">Autoriza la integración a facturar órdenes entregadas. Requiere los permisos contables y de ventas correspondientes.</field>
+    </record>
+</odoo>

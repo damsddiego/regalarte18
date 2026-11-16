@@ -120,6 +120,14 @@ class SngEnvioMercaderia(models.Model):
         readonly=True,
         copy=False,
     )
+    customer_delivery_carrier_id = fields.Many2one(
+        "delivery.carrier",
+        string="Método de Ventas habitual al crear",
+        ondelete="restrict",
+        check_company=True,
+        readonly=True,
+        copy=False,
+    )
     customer_delivery_method = fields.Char(
         string="Método habitual (histórico)",
         readonly=True,
@@ -131,6 +139,13 @@ class SngEnvioMercaderia(models.Model):
         ondelete="restrict",
         check_company=True,
         tracking=True,
+    )
+    delivery_carrier_id = fields.Many2one(
+        "delivery.carrier",
+        string="Método de entrega de Ventas",
+        ondelete="restrict",
+        check_company=True,
+        copy=False,
     )
     delivery_method = fields.Char(
         string="Método utilizado (histórico)",
@@ -251,11 +266,14 @@ class SngEnvioMercaderia(models.Model):
             else:
                 record.boxes_label = False
 
-    @api.depends("customer_delivery_type_id", "delivery_type_id")
+    @api.depends("customer_delivery_type_id", "delivery_type_id",
+                 "customer_delivery_carrier_id", "delivery_carrier_id")
     def _compute_delivery_method_audit(self):
         for record in self:
-            customer_method = record.customer_delivery_type_id
-            used_method = record.delivery_type_id
+            customer_method = (record.customer_delivery_carrier_id
+                               if record.delivery_carrier_id
+                               else record.customer_delivery_type_id)
+            used_method = record.delivery_carrier_id or record.delivery_type_id
             if not used_method:
                 status = "missing"
             elif not customer_method:
@@ -333,6 +351,11 @@ class SngEnvioMercaderia(models.Model):
             for field_name, value in source_values.items():
                 vals.setdefault(field_name, value)
 
+            if vals.get("delivery_carrier_id") and vals.get("customer_delivery_carrier_id"):
+                vals["customer_delivery_method"] = self.env["delivery.carrier"].browse(
+                    vals["customer_delivery_carrier_id"]
+                ).name
+
             delivery_type = self.env["res.partner.delivery.type"].browse(
                 vals.get("delivery_type_id")
             ).exists()
@@ -362,8 +385,10 @@ class SngEnvioMercaderia(models.Model):
             "contact_name",
             "contact_phone",
             "customer_delivery_type_id",
+            "customer_delivery_carrier_id",
             "customer_delivery_method",
             "delivery_type_id",
+            "delivery_carrier_id",
             "delivery_method",
             "box_number",
             "box_total",
@@ -433,8 +458,15 @@ class SngEnvioMercaderia(models.Model):
 
     def action_set_customer_default(self, actor_partner_id=False):
         for record in self:
+            self.env.cr.execute(
+                "SELECT id FROM sng_envio_mercaderia WHERE id = %s FOR UPDATE",
+                [record.id],
+            )
+            record.invalidate_recordset(["customer_method_updated", "state"])
             if record.state == "cancel":
                 raise UserError(_("No se puede actualizar el cliente desde una auditoría cancelada."))
+            if record.customer_method_updated:
+                continue
             if not record.delivery_type_id:
                 raise UserError(_("Debe seleccionar el método utilizado."))
 
@@ -446,8 +478,23 @@ class SngEnvioMercaderia(models.Model):
             if not actor:
                 actor = record.picker_partner_id
 
-            previous_method = target_partner.delivery_type_id.name or _("Sin método")
+            previous_method = (
+                record.partner_id.with_company(record.company_id).property_delivery_carrier_id.name
+                if record.delivery_carrier_id else target_partner.delivery_type_id.name
+            ) or _("Sin método")
             target_partner.write({"delivery_type_id": record.delivery_type_id.id})
+            carrier = record.delivery_carrier_id
+            if not carrier:
+                equivalents = self.env["delivery.carrier"].search([
+                    ("name", "=ilike", record.delivery_type_id.name),
+                    "|", ("company_id", "=", False), ("company_id", "=", record.company_id.id),
+                ], limit=2)
+                if len(equivalents) == 1:
+                    carrier = equivalents
+            if carrier:
+                record.partner_id.with_company(record.company_id).write({
+                    "property_delivery_carrier_id": carrier.id,
+                })
             record.with_context(allow_envio_audit_write=True).write(
                 {
                     "customer_method_updated": True,
@@ -528,6 +575,41 @@ class SngEnvioMercaderia(models.Model):
         }
 
     @api.model
+    def mobile_get_carrier_methods(self, source_model, source_id):
+        sale_order, picking = self._resolve_mobile_source(source_model, source_id)
+        company = sale_order.company_id if sale_order else picking.company_id
+        return self.env["delivery.carrier"].search_read(
+            [("active", "=", True), "|", ("company_id", "=", False),
+             ("company_id", "=", company.id)],
+            ["id", "name"], order="sequence, name",
+        )
+
+    @api.model
+    def mobile_get_carrier_defaults(self, source_model, source_id):
+        defaults = self.mobile_get_defaults(source_model, source_id)
+        sale_order, picking = self._resolve_mobile_source(source_model, source_id)
+        company = sale_order.company_id if sale_order else picking.company_id
+        partner = sale_order.partner_id if sale_order else picking.partner_id
+        shipping_partner = sale_order.partner_shipping_id if sale_order else partner
+        carrier = partner.with_company(company).property_delivery_carrier_id
+        if not carrier or not carrier.active or (carrier.company_id and carrier.company_id != company):
+            carrier = shipping_partner.with_company(company).property_delivery_carrier_id
+        if carrier and (not carrier.active or (carrier.company_id and carrier.company_id != company)):
+            carrier = self.env["delivery.carrier"]
+        if not carrier and defaults.get("customer_delivery_method"):
+            carrier = self.env["delivery.carrier"].search([
+                ("name", "=ilike", defaults["customer_delivery_method"]),
+                "|", ("company_id", "=", False), ("company_id", "=", company.id),
+            ], limit=1)
+        suggested = carrier or (sale_order.carrier_id if sale_order else self.env["delivery.carrier"])
+        if suggested and (not suggested.active or (suggested.company_id and suggested.company_id != company)):
+            suggested = self.env["delivery.carrier"]
+        defaults["customer_delivery_type_id"] = carrier.id or False
+        defaults["customer_delivery_method"] = carrier.name or False
+        defaults["suggested_delivery_type_id"] = suggested.id or False
+        return defaults
+
+    @api.model
     def mobile_create_or_get(
         self,
         source_model,
@@ -539,6 +621,7 @@ class SngEnvioMercaderia(models.Model):
         request_key,
         confirm=False,
         notes=False,
+        delivery_carrier_id=False,
     ):
         if not request_key or not str(request_key).strip():
             raise ValidationError(_("La solicitud móvil debe incluir un identificador único."))
@@ -556,9 +639,29 @@ class SngEnvioMercaderia(models.Model):
 
         existing = self.search([("mobile_request_key", "=", request_key)], limit=1)
         if existing:
+            if delivery_carrier_id and existing.delivery_carrier_id.id != int(delivery_carrier_id):
+                raise ValidationError(_("La solicitud ya tiene otro método de entrega."))
             return existing._mobile_payload()
 
         sale_order, picking = self._resolve_mobile_source(source_model, source_id)
+        carrier = self.env["delivery.carrier"]
+        if delivery_carrier_id:
+            company = sale_order.company_id if sale_order else picking.company_id
+            carrier = self.env["delivery.carrier"].search([
+                ("id", "=", int(delivery_carrier_id)), ("active", "=", True),
+                "|", ("company_id", "=", False), ("company_id", "=", company.id),
+            ], limit=1)
+            if not carrier or delivery_type_id != carrier.id:
+                raise ValidationError(_("El método de entrega de Ventas no es válido."))
+            delivery_type = self.env["res.partner.delivery.type"].search([
+                ("name", "=ilike", carrier.name),
+                "|", ("company_id", "=", False), ("company_id", "=", company.id),
+            ], limit=1)
+            if not delivery_type:
+                delivery_type = self.env["res.partner.delivery.type"].create({
+                    "name": carrier.name, "company_id": company.id,
+                })
+            delivery_type_id = delivery_type.id
         delivery_type = self.env["res.partner.delivery.type"].search(
             [("id", "=", delivery_type_id)],
             limit=1,
@@ -581,6 +684,7 @@ class SngEnvioMercaderia(models.Model):
                 "box_number": box_number,
                 "box_total": box_total,
                 "delivery_type_id": delivery_type.id,
+                "delivery_carrier_id": carrier.id or False,
                 "picker_partner_id": picker.id,
                 "picked_at": fields.Datetime.now(),
                 "mobile_request_key": request_key,
@@ -704,6 +808,18 @@ class SngEnvioMercaderia(models.Model):
             if partner
             else self.env["res.partner.delivery.type"]
         )
+        customer_carrier = partner.with_company(company).property_delivery_carrier_id
+        if customer_carrier.company_id and customer_carrier.company_id != company:
+            customer_carrier = self.env["delivery.carrier"]
+        if not customer_carrier:
+            customer_carrier = delivery_partner.with_company(company).property_delivery_carrier_id
+        if customer_carrier.company_id and customer_carrier.company_id != company:
+            customer_carrier = self.env["delivery.carrier"]
+        if not customer_carrier and customer_method:
+            customer_carrier = self.env["delivery.carrier"].search([
+                ("name", "=ilike", customer_method.name),
+                "|", ("company_id", "=", False), ("company_id", "=", company.id),
+            ], limit=1)
         suggested_method = customer_method
         if sale_order and sale_order.shipping_method:
             matching_method = self.env["res.partner.delivery.type"].search(
@@ -735,6 +851,7 @@ class SngEnvioMercaderia(models.Model):
                 or partner.mobile
             ),
             "customer_delivery_type_id": customer_method.id or False,
+            "customer_delivery_carrier_id": customer_carrier.id or False,
             "customer_delivery_method": customer_method.name or False,
             "delivery_type_id": suggested_method.id or False,
             "delivery_method": suggested_method.name or False,
