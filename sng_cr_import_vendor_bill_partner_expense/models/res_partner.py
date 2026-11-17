@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
 
 
 class ResPartner(models.Model):
@@ -16,10 +16,40 @@ class ResPartner(models.Model):
         ],
         help=(
             "Cuenta contable de gasto asignada a este proveedor. Si se define, "
-            "las facturas y notas de credito de proveedor usaran esta cuenta en "
-            "sus lineas de producto."
+            "las facturas y notas de credito de proveedor nuevas usaran esta "
+            "cuenta en sus lineas de producto. Cambiarla no modifica las facturas "
+            "que ya existen."
         ),
     )
+
+    def action_apply_import_bill_expense_account_to_drafts(self):
+        """Reaplica la cuenta de gasto a las facturas de proveedor en borrador.
+
+        Nunca toca facturas publicadas ni canceladas."""
+        self.ensure_one()
+        moves = self.env["account.move"].search(
+            [
+                ("partner_id", "=", self.id),
+                ("move_type", "in", ("in_invoice", "in_refund")),
+                ("state", "=", "draft"),
+                ("company_id", "=", self.env.company.id),
+            ]
+        )
+        lines = moves._apply_partner_import_bill_expense_account()
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "type": "success" if lines else "info",
+                "title": _("Cuenta de gasto del proveedor"),
+                "message": _(
+                    "Se actualizaron %(lines)s líneas en %(moves)s facturas en borrador.",
+                    lines=len(lines),
+                    moves=len(lines.move_id),
+                ),
+                "sticky": False,
+            },
+        }
 
     @api.model
     def _migrate_expense_account_id_to_import_bill_expense_account_id(self):

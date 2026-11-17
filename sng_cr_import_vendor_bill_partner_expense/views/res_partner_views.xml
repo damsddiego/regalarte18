@@ -10,6 +10,15 @@
                     name="import_bill_expense_account_id"
                     options="{'no_create_edit': True}"
                 />
+                <button
+                    name="action_apply_import_bill_expense_account_to_drafts"
+                    type="object"
+                    string="Aplicar a facturas en borrador"
+                    class="btn-link"
+                    colspan="2"
+                    invisible="not import_bill_expense_account_id"
+                    confirm="Se pondrá esta cuenta de gasto en las facturas y notas de crédito EN BORRADOR de este proveedor. Las publicadas no se modifican. ¿Continuar?"
+                />
             </xpath>
         </field>
     </record>
